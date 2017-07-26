@@ -5,6 +5,6 @@ set DOTNETFX2=%SystemRoot%\Microsoft.NET\Framework64\v4.0.30319
 set PATH=%PATH%;%DOTNETFX2%
 echo Installing WindowsService...
 echo ---------------------------------------------------
-InstallUtil /i Netcell.Remoting.exe
+InstallUtil /i Nistec.Cache.Agent.exe
 echo ---------------------------------------------------
 echo Done.
