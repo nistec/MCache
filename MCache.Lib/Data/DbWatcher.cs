@@ -245,7 +245,7 @@ VALUES('{1}','{2}',0)";
         {
             try
             {
-                using (IDbCmd dbCmd = Owner.Db.NewCmd())
+                using (IDbCmd dbCmd = DbFactory.Create(Owner.ConnectionKey))// Owner.Db.NewCmd())
                 {
                     return dbCmd.ExecuteNonQuery(string.Format("UPDATE {0} SET Edited=0 WHERE ClientId='{1}' and TableName='{2}'", Owner.TableWatcherName, Owner.ClientId, tableName));
                 }
@@ -261,7 +261,7 @@ VALUES('{1}','{2}',0)";
         {
             try
             {
-                using (IDbCmd dbCmd = Owner.Db.NewCmd())
+                using (IDbCmd dbCmd = DbFactory.Create(Owner.ConnectionKey))//Owner.Db.NewCmd())
                 {
                     return dbCmd.ExecuteNonQuery(string.Format(SqlAddTableToWatcherTable, Owner.TableWatcherName, Owner.ClientId, tableName));
                 }
@@ -275,23 +275,23 @@ VALUES('{1}','{2}',0)";
 
         public void Register(string[] tables)
         {
-            RegisterTablesTrigger(Owner.Db, tables, Owner.ClientId, Owner.TableWatcherName);
+            RegisterTablesTrigger(Owner.ConnectionKey, tables, Owner.ClientId, Owner.TableWatcherName);
         }
 
         public void Register(string[] tables, bool createTriggers)
         {
             if (createTriggers)
             {
-                CreateTablesTrigger(Owner.Db, tables, Owner.TableWatcherName);
+                CreateTablesTrigger(Owner.ConnectionKey, tables, Owner.TableWatcherName);
             }
-            RegisterTablesTrigger(Owner.Db, tables, Owner.ClientId, Owner.TableWatcherName);
+            RegisterTablesTrigger(Owner.ConnectionKey, tables, Owner.ClientId, Owner.TableWatcherName);
         }
 
         public int CreateTableTrigger(string tableName)
         {
             try
             {
-                using (IDbCmd dbCmd = Owner.Db.NewCmd())
+                using (IDbCmd dbCmd = DbFactory.Create(Owner.ConnectionKey))//Owner.Db.NewCmd())
                 {
                     string Database = dbCmd.Connection.Database;
                     int res = dbCmd.ExecuteScalar<int>(string.Format(SqlIsTriggerExists, Database, tableName));
@@ -313,7 +313,7 @@ VALUES('{1}','{2}',0)";
             try
             {
                 DataTable dt = null; ;
-                using (IDbCmd dbCmd = Owner.Db.NewCmd())
+                using (IDbCmd dbCmd = DbFactory.Create(Owner.ConnectionKey))//Owner.Db.NewCmd())
                 {
                     dt = dbCmd.ExecuteDataTable(Owner.TableWatcherName, string.Format("SELECT * FROM {0} WHERE ClientId='{1}'", Owner.TableWatcherName, Owner.ClientId), false);
                 }
@@ -340,15 +340,15 @@ VALUES('{1}','{2}',0)";
 
         #region static
 
-        public static int CreateTableWatcher(IDbContext db)
+        public static int CreateTableWatcher(string connectionKey)
         {
-            return CreateTableWatcher(db, DefaultWatcherName);
+            return CreateTableWatcher(connectionKey, DefaultWatcherName);
         }
-        public static int CreateTableWatcher(IDbContext db, string TableWatcherName)
+        public static int CreateTableWatcher(string connectionKey, string TableWatcherName)
         {
             try
             {
-                using (IDbCmd dbCmd = db.NewCmd())
+                using (IDbCmd dbCmd = DbFactory.Create(connectionKey))// db.NewCmd())
                 {
                     string Database = dbCmd.Connection.Database;
                     int res = dbCmd.ExecuteScalar<int>(string.Format(SqlIsTableWatcherExists, Database, TableWatcherName));
@@ -389,14 +389,16 @@ VALUES('{1}','{2}',0)";
         }
 
  
-        public static void CreateTablesTrigger(IDbContext db, string[] tables, string tableWatcher)
+        public static void CreateTablesTrigger(string connectionKey, string[] tables, string tableWatcher)
         {
 
             List<string> commands = new List<string>();
             IDbCmd dbCmd = null;
             try
             {
-                dbCmd = db.NewCmd();
+                dbCmd = DbFactory.Create(connectionKey);
+               
+                //dbCmd = db.NewCmd();
                 object[] results = null;
                 string[] exists = new string[tables.Length];
 
@@ -443,7 +445,7 @@ VALUES('{1}','{2}',0)";
 
         }
 
-        public static void RegisterTablesTrigger(IDbContext db, string[] tables, string clientId, string tableWatcher)
+        public static void RegisterTablesTrigger(string connectionKey, string[] tables, string clientId, string tableWatcher)
         {
             try
             {
@@ -452,7 +454,7 @@ VALUES('{1}','{2}',0)";
                 {
                     registers[i] = string.Format(SqlAddTableToWatcherTable, tableWatcher, clientId, tables[i]);
                 }
-                using (IDbCmd dbCmd = db.NewCmd())
+                using (IDbCmd dbCmd = DbFactory.Create(connectionKey))//db.NewCmd())
                 {
                     dbCmd.MultiExecuteNonQuery(registers, false);
                 }

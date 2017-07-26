@@ -28,6 +28,8 @@ using Nistec.Data;
 using System.Configuration;
 using Nistec.Generic;
 using Nistec.Caching.Config;
+using System.Threading;
+using System.Collections.Concurrent;
 
 namespace Nistec.Caching.Sync
 {
@@ -35,41 +37,140 @@ namespace Nistec.Caching.Sync
     /// Represents a list of multi database Synchronization cache.
     /// Each <see cref="SyncDb"/> item holds multiple tables from specific database.  
     /// </summary>
-    internal class SyncDbCache 
+    internal class SyncDbCache : IDisposable
     {
+        /*
+        #region IDataCache
+
+        /// <summary>
+        /// Get <see cref="CacheSyncState"/> the sync state.
+        /// </summary>
+        public CacheSyncState SyncState { get; internal set; }
+
+        /// <summary>
+        ///  Wait until the current item is ready for synchronization using timeout for waiting in milliseconds.
+        /// </summary>
+        /// <param name="timeout">timeout in milliseconds</param>
+        public void WaitForReadySyncState(int timeout)
+        {
+            if (timeout < 1000)
+                timeout = 1000;
+            int wait_counter = 0;
+            while (this.SyncState == CacheSyncState.Started)
+            {
+                Thread.Sleep(100);
+                wait_counter += 100;
+                if (wait_counter > timeout)
+                {
+                    this.SyncState = CacheSyncState.Idle;
+                }
+            }
+        }
+
+        #endregion
+
+        #region IDispose
+
+        /// <summary>
+        /// SyncDb
+        /// </summary>
+        ~SyncDbCache()
+        {
+            Dispose(false);
+        }
+
+       /// <summary>
+        /// Dispose
+       /// </summary>
+       /// <param name="disposing"></param>
+        protected void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                Stop();
+
+                if(m_data!=null)
+                {
+                    foreach(var entry in m_data)
+                    {
+                        entry.Value.Dispose();
+                    }
+                    m_data = null;
+                }
+
+                //if (_CacheSynchronize != null)
+                //{
+                //    _CacheSynchronize.Dispose();
+                //    _CacheSynchronize=null;
+                //}
+                // if (_SyncTables != null)
+                //{
+                //    _SyncTables.Dispose();
+                //    _SyncTables=null;
+                //}
+                
+            }
+            //this._ClientId=null;
+            //this._DbContext = null;
+            //this._storageName = null;
+            //this._TableWatcherName = null;
+            this.CacheName = null;
+            
+        }
+
+        /// <summary>
+        /// Dispose
+        /// </summary>
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+       
+        #endregion
+        */
+
         internal Action<string> FunctionSyncChanged;
 
         internal void Reload(SyncDbCache copy)
         {
-            lock (SyncRoot)
+
+
+            foreach (var entry in copy.m_data)
             {
-                m_data = copy.m_data;
+                m_data[entry.Key] = entry.Value;
+                CacheLogger.Debug("SyncDbCache Reload item Completed : " + entry.Key);
+                Thread.Sleep(10);
             }
+
+            //CacheLogger.Debug("SyncDbCache Reload Completed : " + copy.CacheName);
         }
 
-        bool m_copy=false;
+        bool m_copy = false;
 
-        Dictionary<string, SyncDb> m_data;
-        
-        public object SyncRoot
-        {
-            get { return ((ICollection)m_data).SyncRoot; }
-        }
+        //Dictionary<string, SyncDb> m_data;
+        ConcurrentDictionary<string, SyncDb> m_data;
+
+        //public object SyncRoot
+        //{
+        //    get { return ((ICollection)m_data).SyncRoot; }
+        //}
 
         public SyncDb[] GetItems()
         {
-            lock (SyncRoot)
-            {
-                return m_data.Values.ToArray();
-            }
+            return m_data.Values.ToArray();
+
         }
 
         public string[] GetKeys()
         {
-            lock (SyncRoot)
-            {
-                return m_data.Keys.ToArray();
-            }
+            return m_data.Keys.ToArray();
+        }
+
+        public bool Initialized
+        {
+            get { return _initialized; }
         }
 
         /// <summary>
@@ -86,10 +187,8 @@ namespace Nistec.Caching.Sync
                 }
                 dc.WaitForReadySyncState(2000);
                 ((SyncDb)dc).SyncState = CacheSyncState.Started;
-                lock (SyncRoot)
-                {
-                    m_data[dc.ConnectionKey] = (SyncDb)dc;
-                }
+
+                m_data[dc.ConnectionKey] = (SyncDb)dc;
             }
             catch (Exception ex)
             {
@@ -101,7 +200,7 @@ namespace Nistec.Caching.Sync
                     ((SyncDb)dc).SyncState = CacheSyncState.Idle;
             }
         }
-       
+
 
         #region members
 
@@ -134,14 +233,14 @@ namespace Nistec.Caching.Sync
         /// <param name="cacheName"></param>
         public SyncDbCache(string cacheName)
         {
-            m_data = new Dictionary<string, SyncDb>();
+            m_data = new ConcurrentDictionary<string, SyncDb>();
             CacheName = cacheName;
-         }
+        }
 
         internal SyncDbCache(string cacheName, bool copy)
         {
             m_copy = copy;
-            m_data = new Dictionary<string, SyncDb>();
+            m_data = new ConcurrentDictionary<string, SyncDb>();
             CacheName = cacheName;
 
         }
@@ -152,14 +251,15 @@ namespace Nistec.Caching.Sync
         /// <param name="intervalSeconds"></param>
         public void Start(int intervalSeconds)
         {
-             if (m_copy)
+            if (m_copy)
                 return;
-
+            int counter = 0;
             foreach (SyncDb dc in this.GetItems())
             {
                 dc.Start(intervalSeconds);
+                counter++;
             }
-            _initialized = true;
+            _initialized = counter > 0;
         }
 
         /// <summary>
@@ -175,7 +275,7 @@ namespace Nistec.Caching.Sync
                 foreach (SyncDb dc in this.GetItems())
                 {
                     dc.Stop();
-                    
+
                     dc.SyncDataSourceChanged -= new SyncDataSourceChangedEventHandler(_SyncData_SyncDataSourceChanged);
                 }
 
@@ -193,7 +293,7 @@ namespace Nistec.Caching.Sync
 
             foreach (SyncDb dc in this.GetItems())
             {
-                 dc.Dispose();
+                dc.Dispose();
             }
             if (m_data != null)
             {
@@ -205,7 +305,7 @@ namespace Nistec.Caching.Sync
 
         #region events
 
-        
+
 
         /// <summary>
         /// OnSyncChanged
@@ -213,7 +313,7 @@ namespace Nistec.Caching.Sync
         /// <param name="e"></param>
         protected virtual void OnSyncChanged(GenericEventArgs<string> e)
         {
-            CacheLogger.Debug("SyncDbCache OnSyncChanged : " + e.Args);
+            //CacheLogger.Debug("SyncDbCache OnSyncChanged : " + e.Args);
 
 
             if (FunctionSyncChanged != null)
@@ -222,7 +322,7 @@ namespace Nistec.Caching.Sync
             }
         }
 
-     
+
 
         #endregion
 
@@ -241,21 +341,23 @@ namespace Nistec.Caching.Sync
             intervalSeconds = CacheDefaults.GetValidIntervalSeconds(intervalSeconds);
             SyncDb rdc = null;
 
-            lock (this.SyncRoot)
+            bool exists = m_data.TryGetValue(connectionKey, out rdc);
+
+
+            //add if not exists
+            if (!exists)
             {
+                //ConnectionStringSettings cn = NetConfig.ConnectionSettings(connectionKey);
+                //rdc = new SyncDb(connectionKey, cn.ConnectionString, DBProvider.SqlServer);
+                rdc = new SyncDb(connectionKey);
+                rdc.SyncOption = SyncOption.Auto;
 
-                if (!m_data.TryGetValue(connectionKey, out rdc))
-                {
-                    ConnectionStringSettings cn = NetConfig.ConnectionSettings(connectionKey);
-                    rdc = new SyncDb(connectionKey, cn.ConnectionString, DBProvider.SqlServer);
-                    rdc.SyncOption = SyncOption.Auto;
-
-                    //evt-
-                    rdc.SyncDataSourceChanged += new SyncDataSourceChangedEventHandler(_SyncData_SyncDataSourceChanged);
-                    m_data[connectionKey] = rdc;
-                }
-
+                //evt-
+                rdc.SyncDataSourceChanged += new SyncDataSourceChangedEventHandler(_SyncData_SyncDataSourceChanged);
+                m_data[connectionKey] = rdc;
             }
+
+
 
             if (rdc != null)
             {
@@ -278,21 +380,38 @@ namespace Nistec.Caching.Sync
         {
             SyncDb rdc = null;
 
-            lock (this.SyncRoot)
+
+            if (m_data.TryGetValue(connectionKey, out rdc))
             {
-                if (m_data.TryGetValue(connectionKey, out rdc))
+                if (rdc.SyncTables.Contains(sc))
                 {
-                    if (rdc.SyncTables.Contains(sc))
+                    rdc.SyncTables.Remove(sc);
+                    if (!m_data.ContainsKey(connectionKey))
                     {
-                        rdc.SyncTables.Remove(sc);
-                        if (!m_data.ContainsKey(connectionKey))
-                        {
-                            //evt-
-                            rdc.SyncDataSourceChanged -= new SyncDataSourceChangedEventHandler(_SyncData_SyncDataSourceChanged);
-                        }
+                        //evt-
+                        rdc.SyncDataSourceChanged -= new SyncDataSourceChangedEventHandler(_SyncData_SyncDataSourceChanged);
                     }
                 }
             }
+
+        }
+
+
+        /// <summary>
+        /// is sync source exists in db list.
+        /// </summary>
+        /// <param name="sc"></param>
+        public bool SyncSourceExists(SyncEntity sc)
+        {
+            SyncDb rdc = null;
+
+
+            if (m_data.TryGetValue(sc.ConnectionKey, out rdc))
+            {
+                return rdc.SyncTables.IsExists(sc);
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -304,29 +423,28 @@ namespace Nistec.Caching.Sync
         {
             SyncDb rdc = null;
 
-            lock (this.SyncRoot)
-            {
-                if (m_data.TryGetValue(connectionKey, out rdc))
-                {
-                    if (rdc.SyncTables.Contains(entityName))
-                    {
-                        rdc.SyncTables.Remove(entityName);
 
-                        if (!m_data.ContainsKey(connectionKey))
-                        {
-                            //evt-
-                            rdc.SyncDataSourceChanged -= new SyncDataSourceChangedEventHandler(_SyncData_SyncDataSourceChanged);
-                        }
+            if (m_data.TryGetValue(connectionKey, out rdc))
+            {
+                if (rdc.SyncTables.Contains(entityName))
+                {
+                    rdc.SyncTables.Remove(entityName);
+
+                    if (!m_data.ContainsKey(connectionKey))
+                    {
+                        //evt-
+                        rdc.SyncDataSourceChanged -= new SyncDataSourceChangedEventHandler(_SyncData_SyncDataSourceChanged);
                     }
                 }
             }
+
         }
 
         /// <summary>
         /// Add Db To Sync Cache
         /// </summary>
         /// <param name="connectionKey"></param>
-       /// <param name="intervalSeconds"></param>
+        /// <param name="intervalSeconds"></param>
         public void AddDb(string connectionKey, int intervalSeconds)
         {
             if (string.IsNullOrEmpty(connectionKey))
@@ -335,18 +453,18 @@ namespace Nistec.Caching.Sync
             }
             intervalSeconds = CacheDefaults.GetValidIntervalSeconds(intervalSeconds);
 
-            lock (SyncRoot)
+
+            //ConnectionStringSettings cn = NetConfig.ConnectionSettings(connectionKey);
+            //SyncDb rdc = new SyncDb(connectionKey, cn.ConnectionString, DBProvider.SqlServer);
+            SyncDb rdc = new SyncDb(connectionKey);
+            //evt-
+            rdc.SyncDataSourceChanged += new SyncDataSourceChangedEventHandler(_SyncData_SyncDataSourceChanged);
+            m_data[connectionKey] = rdc;
+            if (!m_copy)
             {
-                ConnectionStringSettings cn = NetConfig.ConnectionSettings(connectionKey);
-                SyncDb rdc = new SyncDb(connectionKey, cn.ConnectionString, DBProvider.SqlServer);
-                //evt-
-                rdc.SyncDataSourceChanged += new SyncDataSourceChangedEventHandler(_SyncData_SyncDataSourceChanged);
-                m_data[connectionKey] = rdc;
-                if (!m_copy)
-                {
-                    rdc.Start(intervalSeconds);
-                }
+                rdc.Start(intervalSeconds);
             }
+
         }
 
         /// <summary>
@@ -359,19 +477,29 @@ namespace Nistec.Caching.Sync
             {
                 throw new ArgumentNullException("RemoveDb.connectionKey");
             }
-            lock (this.SyncRoot)
+
+            //lock (this.SyncRoot)
+            //{
+            //    if (m_data.ContainsKey(connectionKey))
+            //    {
+            //        SyncDb rdc = m_data[connectionKey];
+            //        if (rdc != null)
+            //        {
+            //            //evt-
+            //            rdc.SyncDataSourceChanged -= new SyncDataSourceChangedEventHandler(_SyncData_SyncDataSourceChanged);
+            //            rdc.Stop();
+            //        }
+            //        m_data.Remove(connectionKey);
+
+
+            //    }
+            //}
+
+            SyncDb rdc;
+            if (m_data.TryRemove(connectionKey, out rdc))
             {
-                if (m_data.ContainsKey(connectionKey))
-                {
-                    SyncDb rdc = m_data[connectionKey];
-                    if (rdc != null)
-                    {
-                        //evt-
-                        rdc.SyncDataSourceChanged -= new SyncDataSourceChangedEventHandler(_SyncData_SyncDataSourceChanged);
-                        rdc.Stop();
-                    }
-                    m_data.Remove(connectionKey);
-                }
+                rdc.SyncDataSourceChanged -= new SyncDataSourceChangedEventHandler(_SyncData_SyncDataSourceChanged);
+                rdc.Stop();
             }
 
         }
@@ -386,10 +514,7 @@ namespace Nistec.Caching.Sync
         /// </summary>
         public void ClearSafe()
         {
-            lock (this.SyncRoot)
-            {
-                m_data.Clear();
-            }
+            m_data.Clear();
 
         }
         #endregion
@@ -405,12 +530,10 @@ namespace Nistec.Caching.Sync
                 throw new ArgumentNullException("GetDb.connectionKey");
             }
             SyncDb rdc;
-            lock (SyncRoot)
+
+            if (m_data.TryGetValue(connectionKey, out rdc))
             {
-                if (m_data.TryGetValue(connectionKey, out rdc))
-                {
-                    return rdc;
-                }
+                return rdc;
             }
 
             return null;
@@ -423,10 +546,9 @@ namespace Nistec.Caching.Sync
         /// <returns></returns>
         public bool ContainsSyncDb(string connectionKey)
         {
-            lock (this.SyncRoot)
-            {
-                return m_data.ContainsKey(connectionKey);
-            }
+
+            return m_data.ContainsKey(connectionKey);
+
         }
 
         /// <summary>
@@ -438,16 +560,14 @@ namespace Nistec.Caching.Sync
         public bool ContainsSyncSource(string connectionKey, DataSyncEntity sc)
         {
 
-            lock (this.SyncRoot)
+
+            SyncDb rdc = null;
+
+            if (m_data.TryGetValue(connectionKey, out rdc))
             {
-                SyncDb rdc = null;
-
-                if (m_data.TryGetValue(connectionKey, out rdc))
-                {
-                    return rdc.SyncTables.Contains(sc);
-                }
-
+                return rdc.SyncTables.Contains(sc);
             }
+
             return false;
         }
 
@@ -460,16 +580,15 @@ namespace Nistec.Caching.Sync
         public bool ContainsSyncSource(string connectionKey, string tableName)
         {
 
-            lock (this.SyncRoot)
+
+            SyncDb rdc = null;
+
+            if (m_data.TryGetValue(connectionKey, out rdc))
             {
-                SyncDb rdc = null;
-
-                if (m_data.TryGetValue(connectionKey, out rdc))
-                {
-                    return rdc.SyncTables.Contains(tableName);
-                }
-
+                return rdc.SyncTables.Contains(tableName);
             }
+
+
             return false;
         }
 

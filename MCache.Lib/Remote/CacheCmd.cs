@@ -335,6 +335,8 @@ namespace Nistec.Caching.Remote
         public const string GetAllEntityNames = "sync_GetAllEntityNames";
         /// <summary>Restart all items in sync cache.</summary>
         public const string Reset = "sync_Reset";
+        /// <summary>Get all items count for specified entity from sync cache.</summary>
+        public const string GetEntityItemsCount = "sync_GetEntityItemsCount";
         ///// <summary>Get sync cache statistic.</summary>
         //public const string GetSyncStatistic = "sync_GetSyncStatistic";
 

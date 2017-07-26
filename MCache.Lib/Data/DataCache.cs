@@ -71,22 +71,36 @@ namespace Nistec.Caching.Data
         private CacheSynchronizer _CacheSynchronize;
         DbCache Owner;
 
-        IDbContext _DbContext;
-        /// <summary>
-        /// Get db as <see cref="IDbContext"/>.
-        /// </summary>
-        public IDbContext Db
-        {
-            get { return _DbContext; }
-        }
+        //IDbContext _DbContext;
+        ///// <summary>
+        ///// Get db as <see cref="IDbContext"/>.
+        ///// </summary>
+        //public IDbContext Db
+        //{
+        //    get { return _DbContext; }
+        //}
 
        
+        ///// <summary>
+        ///// Get the connection key for current database. 
+        ///// </summary>
+        //public string ConnectionKey
+        //{
+        //    get { return Db.ConnectionName; }
+        //}
+
+        public IDbContext Db()
+        {
+            return new DbContext(ConnectionKey);
+        }
+
         /// <summary>
         /// Get the connection key for current database. 
         /// </summary>
         public string ConnectionKey
         {
-            get { return Db.ConnectionName; }
+            get;
+            private set;
         }
 
         internal bool _EnableDataSource = true;
@@ -197,19 +211,19 @@ namespace Nistec.Caching.Data
         }
 
      
-        /// <summary>
-        /// Initialize a new instance of data cache using connection string and <see cref="DBProvider"/>.
-        /// </summary>
-        /// <param name="owner"></param>
-        /// <param name="cacheName"></param>
-        /// <param name="connection"></param>
-        /// <param name="providerDb"></param>
-        public DataCache(DbCache owner,string cacheName, string connection, DBProvider providerDb)
-            : this(cacheName)
-        {
-            Owner = owner;
-            _DbContext = new DbContext(connection, providerDb);
-        }
+        ///// <summary>
+        ///// Initialize a new instance of data cache using connection string and <see cref="DBProvider"/>.
+        ///// </summary>
+        ///// <param name="owner"></param>
+        ///// <param name="cacheName"></param>
+        ///// <param name="connection"></param>
+        ///// <param name="providerDb"></param>
+        //public DataCache(DbCache owner,string cacheName, string connection, DBProvider providerDb)
+        //    : this(cacheName)
+        //{
+        //    Owner = owner;
+        //    _DbContext = new DbContext(connection, providerDb);
+        //}
  
 
         /// <summary>
@@ -222,21 +236,22 @@ namespace Nistec.Caching.Data
             : this(cacheName)
         {
             Owner = owner;
-            _DbContext = new DbContext(connectionKey);
+            ConnectionKey = connectionKey;
+            //_DbContext = new DbContext(connectionKey);
         }
  
-        /// <summary>
-        /// Initialize a new instance of data cache using <see cref="AutoDb"/>.
-        /// </summary>
-        /// <param name="owner"></param>
-        /// <param name="cacheName"></param>
-        /// <param name="dalDB"></param>
-        public DataCache(DbCache owner, string cacheName, AutoDb dalDB)
-            : this(cacheName)
-        {
-            Owner = owner;
-            _DbContext = new DbContext( dalDB.Connection.ConnectionString, dalDB.DBProvider);
-        }
+        ///// <summary>
+        ///// Initialize a new instance of data cache using <see cref="AutoDb"/>.
+        ///// </summary>
+        ///// <param name="owner"></param>
+        ///// <param name="cacheName"></param>
+        ///// <param name="dalDB"></param>
+        //public DataCache(DbCache owner, string cacheName, AutoDb dalDB)
+        //    : this(cacheName)
+        //{
+        //    Owner = owner;
+        //    _DbContext = new DbContext( dalDB.Connection.ConnectionString, dalDB.DBProvider);
+        //}
 
         /// <summary>
         /// Synchronize DataCache
@@ -246,7 +261,7 @@ namespace Nistec.Caching.Data
         {
             if (initilized)
                 return;
-            this._DbContext = cache.Db;
+            //this._DbContext = cache.Db;
             this.DS = cache.DataSource;
 
             this._CacheName = cache._CacheName;
@@ -349,7 +364,7 @@ namespace Nistec.Caching.Data
                 }
                 if (useWatcher)
                 {
-                    DbWatcher.CreateTableWatcher(this.Db);
+                    DbWatcher.CreateTableWatcher(this.ConnectionKey);
                 }
             }
             catch (Exception ex)
@@ -385,7 +400,7 @@ namespace Nistec.Caching.Data
             {
 
                 DataTable dt = null;
-                using (IDbCmd dbCmd = Db.NewCmd())
+                using (IDbCmd dbCmd = DbFactory.Create(ConnectionKey))// Db.NewCmd())
                 {
                     dt = dbCmd.ExecuteDataTable(item.EntityName, "SELECT * FROM " + item.ViewName, false);
                 }
@@ -464,7 +479,7 @@ namespace Nistec.Caching.Data
                 
             }
             this._ClientId=null;
-            this._DbContext = null;
+            //this._DbContext = null;
             this._CacheName = null;
             this._TableWatcherName = null;
             this.CacheName = null;
@@ -492,7 +507,7 @@ namespace Nistec.Caching.Data
         public int CreateTableWatcher(string tableWatcherName)
         {
             _TableWatcherName = tableWatcherName;
-            return DbWatcher.CreateTableWatcher(this.Db, tableWatcherName);
+            return DbWatcher.CreateTableWatcher(this.ConnectionKey, tableWatcherName);
         }
         /// <summary>
         /// Add tables to table watcher.
@@ -500,7 +515,7 @@ namespace Nistec.Caching.Data
         /// <param name="Tables"></param>
         public void CreateTablesTrigger(params string[] Tables)
         {
-            DbWatcher.CreateTablesTrigger(this.Db, Tables, TableWatcherName);
+            DbWatcher.CreateTablesTrigger(this.ConnectionKey, Tables, TableWatcherName);
         }
         /// <summary>
         /// Create tables trigger.
@@ -508,7 +523,7 @@ namespace Nistec.Caching.Data
         public void CreateTablesTrigger()
         {
             string[] Tables = this._SyncTables.GetTablesTrigger();
-            DbWatcher.CreateTablesTrigger(this.Db, Tables, TableWatcherName);
+            DbWatcher.CreateTablesTrigger(this.ConnectionKey, Tables, TableWatcherName);
         }
         /// <summary>
         /// Create tables trigger.
@@ -525,7 +540,7 @@ namespace Nistec.Caching.Data
             {
                 CreateTableWatcher(tableWatcherName);
             }
-            DbWatcher.CreateTablesTrigger(this.Db, Tables, TableWatcherName);
+            DbWatcher.CreateTablesTrigger(this.ConnectionKey, Tables, TableWatcherName);
         }
         
         /// <summary>
@@ -538,11 +553,11 @@ namespace Nistec.Caching.Data
                 return;
 
             intervalSeconds = CacheDefaults.GetValidIntervalSeconds(intervalSeconds);
-           
+
             if (_SyncOption == SyncOption.Auto)
             {
-
-                CreateTablesTrigger(true, _TableWatcherName);
+                if (CacheSettings.EnableSyncTypeEventTrigger)
+                    CreateTablesTrigger(true, _TableWatcherName);
 
                 DataSyncEntity[] items = _SyncTables.GetItems();
                 if (items != null)
@@ -556,7 +571,9 @@ namespace Nistec.Caching.Data
 
                     }
                 }
+
                 _CacheSynchronize.Start(intervalSeconds);
+
             }
             OnCacheStateChanged(EventArgs.Empty);
         }
@@ -620,7 +637,7 @@ namespace Nistec.Caching.Data
         {
             try
             {
-                using (IDbCmd dbCmd = this.Db.NewCmd())
+                using (IDbCmd dbCmd = DbFactory.Create(ConnectionKey))//this.Db.NewCmd())
                 {
                     foreach (DataTable dt in DS.Tables)
                     {
@@ -875,7 +892,7 @@ namespace Nistec.Caching.Data
         {
      
             int res = 0;
-            using (IDbCmd dbCmd = this.Db.NewCmd())
+            using (IDbCmd dbCmd = DbFactory.Create(ConnectionKey))//this.Db.NewCmd())
             {
                 foreach (DataTable dt in DS.Tables)
                 {
@@ -904,7 +921,7 @@ namespace Nistec.Caching.Data
                 return 0;
 
             int res = 0;
-            using (IDbCmd dbCmd = this.Db.NewCmd())
+            using (IDbCmd dbCmd = DbFactory.Create(ConnectionKey))//this.Db.NewCmd())
             {
                 res = dbCmd.Adapter.UpdateChanges(dt);
             }

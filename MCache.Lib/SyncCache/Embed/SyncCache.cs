@@ -255,7 +255,7 @@ namespace Nistec.Caching.Sync.Embed
             return _SyncBag.GetItems(); 
         }
         
-         
+         /*
         /// <summary>
         /// Get the count of all items in all cref="ISyncItem"/> items in cache.
         /// </summary>
@@ -276,6 +276,7 @@ namespace Nistec.Caching.Sync.Embed
             }
             return list;
         }
+        */
 
         /// <summary>
         /// Get the count of all items in all cref="ISyncItem"/> items in cache.

@@ -23,6 +23,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Collections;
+using Nistec.Caching.Data;
 
 namespace Nistec.Caching.Sync
 {
@@ -36,4 +37,9 @@ namespace Nistec.Caching.Sync
     {
         IDictionary Items { get; }
     }
+
+    //internal interface ISyncStream
+    //{
+    //    void ReloadSyncItem(DataSyncEntity entity); 
+    //}
 }

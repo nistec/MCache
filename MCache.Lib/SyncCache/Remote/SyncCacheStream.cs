@@ -52,8 +52,66 @@ namespace Nistec.Caching.Sync.Remote
     /// in run time without any interruption in process.
     /// When problem was occured during the sync process , the item, will stay as the original item.    
     /// </summary>
-    public class SyncCacheStream : SyncCacheBase, IDisposable
+    public class SyncCacheStream : SyncCacheBase, IDisposable//,ISyncStream
     {
+
+        ///// <summary>
+        ///// ReloadSyncItem
+        ///// </summary>
+        ///// <param name="entity"></param>
+        //public void ReloadSyncItem(DataSyncEntity entity) 
+        //{
+        //    try
+        //    {
+        //        if (entity == null)
+        //        {
+        //            throw new ArgumentNullException("SyncItem.DataSyncEntity.entity");
+        //        }
+        //        if (entity.SyncEntity == null)
+        //        {
+        //            throw new ArgumentNullException("SyncItem.DataSyncEntity.SyncEntity");
+        //        }
+
+        //        entity.SyncEntity.ValidateSyncEntity();
+
+        //        SyncItemStream<EntityStream> item = new SyncItemStream<EntityStream>(entity.SyncEntity, true);
+
+        //        while (!item.IsReady)
+        //        {
+        //            if (item.IsTimeout)
+        //            {
+        //                throw new TimeoutException("SyncItemStream timeout error: " + entity.EntityName);
+        //            }
+        //            Thread.Sleep(100);
+        //        }
+        //        item.Validate();
+
+        //        var dbCopy = DataCacheCopy();
+        //        var bagCopy = BagCopy();
+
+        //        //var bagCopy = new SyncBagStream(this.CacheName, this);
+
+        //        dbCopy.AddSyncSource(item.ConnectionKey, item.SyncSource, IntervalSeconds, true);
+
+        //        bagCopy.Set(item);
+
+        //        _DataCache.Reload(dbCopy);
+
+        //        Reload(bagCopy);
+
+        //        _DataCache.Start(IntervalSeconds);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        string entityName = "";
+        //        if (!(ex is ArgumentNullException))
+        //        {
+        //            entityName = entity.EntityName;
+        //        }
+        //        CacheLogger.Logger.LogAction(CacheAction.SyncItem, CacheActionState.Error, string.Format("SyncItem.SyncEntity copy {0} error: {1}", entityName, ex.Message));
+        //    }
+
+        //}
 
         internal void Reload(SyncBagStream copy)
         {
@@ -64,68 +122,92 @@ namespace Nistec.Caching.Sync.Remote
         {
             return new SyncBagStream(CacheName,this);
         }
-        
 
-        internal override void LoadSyncItems(XmlNode node, bool copy)
+        int synchronized;
+        internal override void LoadSyncItems(XmlNode node, bool EnableAsyncTask)
         {
             if (node == null)
                 return;
+            
+            bool hasChange = false;
             try
             {
-                XmlNodeList list = node.ChildNodes;
-                if (list == null)
-                    return;
-
-                if (copy)
+                if (0 == Interlocked.Exchange(ref synchronized, 1))
                 {
-                    var dbCopy = DataCacheCopy();
-                    var bagCopy = BagCopy();
+                    XmlNodeList list = node.ChildNodes;
+                    if (list == null)
+                        return;
 
-                    foreach (XmlNode n in list)
+                    if (EnableAsyncTask)
                     {
-                        if (n.NodeType == XmlNodeType.Comment)
-                            continue;
-                        SyncEntity sync = new SyncEntity(new XmlTable(n));
-                        if (sync.SyncType == SyncType.Remove)
+                        var dbCopy = DataCacheCopy();
+                        var bagCopy = BagCopy();
+                        //var syncBox = SyncBox.Instance;
+
+                        foreach (XmlNode n in list)
                         {
-                            if (RemoveItem(sync.EntityName))
+                            if (n.NodeType == XmlNodeType.Comment)
+                                continue;
+                            SyncEntity sync = new SyncEntity(new XmlTable(n));
+                            if (sync.SyncType == SyncType.Remove)
                             {
-                                bagCopy.RemoveItem(sync.EntityName);
-                                dbCopy.RemoveSyncSource(sync.ConnectionKey, sync.EntityName);
+                                if (RemoveItem(sync.EntityName))
+                                {
+                                    this._DataCache.RemoveSyncSource(sync.ConnectionKey, sync.EntityName);
+                                    this._SyncBag.RemoveItem(sync.EntityName);
+                                    hasChange = true;
+                                }
+                            }
+                            else
+                            {
+                                if (!this._DataCache.SyncSourceExists(sync))
+                                {
+                                    AddItem(sync, dbCopy, bagCopy);
+                                    hasChange = true;
+                                }
+
                             }
                         }
-                        else
+                        if (hasChange)
                         {
-                            AddItem(sync, dbCopy, bagCopy);
+                            lock (ThreadLock)
+                            {
+                                _DataCache.Reload(dbCopy);
+
+                                Reload(bagCopy);
+
+                                _DataCache.Start(IntervalSeconds);
+                            }
                         }
                     }
-
-                    _DataCache.Reload(dbCopy);
-
-                    Reload(bagCopy);
-
-                    _DataCache.Start(IntervalSeconds);
-
-                }
-                else
-                {
-
-                    if (_reloadOnChange)
+                    else
                     {
-                        Clear(true);
-                    }
-                    foreach (XmlNode n in list)
-                    {
-                        if (n.NodeType == XmlNodeType.Comment)
-                            continue;
 
-                        AddItem(new XmlTable(n), false);
+                        if (_reloadOnChange)
+                        {
+                            Clear(true);
+                        }
+                        foreach (XmlNode n in list)
+                        {
+                            if (n.NodeType == XmlNodeType.Comment)
+                                continue;
+
+                            AddItem(new XmlTable(n), false);
+                        }
                     }
                 }
             }
             catch (Exception ex)
             {
+                CacheLogger.Logger.LogAction(CacheAction.SyncItem, CacheActionState.Error, string.Format("LoadSyncItems error: {0}", ex.Message));
+
                 OnError("LoadSyncItems error " + ex.Message);
+            }
+            finally
+            {
+                //Release the lock
+                Interlocked.Exchange(ref synchronized, 0);
+
             }
         }
 
@@ -194,10 +276,7 @@ namespace Nistec.Caching.Sync.Remote
             }
         }
 
-      
-
-
-        internal override void AddItem(SyncEntity entity) //where T : IEntityItem
+         internal override void AddItem(SyncEntity entity) //where T : IEntityItem
         {
             if (entity == null)
             {
@@ -303,7 +382,7 @@ namespace Nistec.Caching.Sync.Remote
            return _SyncBag.GetItems();
         }
 
-
+        /*
         /// <summary>
         /// Get the count of all items in all cref="ISyncItem"/> items in cache.
         /// </summary>
@@ -325,6 +404,7 @@ namespace Nistec.Caching.Sync.Remote
             }
             return list;
         }
+        */
 
         /// <summary>
         /// Get the size of all items in all cref="ISyncItem"/> items in cache.
@@ -520,6 +600,14 @@ namespace Nistec.Caching.Sync.Remote
             if (syncItem == null)
                 return null;
             return syncItem.GetEntityItems(false);
+        }
+
+        internal int GetEntityItemsCountInternal(MessageStream message)
+        {
+            var syncItem = GetItem(message.Key);
+            if (syncItem == null)
+                return 0;
+            return syncItem.GetEntityItemsCount();
         }
 
         internal string[] GetEntityKeysInternal(MessageStream message)

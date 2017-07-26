@@ -24,17 +24,19 @@ using System.Linq;
 using System.Text;
 using Nistec.Caching.Sync;
 using System.Collections;
+using System.Collections.Concurrent;
 
 namespace Nistec.Caching.Data
 {
+
     /// <summary>
     /// Represent the  HashSet of <see cref="DataSyncEntity"/>  data sync entities in cache.
     /// </summary>
-    public class DataSyncList :IDisposable
+    public class DataSyncList : IDisposable
     {
-        static object SyncRoot = new object();
-
-        HashSet<DataSyncEntity> m_data;
+        //static object SyncRoot = new object();
+  
+        ConcurrentDictionary<string, DataSyncEntity> m_data;
 
         internal IDataCache Owner;
 
@@ -44,7 +46,7 @@ namespace Nistec.Caching.Data
         /// <param name="owner"></param>
         public DataSyncList(IDataCache owner)
         {
-            m_data = new HashSet<DataSyncEntity>();
+            m_data = new ConcurrentDictionary<string, DataSyncEntity>();
             Owner = owner;
         }
 
@@ -54,7 +56,7 @@ namespace Nistec.Caching.Data
         /// </summary>
         ~DataSyncList()
         {
-             Dispose(false);
+            Dispose(false);
         }
         /// <summary>
         /// Release all resources from current instance.
@@ -88,13 +90,7 @@ namespace Nistec.Caching.Data
         /// <returns></returns>
         public DataSyncEntity[] GetItems()
         {
-            DataSyncEntity[] items = null;
-
-            lock (SyncRoot)
-            {
-                items = m_data.ToArray();
-            }
-            return items;
+            return m_data.Values.ToArray();
         }
         /// <summary>
         /// Returns a number that represents how many elements in the specified sequence satisfy a condition.
@@ -103,10 +99,7 @@ namespace Nistec.Caching.Data
         /// <returns></returns>
         public int GetItemsCount(SyncType st)
         {
-            lock (SyncRoot)
-            {
-                return m_data.Count(p => p.SyncType == st);
-            }
+            return m_data.Values.Count(p => p.SyncType == st);
         }
         /// <summary>
         /// Get all items with SyncType.Event as array of <see cref="DataSyncEntity"/>.
@@ -114,13 +107,8 @@ namespace Nistec.Caching.Data
         /// <returns></returns>
         public DataSyncEntity[] GetEventsItems()
         {
-            DataSyncEntity[] items = null;
-
-            lock (SyncRoot)
-            {
-                items = m_data.Where(p => p.SyncType == SyncType.Event).ToArray();
-            }
-            return items;
+            var items = m_data.Values.Where(p => p.SyncType == SyncType.Event);
+            return (items == null) ? null : items.ToArray();
         }
         /// <summary>
         /// Get all items with SyncType.Daily or SyncType.Interval as array of <see cref="DataSyncEntity"/>.
@@ -128,14 +116,11 @@ namespace Nistec.Caching.Data
         /// <returns></returns>
         public DataSyncEntity[] GetIntervalItems()
         {
-            DataSyncEntity[] items = null;
-
-            lock (SyncRoot)
-            {
-                items = m_data.Where(p => p.SyncType == SyncType.Daily || p.SyncType == SyncType.Interval).ToArray();
-            }
-            return items;
+            var items= m_data.Values.Where(p => p.SyncType == SyncType.Daily || p.SyncType == SyncType.Interval);
+            return (items == null) ? null : items.ToArray();
+               
         }
+
         /// <summary>
         /// Get specified item in list with entity name.
         /// </summary>
@@ -144,24 +129,20 @@ namespace Nistec.Caching.Data
         public DataSyncEntity Get(string entityName)
         {
 
-            DataSyncEntity[] items = GetItems();
-            if (items == null)
-            {
-                return null;
-            }
-            foreach (DataSyncEntity o in items)
-            {
-                if (o.EntityName.Equals(entityName))
-                    return o;
-            }
-            return null;
+            DataSyncEntity entity;
+            m_data.TryGetValue(entityName, out entity);
+            return entity;
+
         }
         /// <summary>
         /// Returns a number that represents how many elements in the list.
         /// </summary>
         public int Count
         {
-            get { lock (SyncRoot) { return m_data.Count; } }
+            get
+            {
+                return m_data.Count;
+            }
         }
 
         internal int Add(SyncEntity entity)
@@ -181,21 +162,14 @@ namespace Nistec.Caching.Data
             {
                 return 0;
             }
+           
 
-            lock (SyncRoot)
-            {
-                if (m_data.Contains(syncsource))
-                {
-                    m_data.Remove(syncsource);
-                }
+            m_data[syncsource.EntityName] = syncsource;
 
-                m_data.Add(syncsource);
-
-                return m_data.Count - 1;
-            }
+            return m_data.Count - 1;
 
         }
-     
+
         /// <summary>
         /// Registered All Tables that has sync option by event.
         /// </summary>
@@ -210,7 +184,7 @@ namespace Nistec.Caching.Data
             {
                 if (o.SyncType == SyncType.Event)
                 {
-                    o.Register(Owner);
+                    o.RegisterAsync(Owner);
                 }
             }
         }
@@ -226,7 +200,7 @@ namespace Nistec.Caching.Data
 
             DataSyncEntity[] items = GetEventsItems();
 
-            if (items != null)
+            if (items != null && items.Length>0)
             {
                 foreach (DataSyncEntity o in items)
                 {
@@ -259,7 +233,7 @@ namespace Nistec.Caching.Data
             return list.ToArray();
         }
 
-   
+
         /// <summary>
         /// Add a new <see cref="DataSyncEntity"/> item to the list.
         /// </summary>
@@ -268,18 +242,21 @@ namespace Nistec.Caching.Data
         public void AddSafe(DataSyncEntity entity, bool replaceExists)
         {
 
+            //m_data.AddOrUpdate(entity.EntityName, entity, (key, oldValue) => entity);
 
-            lock (SyncRoot)
-            {
-                if (!m_data.Contains(entity))
-                {
-                    m_data.Add(entity);
-                }
-               else if (replaceExists)
-                {
-                    m_data.Add(entity);
-                }
-            }
+            m_data[entity.EntityName] = entity;
+
+            //lock (SyncRoot)
+            //{
+            //    if (!m_data.Contains(entity))
+            //    {
+            //        m_data.Add(entity);
+            //    }
+            //    else if (replaceExists)
+            //    {
+            //        m_data.Add(entity);
+            //    }
+            //}
         }
         /// <summary>
         /// Remove item from list.
@@ -288,14 +265,9 @@ namespace Nistec.Caching.Data
         /// <returns></returns>
         public bool Remove(DataSyncEntity entity)
         {
-            lock (SyncRoot)
-            {
-                if (m_data.Contains(entity))
-                {
-                   return m_data.Remove(entity);
-                }
-            }
-            return false;
+            DataSyncEntity syncentity;
+            return m_data.TryRemove(entity.EntityName, out syncentity);
+
         }
 
         /// <summary>
@@ -305,10 +277,13 @@ namespace Nistec.Caching.Data
         /// <returns></returns>
         public int Remove(string entityName)
         {
-            lock (SyncRoot)
+            DataSyncEntity syncentity;
+            if( m_data.TryRemove(entityName, out syncentity))
             {
-                return m_data.RemoveWhere(d => d.EntityName == entityName);
+                return 1;
             }
+            return 0;
+
         }
 
         /// <summary>
@@ -318,12 +293,25 @@ namespace Nistec.Caching.Data
         /// <returns></returns>
         public bool Contains(DataSyncEntity entity)
         {
-            lock (SyncRoot)
-            {
-                return m_data.Contains(entity);
-            }
+            return m_data.ContainsKey(entity.EntityName);
+
+            
         }
-        
+
+        /// <summary>
+        /// Determines whether a HashSet list contains the specified element.
+        /// </summary>
+        /// <param name="entity"></param>
+        /// <returns></returns>
+        public bool IsExists(SyncEntity entity)
+        {
+            var item = Get(entity.EntityName);
+            if (item == null)
+                return false;
+
+            return item.SyncEntity.IsEquals(entity);
+
+        }
 
         /// <summary>
         /// Determines whether a HashSet list contains the specified element.
@@ -332,16 +320,8 @@ namespace Nistec.Caching.Data
         /// <returns></returns>
         public bool Contains(string entityName)
         {
-            if (m_data.Count == 0)
-                return false;
-            DataSyncEntity[] items = GetItems();
-            
-            foreach (DataSyncEntity o in items)
-            {
-                if (o.EntityName.Equals(entityName))
-                    return true;
-            }
-            return false;
+            return m_data.ContainsKey(entityName);
+
         }
 
         /// <summary>
@@ -351,19 +331,13 @@ namespace Nistec.Caching.Data
         /// <returns></returns>
         public bool IsExists(string viewName)
         {
-            if (this.Count == 0)
-                return false;
-            DataSyncEntity[] items = GetItems();
 
-            foreach (DataSyncEntity o in items)
-            {
-                if (o.ViewName.Equals(viewName))
-                    return true;
-            }
-            return false;
+            var items = m_data.Values.Where(p => p.ViewName == viewName);
+            return (items == null) ? false : items.Count() >0 ;
+
         }
 
-     
+
         /// <summary>
         /// Get item from list using the DataSyncEntity.ViewName.
         /// </summary>
@@ -371,16 +345,9 @@ namespace Nistec.Caching.Data
         /// <returns></returns>
         public DataSyncEntity GetItemByView(string viewName)
         {
-            if (this.Count == 0)
-                return null;
-            DataSyncEntity[] items = GetItems();
+            return m_data.Values.Where(p => p.ViewName == viewName).FirstOrDefault();
 
-            foreach (DataSyncEntity o in items)
-            {
-                if (o.ViewName.Equals(viewName))
-                    return o;
-            }
-            return null;
         }
     }
+
 }

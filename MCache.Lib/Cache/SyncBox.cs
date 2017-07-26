@@ -30,6 +30,7 @@ using Nistec.Caching.Sync;
 using System.Threading;
 using System.Threading.Tasks;
 using Nistec.Caching.Data;
+using Nistec.Caching.Config;
 
 namespace Nistec.Caching
 {
@@ -78,11 +79,13 @@ namespace Nistec.Caching
 
         #region ctor
 
-        public SyncBox(bool autoStart, bool isRemote)
+        public SyncBox(bool autoStart, bool isRemote)//, int intervalSeconds=60)
         {
+            
             m_SynBox = new ConcurrentQueue<SyncBoxTask>();
             IsRemote = isRemote;
-            this.Initialized = true;
+            this.IntervalSeconds = CacheSettings.SyncBoxInterval;
+            //this.Initialized = true;
             this.LogAction(CacheAction.General, CacheActionState.None, "Initialized SynBox");
 
             if (autoStart)
@@ -134,7 +137,89 @@ namespace Nistec.Caching
 
         #region Timer Sync
 
-       
+        private ThreadTimer SettingTimer;
+
+        public int IntervalSeconds
+        {
+            get;
+            internal set;
+        }
+        public DateTime LastSyncTime
+        {
+            get;
+            private set;
+        }
+        public CacheSyncState SyncState
+        {
+            get;
+            private set;
+        }
+
+        public DateTime NextSyncTime
+        {
+            get
+            {
+                return this.LastSyncTime.AddSeconds((double)this.IntervalSeconds);
+            }
+        }
+        internal void SetCacheSyncState(CacheSyncState state)
+        {
+            this.SyncState = state;
+        }
+
+        private void SettingTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+        {
+            if (this.Initialized && (this.SyncState == CacheSyncState.Idle))
+            {
+                this.LastSyncTime = DateTime.Now;
+                this.OnSyncStarted(EventArgs.Empty);
+                DateTime time = this.LastSyncTime.AddSeconds((double)this.IntervalSeconds);
+                //this.NextSyncTime = time;
+            }
+        }
+
+        public void Start()
+        {
+
+            if (!this.Initialized)
+            {
+                this.SyncState = CacheSyncState.Idle;
+                this.Initialized = true;
+                this.InitializeTimer();
+            }
+        }
+
+        public void Stop()
+        {
+            if (this.Initialized)
+            {
+                this.Initialized = false;
+                this.SyncState = CacheSyncState.Idle;
+                this.DisposeTimer();
+            }
+        }
+
+        private void DisposeTimer()
+        {
+            this.SettingTimer.Stop();
+            this.SettingTimer.Enabled = false;
+            this.SettingTimer.Elapsed -= new System.Timers.ElapsedEventHandler(this.SettingTimer_Elapsed);
+            this.SettingTimer = null;
+            this.LogAction(CacheAction.General, CacheActionState.None, "Dispose SyncBox Timer");
+        }
+
+        private void InitializeTimer()
+        {
+            this.SettingTimer = new ThreadTimer((long)(this.IntervalSeconds * 1000));
+            this.SettingTimer.AutoReset = true;
+            this.SettingTimer.Elapsed += new System.Timers.ElapsedEventHandler(this.SettingTimer_Elapsed);
+            this.SettingTimer.Enabled = true;
+            this.SettingTimer.Start();
+            this.LogAction(CacheAction.General, CacheActionState.None, "Initialized SyncBox Interval:{0}", new string[] { this.SettingTimer.Interval.ToString() });
+        }
+
+
+       /*
         public void Start()
         {
 
@@ -171,9 +256,82 @@ namespace Nistec.Caching
             }
             this.LogAction(CacheAction.General, CacheActionState.None, "Initialized SyncBox Not keep alive");
         }
+        */
+
+        #endregion
+
+
+        #region events
+
+        public event EventHandler SyncStarted;
+
+        public event SyncEntityTimeCompletedEventHandler SyncAccepted;
+
+        protected virtual void OnSyncStarted(EventArgs e)
+        {
+            if (this.SyncStarted != null)
+            {
+                this.SyncStarted(this, e);
+            }
+
+            this.OnSyncDequeue();
+        }
+
+        protected virtual void OnSyncAccepted(SyncEntityTimeCompletedEventArgs e)
+        {
+            if (this.SyncAccepted != null)
+            {
+                this.SyncAccepted(this, e);
+            }
+            else
+            {
+                e.Item.DoAsync();
+            }
+        }
+
+        protected virtual void OnSyncDequeue()
+        {
+            try
+            {
+                SyncBoxTask syncTask = null;
+                if (m_SynBox.TryDequeue(out syncTask))
+                {
+                    OnSyncAccepted(new SyncEntityTimeCompletedEventArgs(syncTask));
+                }
+            }
+            catch (Exception ex)
+            {
+                this.LogAction(CacheAction.SyncTime, CacheActionState.Error, "SyncBox OnSyncDequeue error :" + ex.Message);
+
+            }
+        }
+
+        #endregion
+
+        #region Sync
+
+
+
+        /*
+        public void DoSyncAll()
+        {
+            int count= this.Count;
+            if (count > 0)
+            {
+                this.LogAction(CacheAction.General, CacheActionState.Debug, "SyncBox DoSyncAll items: " + count.ToString());
+                int i = 0;
+                while (i < count)
+                {
+                    OnSyncTask();
+                    i++;
+                    Thread.Sleep(100);
+                }
+            }
+        }
 
         public void DoSync()
         {
+            this.LogAction(CacheAction.General, CacheActionState.Debug, "SyncBox DoSync...");
             OnSyncTask();
         }
 
@@ -187,9 +345,7 @@ namespace Nistec.Caching
                     SyncBoxTask syncTask = null;
                     if (m_SynBox.TryDequeue(out syncTask))
                     {
-                       
                         syncTask.DoSync();
-                       
                     }
                 }
             }
@@ -204,7 +360,7 @@ namespace Nistec.Caching
                 Interlocked.Exchange(ref synchronized, 0);
             }
         }
-
+        */
         #endregion
 
         #region LogAction

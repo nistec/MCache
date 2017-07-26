@@ -439,6 +439,7 @@ namespace Nistec.Caching.Server
                 case SyncCacheCmd.GetEntityKeys:
                 case SyncCacheCmd.GetAllEntityNames:
                 case SyncCacheCmd.GetItemsReport:
+                case SyncCacheCmd.GetEntityItemsCount:
                     return AgentManager.SyncCache.ExecRemote(message);
 
                 case SessionCmd.Reply:

@@ -36,7 +36,7 @@ namespace Nistec.Caching.Server.Pipe
     /// <summary>
     /// Represent a sync pipe server listner.
     /// </summary>
-    public class PipeSyncServer : PipeServer<CacheMessage>//PipeServerCache
+    public class PipeSyncServer : PipeServer<CacheMessage>
     {
    
         #region override

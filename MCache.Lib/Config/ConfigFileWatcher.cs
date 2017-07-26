@@ -50,6 +50,7 @@ namespace Nistec.Caching.Config
         {
             ConfigurationManager.RefreshSection("appSettings");
             ConfigurationManager.RefreshSection("connectionStrings");
+            Netlog.Info("ConfigFileWatcher FileChanged");
         }
 
         bool _IsListen;

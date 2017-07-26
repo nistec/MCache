@@ -30,6 +30,7 @@ using Nistec.Caching.Remote;
 using Nistec.Data.Entities;
 using Nistec.Data.Factory;
 using System.Threading;
+using Nistec.Caching.Config;
 
 namespace Nistec.Caching.Sync
 {
@@ -137,10 +138,27 @@ namespace Nistec.Caching.Sync
         #region Ctor
 
 
-        private SyncDb(string cacheName)
+        //private SyncDb(string connectionKey)
+        //{
+        //     SyncState = CacheSyncState.Idle;
+        //     _storageName = connectionKey;
+        //    _ClientId = Environment.MachineName + "$" + _storageName;
+        //    _TableWatcherName = DbWatcher.DefaultWatcherName;
+        //    initilized = false;
+        //    _SyncTables = new DataSyncList(this);
+        //    _CacheSynchronize = new CacheSynchronizer(this);
+        //    _state = DataCacheState.Closed;
+        //    _SyncOption = SyncOption.Manual;
+        //}
+
+        /// <summary>
+        /// SyncDb Ctor 
+        /// </summary>
+        /// <param name="connectionKey"></param>
+        public SyncDb(string connectionKey)
         {
-             SyncState = CacheSyncState.Idle;
-            _storageName = cacheName;
+            SyncState = CacheSyncState.Idle;
+            _storageName = connectionKey;
             _ClientId = Environment.MachineName + "$" + _storageName;
             _TableWatcherName = DbWatcher.DefaultWatcherName;
             initilized = false;
@@ -148,30 +166,33 @@ namespace Nistec.Caching.Sync
             _CacheSynchronize = new CacheSynchronizer(this);
             _state = DataCacheState.Closed;
             _SyncOption = SyncOption.Manual;
-        }
-
-        /// <summary>
-        /// SyncDb Ctor 
-        /// </summary>
-        /// <param name="cacheName"></param>
-        /// <param name="connection"></param>
-        /// <param name="providerDb"></param>
-        public SyncDb(string cacheName, string connection, DBProvider providerDb)
-            : this(cacheName)
-        {
-            _DbContext = new DbContext(connection, providerDb);
+            //_DbContext = new DbContext(connectionKey);
         }
  
-        /// <summary>
-        /// SyncDb Ctor 
-        /// </summary>
-        /// <param name="cacheName"></param>
-        /// <param name="dalDB"></param>
-        public SyncDb(string cacheName, AutoDb dalDB)
-            : this(cacheName)
-        {
-            _DbContext = new DbContext(dalDB.Connection.ConnectionString, dalDB.DBProvider);
-        }
+
+        ///// <summary>
+        ///// SyncDb Ctor 
+        ///// </summary>
+        ///// <param name="cacheName"></param>
+        ///// <param name="connection"></param>
+        ///// <param name="providerDb"></param>
+        //public SyncDb(string cacheName, string connection, DBProvider providerDb)
+        //    : this(cacheName)
+        //{
+        //    ConnectionKey
+        //    _DbContext = new DbContext(connection, providerDb);
+        //}
+ 
+        ///// <summary>
+        ///// SyncDb Ctor 
+        ///// </summary>
+        ///// <param name="cacheName"></param>
+        ///// <param name="dalDB"></param>
+        //public SyncDb(string connectionName, AutoDb dalDB)
+        //    : this(connectionName)
+        //{
+        //    _DbContext = new DbContext(dalDB.Connection.ConnectionString, dalDB.DBProvider);
+        //}
 
         #endregion ctor
 
@@ -208,7 +229,7 @@ namespace Nistec.Caching.Sync
                 
             }
             this._ClientId=null;
-            this._DbContext = null;
+            //this._DbContext = null;
             this._storageName = null;
             this._TableWatcherName = null;
             this.CacheName = null;
@@ -232,18 +253,18 @@ namespace Nistec.Caching.Sync
         internal int CreateTableWatcher(string tableWatcherName)
         {
             _TableWatcherName = tableWatcherName;
-            return DbWatcher.CreateTableWatcher(this.Db, tableWatcherName);
+            return DbWatcher.CreateTableWatcher(this.ConnectionKey, tableWatcherName);
         }
 
         internal void CreateTablesTrigger(params string[] Tables)
         {
-            DbWatcher.CreateTablesTrigger(this.Db, Tables, TableWatcherName);
+            DbWatcher.CreateTablesTrigger(this.ConnectionKey, Tables, TableWatcherName);
         }
 
         internal void CreateTablesTrigger()
         {
             string[] Tables = this._SyncTables.GetTablesTrigger();
-            DbWatcher.CreateTablesTrigger(this.Db, Tables, TableWatcherName);
+            DbWatcher.CreateTablesTrigger(this.ConnectionKey, Tables, TableWatcherName);
         }
 
         internal void CreateTablesTrigger(bool checkWatcher, string tableWatcherName)
@@ -256,7 +277,7 @@ namespace Nistec.Caching.Sync
             {
                 CreateTableWatcher(tableWatcherName);
             }
-            DbWatcher.CreateTablesTrigger(this.Db, Tables, TableWatcherName);
+            DbWatcher.CreateTablesTrigger(this.ConnectionKey, Tables, TableWatcherName);
         }
 
         /// <summary>
@@ -268,22 +289,28 @@ namespace Nistec.Caching.Sync
             if (initilized)
                 return;
 
-           
+
             if (_SyncOption == SyncOption.Auto)
             {
- 
-                CreateTablesTrigger(true, _TableWatcherName);
+
+                bool enableTrigger = CacheSettings.EnableSyncTypeEventTrigger;
+
+                if (enableTrigger)
+                    CreateTablesTrigger(true, _TableWatcherName);
 
                 DataSyncEntity[] items = _SyncTables.GetItems();
-                if (items != null)
+                if (items != null && items.Length > 0)
                 {
                     foreach (DataSyncEntity source in items)
                     {
                         source.SyncSourceChanged += new SyncDataSourceChangedEventHandler(source_SyncSourceChanged);
-                        
+
                     }
                 }
-                _CacheSynchronize.Start(intervalSeconds);
+
+                //if (enableTrigger)
+                    _CacheSynchronize.Start(intervalSeconds);
+                
             }
             OnCacheStateChanged(EventArgs.Empty);
         }
@@ -318,7 +345,7 @@ namespace Nistec.Caching.Sync
         #endregion
 
         #region Properties
-
+        /*
         IDbContext _DbContext;
         /// <summary>
         /// Get <see cref="IDbContext"/> databse context.
@@ -334,6 +361,21 @@ namespace Nistec.Caching.Sync
         public string ConnectionKey
         {
             get { return Db.ConnectionName; }
+        }
+         */
+
+        public IDbContext Db()
+        {
+            return new DbContext(ConnectionKey);
+        }
+
+        /// <summary>
+        /// Get the connection key for current database. 
+        /// </summary>
+        public string ConnectionKey
+        {
+            get { return _storageName; }
+            //private set;
         }
 
         /// <summary>

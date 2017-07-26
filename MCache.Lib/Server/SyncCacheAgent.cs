@@ -207,6 +207,11 @@ namespace Nistec.Caching.Server
         /// <returns></returns>
         public NetStream ExecRemote(CacheMessage message)
         {
+            if(!this.Initialized)
+            {
+                return CacheEntry.GetAckStream(CacheState.CacheNotReady, message.Command, message.Key);
+            }
+
             CacheState state = CacheState.Ok;
             DateTime requestTime = DateTime.Now;
             try
@@ -251,6 +256,8 @@ namespace Nistec.Caching.Server
                             return message.AsyncTask(() => GetNames(), message.Command);
                     case SyncCacheCmd.GetItemsReport:
                             return message.AsyncTask(() => GetItemsReportInternal(message), message.Command);
+                    case SyncCacheCmd.GetEntityItemsCount:
+                            return message.AsyncTask(() => GetEntityItemsCountInternal(message), message.Command);
                 }
             }
             catch (CacheException ce)

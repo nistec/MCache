@@ -275,6 +275,35 @@ namespace Nistec.Caching.Sync
                 return false;
             return base.Equals(((SyncEntity)obj).EntityName == this.EntityName);
         }
+
+        /// <summary>
+        ///  Determines whether the specified System.Object is equal to the current DataSyncEntity.
+        /// </summary>
+        /// <param name="syncEntity"></param>
+        /// <returns></returns>
+        public bool IsEquals(SyncEntity syncEntity)
+        {
+
+            var syncKey=string.Join(",", syncEntity.EntityKeys);
+            var thisKey=string.Join(",", this.EntityKeys);
+
+            var syncSourceName = string.Join(",", syncEntity.SourceName);
+            var thisSourceName = string.Join(",", this.SourceName);
+
+            var isequal= (syncEntity.EntityName == this.EntityName &&
+                syncEntity.ConnectionKey == this.ConnectionKey &&
+                syncKey == thisKey &&
+                syncEntity.EntityType == this.EntityType &&
+                syncEntity.Interval == this.Interval &&
+                syncSourceName == thisSourceName &&
+                syncEntity.SourceType == this.SourceType &&
+                syncEntity.SyncType == this.SyncType &&
+                syncEntity.ViewName == this.ViewName);
+
+            return isequal;
+        }
+
+
         /// <summary>
         /// Get Serves as a hash function for a particular type.
         /// </summary>
@@ -366,6 +395,7 @@ namespace Nistec.Caching.Sync
             if (EntityKeys == null)
                 throw new ArgumentNullException("SyncEntity.entityKeys");
         }
+        
         
 
         #endregion

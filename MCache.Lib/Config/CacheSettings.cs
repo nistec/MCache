@@ -161,6 +161,8 @@ namespace Nistec.Caching.Config
         /// <summary>EnableDynamic.</summary>
         public readonly static bool EnableDynamic = false;
 
+        /// <summary>EnableSyncTypeEvent.</summary>
+        public readonly static bool EnableSyncTypeEventTrigger = true;
         /// <summary>MaxSize.</summary>
         public readonly static long MaxSize = CacheDefaults.DefaultCacheMaxSize;
         /// <summary>DefaultExpiration.</summary>
@@ -169,6 +171,8 @@ namespace Nistec.Caching.Config
         public readonly static bool RemoveExpiredItemOnSync = true;
         /// <summary>Sync Interval in seconds.</summary>
         public readonly static int SyncInterval = CacheDefaults.DefaultIntervalSeconds;
+        /// <summary>SyncBox Interval in seconds.</summary>
+        public readonly static int SyncBoxInterval = CacheDefaults.DefaultIntervalSeconds;
         /// <summary>SyncOption.</summary>
         public readonly static string SyncOption = "Auto";
         /// <summary>SessionTimeout.</summary>
@@ -257,6 +261,7 @@ namespace Nistec.Caching.Config
             DefaultExpiration = table.Get<int>("DefaultExpiration", 30);
             RemoveExpiredItemOnSync = table.Get<bool>("RemoveExpiredItemOnSync", true);
             SyncInterval = table.Get<int>("SyncInterval", 60);
+            SyncBoxInterval = table.Get<int>("SyncBoxInterval", 60);
             SessionTimeout = table.Get<int>("SessionTimeout", CacheDefaults.DefaultSessionTimeout);
             MaxSessionTimeout = table.Get<int>("MaxSessionTimeout", 1440);
             EnableLog = table.Get<bool>("EnableLog", false);
@@ -274,6 +279,8 @@ namespace Nistec.Caching.Config
             EnableTcpBundle = table.Get<bool>("EnableTcpBundle", false);
             EnablePipeBundle = table.Get<bool>("EnablePipeBundle", false);
             EnableHttpBundle = table.Get<bool>("EnableHttpBundle", false);
+
+            EnableSyncTypeEventTrigger = table.Get<bool>("EnableSyncTypeEventTrigger", true);
 
             //MaxTcpBundlePool = table.Get<int>("MaxTcpBundlePool", 0);
 

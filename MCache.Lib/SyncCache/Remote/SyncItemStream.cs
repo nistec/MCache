@@ -36,6 +36,7 @@ using Nistec.Caching.Data;
 using Nistec.Caching.Server;
 using Nistec.Threading;
 using Nistec.IO;
+using System.Collections.Concurrent;
 
 namespace Nistec.Caching.Sync.Remote
 {
@@ -150,17 +151,18 @@ namespace Nistec.Caching.Sync.Remote
 
         #region Properties
 
-        Dictionary<string, EntityStream> _Items;
+        ConcurrentDictionary<string, EntityStream> _Items;
+
         /// <summary>
         /// Get Entities Storage
         /// </summary>
-        public Dictionary<string, EntityStream> Items
+        public ConcurrentDictionary<string, EntityStream> Items
         {
             get
             {
                 if (_Items == null)
                 {
-                    _Items = new Dictionary<string, EntityStream>();
+                    _Items = new ConcurrentDictionary<string, EntityStream>();
                 }
                 return _Items;
             }
@@ -214,15 +216,24 @@ namespace Nistec.Caching.Sync.Remote
         }
 
         /// <summary>
+        /// Get entities items count.
+        /// </summary>
+        /// <returns></returns>
+        public int GetEntityItemsCount()
+        {
+            return Items.Count;
+        }
+
+
+        /// <summary>
         /// Get entity values.
         /// </summary>
         /// <returns></returns>
         public EntityStream[] GetEntityValues()
         {
-            lock (syncLock)
-            {
+           
                 return Items.Values.ToArray();
-            }
+     
         }
 
         /// <summary>
@@ -240,6 +251,7 @@ namespace Nistec.Caching.Sync.Remote
             return size;
         }
 
+        /*
         /// <summary>
         /// Get Values
         /// </summary>
@@ -247,7 +259,7 @@ namespace Nistec.Caching.Sync.Remote
         {
             get
             {
-                return Items.Values;
+                return (ICollection)Items.Values;
             }
         }
 
@@ -258,9 +270,10 @@ namespace Nistec.Caching.Sync.Remote
         {
             get
             {
-                return Items.Keys;
+                return (ICollection)Items.Keys;
             }
         }
+        */
 
         /// <summary>
         /// Get Items count
@@ -323,13 +336,10 @@ namespace Nistec.Caching.Sync.Remote
             }
             EntityStream entity = null;
 
-            lock (syncLock)
-            {
                 if (Items.TryGetValue(key, out entity))
                 {
                     return entity;
                 }
-            }
 
             return null;
         }
@@ -388,7 +398,7 @@ namespace Nistec.Caching.Sync.Remote
             var watch = Stopwatch.StartNew();
             long totalSize = 0;
             int currentCount = Count;
-            Dictionary<string, EntityStream> items = null;
+            ConcurrentDictionary<string, EntityStream> items = null;
             string entityName = null;
 
             try
@@ -415,6 +425,7 @@ namespace Nistec.Caching.Sync.Remote
                 }
 
                 AgentManager.SyncCache.SizeExchage(_Size, totalSize,currentCount, Count, false);//true);
+
                 _Size = totalSize;
 
                 watch.Stop();
@@ -438,10 +449,8 @@ namespace Nistec.Caching.Sync.Remote
         /// <returns></returns>
         internal override bool Contains(string key)
         {
-            lock (syncLock)
-            {
+            
                 return Items.ContainsKey(key);
-            }
 
         }
         #endregion

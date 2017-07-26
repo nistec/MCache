@@ -50,7 +50,7 @@ namespace Nistec.Caching.Sync
     /// that uses <see cref="SysFileWatcher"/> which Listens to the file system change notifications and raises events when a
     /// file is changed.
     /// </summary>
-    public abstract class SyncCacheBase :IDisposable
+    public abstract class SyncCacheBase : IDisposable
     {
         #region members
 
@@ -58,6 +58,7 @@ namespace Nistec.Caching.Sync
 
         internal SyncDbCache _DataCache;
         internal SysFileWatcher _SyncFileWatcher;
+        internal SyncBox _SyncBox;
 
         internal bool _initialized = false;
         internal bool _reloadOnChange = false;
@@ -92,7 +93,20 @@ namespace Nistec.Caching.Sync
              m_cacheName = cacheName;
             _DataCache = new SyncDbCache(cacheName);
             _DataCache.FunctionSyncChanged = OnFunctionSyncChanged;
+
+            _SyncBox = SyncBox.Instance;
+            _SyncBox.SyncAccepted += _SyncBox_SyncAccepted;
+
+            //_Timer = new TimerSyncDispatcher(CacheSettings.SyncInterval,10,true);
+            //_Timer.SyncCompleted += _Timer_SyncCompleted;
+            //_Timer.SyncStarted += _Timer_SyncStarted;
         }
+
+        void _SyncBox_SyncAccepted(object sender, SyncEntityTimeCompletedEventArgs e)
+        {
+            e.Item.DoAsync();
+        }
+
 
         void _DataCache_SyncChanged(object sender, GenericEventArgs<string> e)
         {
@@ -234,6 +248,7 @@ namespace Nistec.Caching.Sync
 
         #region internal methods
 
+        /*
         /// <summary>
         /// Get the count of all items in all cref="ISyncItem"/> items in cache.
         /// </summary>
@@ -252,7 +267,7 @@ namespace Nistec.Caching.Sync
             }
             return list;
         }
-
+        */
         /// <summary>
         /// Get the count of all items in all cref="ISyncItem"/> items in cache.
         /// </summary>
@@ -268,6 +283,7 @@ namespace Nistec.Caching.Sync
             }
             return count;
         }
+         
         #endregion
 
         #region Load xml config
@@ -362,7 +378,7 @@ namespace Nistec.Caching.Sync
             LoadSyncItems(items, CacheSettings.EnableAsyncTask);
         }
 
-        internal abstract void LoadSyncItems(XmlNode node, bool copy);
+        internal abstract void LoadSyncItems(XmlNode node, bool EnableAsyncTask);
    
         #endregion load xml config
 

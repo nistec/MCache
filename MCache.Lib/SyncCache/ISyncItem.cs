@@ -37,7 +37,7 @@ namespace Nistec.Caching.Sync
     /// <summary>
     /// ISyncItemBase interface
     /// </summary>
-    public interface ISyncItemBase
+    public interface ISyncItemBase //-<T>
     {
         /// <summary>
         /// Get Item type.
@@ -55,15 +55,16 @@ namespace Nistec.Caching.Sync
         /// Get or Set <see cref="DataFilter"/>
         /// </summary>
         DataFilter Filter { get; set; }
-        /// <summary>
-        /// Get Sync item values
-        /// </summary>
-        ICollection Values { get; }
 
-        /// <summary>
-        /// Get Sync item Keys
-        /// </summary>
-        ICollection Keys { get; }
+        ///// <summary>
+        ///// Get Sync item values
+        ///// </summary>
+        //ICollection Values { get; }
+
+        ///// <summary>
+        ///// Get Sync item Keys
+        ///// </summary>
+        //ICollection Keys { get; }
 
         /// <summary>
         /// Get Items count
@@ -95,7 +96,7 @@ namespace Nistec.Caching.Sync
     /// <summary>
     /// ISyncItem interface
     /// </summary>
-    public interface ISyncItem : ISyncItemBase
+    public interface ISyncItem : ISyncItemBase //-<T>
     {
  
         /// <summary>
@@ -136,7 +137,7 @@ namespace Nistec.Caching.Sync
     /// <summary>
     /// ISyncItemStream interface
     /// </summary>
-    public interface ISyncItemStream : ISyncItemBase
+    public interface ISyncItemStream : ISyncItemBase //-<T>
     {
         /// <summary>
         /// Get item from sync cache as <see cref="EntityStream"/>.
@@ -157,6 +158,11 @@ namespace Nistec.Caching.Sync
         /// <param name="copyBody"></param>
         /// <returns></returns>
         GenericKeyValue GetEntityItems(bool copyBody);
+        /// <summary>
+        /// Get entity items count.
+        /// </summary>
+        /// <returns></returns>
+        int GetEntityItemsCount();
         /// <summary>
         /// Get entity keys
         /// </summary>

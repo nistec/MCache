@@ -362,9 +362,9 @@ namespace Nistec.Caching
         void WriteLog(LoggerLevel level, string text, params object[] args)
         {
 
-            string msg = string.Format(level.ToString() + "-" + text, args);
+            string msg = string.Format(text, args);
 
-            Log(msg);
+            Log(level.ToString() + "-" + msg);
 
             if (CacheSettings.EnableLog)
             {

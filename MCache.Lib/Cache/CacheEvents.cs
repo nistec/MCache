@@ -210,13 +210,13 @@ namespace Nistec.Caching
     /// </summary>
     public class SyncEntityTimeCompletedEventArgs : EventArgs
     {
-        SyncTask item;
+        SyncBoxTask item;
 
         /// <summary>
         /// SyncTimeCompletedEventArgs
         /// </summary>
         /// <param name="item"></param>
-        public SyncEntityTimeCompletedEventArgs(SyncTask item)
+        internal SyncEntityTimeCompletedEventArgs(SyncBoxTask item)
         {
             this.item = item;
         }
@@ -225,7 +225,7 @@ namespace Nistec.Caching
         /// <summary>
         /// Items
         /// </summary>
-        public SyncTask Item
+        internal SyncBoxTask Item
         {
             get { return this.item; }
         }

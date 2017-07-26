@@ -30,6 +30,7 @@ using Nistec.Generic;
 using Nistec.Caching.Server;
 using System.Threading.Tasks;
 using System.Collections.Concurrent;
+using System.Threading;
 
 namespace Nistec.Caching.Sync.Remote
 {
@@ -49,9 +50,19 @@ namespace Nistec.Caching.Sync.Remote
         /// <param name="copy"></param>
         public void Reload(SyncBagStream copy)
         {
-           
-                m_data = copy.m_data;
-           
+            foreach (var entry in copy.m_data)
+            {
+                if (entry.Value == null || entry.Value.Count == 0)
+                {
+                    CacheLogger.Logger.LogAction(CacheAction.SyncItem, CacheActionState.Debug, string.Format("Reload.SyncBagStream copy {0} is null or empty, item not changed", entry.Key));
+                }
+                else
+                {
+                    m_data[entry.Key] = entry.Value;
+                    CacheLogger.Debug("SyncBagStream Reload item Completed : " + entry.Key);
+                    Thread.Sleep(10);
+                }
+            }
         }
 
         ConcurrentDictionary<string, ISyncItemStream> m_data;
@@ -63,11 +74,7 @@ namespace Nistec.Caching.Sync.Remote
         public ISyncItemStream[] GetItems()
         {
             ISyncItemStream[] items = null;
-
-            //lock (SyncRoot)
-            //{
-                items = m_data.Values.ToArray();
-            //}
+            items = m_data.Values.ToArray();
             return items;
         }
         /// <summary>
@@ -78,10 +85,7 @@ namespace Nistec.Caching.Sync.Remote
         {
             string[] items = null;
 
-            //lock (SyncRoot)
-            //{
                 items = m_data.Keys.ToArray();
-            //}
 
             return items;
         }
@@ -211,6 +215,7 @@ namespace Nistec.Caching.Sync.Remote
            
             return item;
         }
+
 
         #endregion
 

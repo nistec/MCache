@@ -30,6 +30,8 @@ using Nistec.Caching.Sync;
 using Nistec.Caching.Server;
 using System.Threading.Tasks;
 using System.Threading;
+using Nistec.Caching.Data;
+using Nistec.Caching.Config;
 
 namespace Nistec.Caching
 {
@@ -130,25 +132,27 @@ namespace Nistec.Caching
 
         public event EventHandler SyncStarted;
 
-        public event SyncEntityTimeCompletedEventHandler SyncCompleted;
+        //public event SyncEntityTimeCompletedEventHandler SyncCompleted;
 
         protected virtual void OnSyncStarted(EventArgs e)
         {
-            this.OnSyncTimer();
-
             if (this.SyncStarted != null)
             {
                 this.SyncStarted(this, e);
             }
+
+            this.OnSyncTimer();
+
+            //SyncBox.Instance.DoSyncAll();
         }
 
-        protected virtual void OnSyncCompleted(SyncEntityTimeCompletedEventArgs e)
-        {
-            if (this.SyncCompleted != null)
-            {
-                this.SyncCompleted(this, e);
-            }
-        }
+        //protected virtual void OnSyncCompleted(SyncEntityTimeCompletedEventArgs e)
+        //{
+        //    if (this.SyncCompleted != null)
+        //    {
+        //        this.SyncCompleted(this, e);
+        //    }
+        //}
 
         #endregion
 
@@ -181,6 +185,13 @@ namespace Nistec.Caching
             return m_SyncItems.TryRemove(item.ItemName, out syncItem);
         }
 
+        public bool Remove(string itemName)
+        {
+            if (itemName == null)
+                return false;
+            SyncTask syncItem;
+            return m_SyncItems.TryRemove(itemName, out syncItem);
+        }
         public void Clear()
         {
                 m_SyncItems.Clear();
@@ -225,6 +236,7 @@ namespace Nistec.Caching
                 this.LastSyncTime = DateTime.Now;
                 this.OnSyncStarted(EventArgs.Empty);
                 DateTime time = this.LastSyncTime.AddSeconds((double)this.IntervalSeconds);
+                //this.NextSyncTime = time;
            }
         }
 
@@ -273,15 +285,17 @@ namespace Nistec.Caching
             OnSyncTimer();
         }
 
-           protected virtual void OnSyncTimer()
+        protected virtual void OnSyncTimer()
         {
             try
             {
 
+                var syncBox = SyncBox.Instance;
 
                 //0 indicates that the method is not in use.
                 if (0 == Interlocked.Exchange(ref synchronized, 1))
                 {
+                    bool enabletrigger=CacheSettings.EnableSyncTypeEventTrigger;
 
                     SyncTask[] list = GetTimedItems();
                     if (list != null && list.Length > 0)
@@ -295,12 +309,24 @@ namespace Nistec.Caching
                             }
                             else
                             {
-                                SyncBox.Instance.Add(new SyncBoxTask(e.Item,e.ItemName));
+
+                                if (e.Entity == null)
+                                {
+                                    if (enabletrigger)
+                                        syncBox.Add(new SyncBoxTask(e.Item, e.ItemName));
+                                }
+                                else
+                                {
+                                    syncBox.Add(new SyncBoxTask(e.Entity, e.Owner));
+                                }
+
                             }
+                            Thread.Sleep(10);
                         }
                     }
 
                 }
+
             }
             catch (Exception ex)
             {

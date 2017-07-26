@@ -106,12 +106,12 @@ namespace Nistec.Caching
 
         protected virtual void OnSyncStarted(EventArgs e)
         {
-            this.OnSyncTimer();
-
             if (this.SyncStarted != null)
             {
                 this.SyncStarted(this, e);
             }
+
+            this.OnSyncTimer();
         }
 
         protected virtual void OnSyncCompleted(SyncTimeCompletedEventArgs e)

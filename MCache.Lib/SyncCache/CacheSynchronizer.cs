@@ -40,15 +40,20 @@ namespace Nistec.Caching.Sync
         int synchronized;
         private DbWatcher watcher;
         int intervalSeconds = CacheDefaults.DefaultIntervalSeconds;
- 
+        bool enableTrigger;
+
         SyncTask _TimerTask;
         internal SyncTask TimerTask
         {
             get
             {
                 _TimerTask = _TimerTask ??
-                new SyncTask() { Item = this, IntervalSeconds = this.intervalSeconds, ItemName=Owner.CacheName };
+                new SyncTask() { Item = this, ItemName = Owner.CacheName, Timer = new SyncTimer(TimeSpan.FromSeconds(this.intervalSeconds), SyncType.Interval) };
                 return _TimerTask;
+
+                //_TimerTask = _TimerTask ??
+                //new SyncTask() { Item = this, IntervalSeconds = this.intervalSeconds, ItemName=Owner.CacheName };
+                //return _TimerTask;
             }
         }
 
@@ -58,6 +63,7 @@ namespace Nistec.Caching.Sync
         /// <param name="owner"></param>
         public CacheSynchronizer(IDataCache owner)
         {
+            enableTrigger = CacheSettings.EnableSyncTypeEventTrigger;
             this.Owner = owner;
             this.watcher = new DbWatcher(this.Owner);
         }
@@ -107,9 +113,10 @@ namespace Nistec.Caching.Sync
         /// <param name="intervalSeconds"></param>
         public void Start(int intervalSeconds)
         {
-            this.intervalSeconds =  CacheDefaults.GetValidIntervalSeconds(intervalSeconds);
-            RegisteredTablesEvent();
-            TimerSyncDispatcher.Instance.Add(TimerTask);
+            this.intervalSeconds = CacheDefaults.GetValidIntervalSeconds(intervalSeconds);
+            Task.Factory.StartNew(() => RegisteredTablesEvent());
+            if (enableTrigger)
+                TimerSyncDispatcher.Instance.Add(TimerTask);
         }
 
         /// <summary>
@@ -117,10 +124,21 @@ namespace Nistec.Caching.Sync
         /// </summary>
         public void Stop()
         {
-            TimerSyncDispatcher.Instance.Remove(TimerTask);
+            if (enableTrigger)
+                TimerSyncDispatcher.Instance.Remove(TimerTask);
+            Task.Factory.StartNew(() => RemoveTablesEvent());
         }
 
-        
+        ///// <summary>
+        ///// AddToSyncBox
+        ///// </summary>
+        //public void AddToSyncBox(ITaskSync TaskItem, string ItemName)
+        //{
+        //    SyncBox.Instance.Add(new SyncBoxTask(TaskItem, ItemName));
+        //    CacheLogger.Debug(ItemName + " Added SyncBox");
+        //}
+
+
         /// <summary>
         /// DoSynchronize
         /// </summary>
@@ -128,7 +146,7 @@ namespace Nistec.Caching.Sync
         {
             try
             {
-                CacheLogger.Debug("CacheSynchronizer DoSynchronize start...");
+               // CacheLogger.Debug("CacheSynchronizer DoSynchronize start...");
 
                 //0 indicates that the method is not in use.
                 while (0 != Interlocked.Exchange(ref synchronized, 1))
@@ -151,23 +169,26 @@ namespace Nistec.Caching.Sync
                     watcher.Refresh();
                 }
 
-                DataSyncEntity[] items = CheckRegistryItems(syncTables.GetItems());
-                if (items != null)
+                DataSyncEntity[] items = CheckRegistryItems(syncTables.GetItems(),true);
+                if (items != null && items.Length>0)
                 {
+                    CacheLogger.Debug("CacheSynchronizer DoSynchronize DataSyncEntities found items: " + items.Length.ToString());
+                    int i = 0;
                     foreach (DataSyncEntity o in items)
                     {
                         if (o.Edited)
                         {
 
                             SyncBox.Instance.Add(new SyncBoxTask(o, Owner));
-
+                            i++;
                         }
                     }
+                    //CacheLogger.DebugFormat("CacheSynchronizer DoSynchronize DataSyncEntities Added to SyncBox: {0}!" ,i);
                 }
-                else
-                {
-                    CacheLogger.Debug("CacheSynchronizer DoSynchronize DataSyncEntities not found!");
-                }
+                //else
+                //{
+                //    CacheLogger.Debug("CacheSynchronizer DoSynchronize DataSyncEntities not found!");
+                //}
                 //}
             }
             catch (Exception ex)
@@ -183,7 +204,9 @@ namespace Nistec.Caching.Sync
         }
 
 
-        internal DataSyncEntity[] CheckRegistryItems(DataSyncEntity[] items)
+       
+
+        internal DataSyncEntity[] CheckRegistryItems(DataSyncEntity[] items, bool eventOnly)
         {
 
             List<DataSyncEntity> list = new List<DataSyncEntity>();
@@ -204,7 +227,7 @@ namespace Nistec.Caching.Sync
                         list.Add(o);
                     }
                 }
-                else //if (o.SyncTime.HasTimeToRun())
+                else if (!eventOnly) //if (o.SyncTime.HasTimeToRun())
                 {
 
                     bool isTimeToRun = o.SyncTime.HasTimeToRun();
@@ -243,9 +266,42 @@ namespace Nistec.Caching.Sync
                         o.CreateTableTrigger(Owner);
                         o.Register(Owner);
                     }
+                    else if (o.SyncType == SyncType.Daily || o.SyncType == SyncType.Interval)
+                    {
+                        //TimerSyncDispatcher.Instance.Add(new SyncTask() { Item = this, IntervalSeconds =(int) o.SyncTime.Interval.TotalSeconds, ItemName = o.EntityName, Entity=o, Owner=Owner });
+                        TimerSyncDispatcher.Instance.Add(new SyncTask() { Item = this, Timer = o.SyncTime, ItemName = o.EntityName, Entity = o, Owner = Owner });
+                    }
                 }
             }
         }
 
+        /// <summary>
+        /// Registered All Tables that has sync option by event.
+        /// </summary>
+        public void RemoveTablesEvent()
+        {
+            DataSyncList syncTables = Owner.SyncTables;
+            if (syncTables == null || syncTables.Count == 0)
+                return;
+
+            DataSyncEntity[] items = syncTables.GetItems();
+
+            if (items != null)
+            {
+                foreach (DataSyncEntity o in items)
+                {
+                    if (o.SyncType == SyncType.Event)
+                    {
+                        //TODO:
+                        //o.CreateTableTrigger(Owner);
+                        //o.Register(Owner);
+                    }
+                    else if (o.SyncType == SyncType.Daily || o.SyncType == SyncType.Interval)
+                    {
+                        TimerSyncDispatcher.Instance.Remove(o.EntityName);
+                    }
+                }
+            }
+        }
     }
 }

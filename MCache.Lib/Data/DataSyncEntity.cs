@@ -33,6 +33,7 @@ using Nistec.Caching.Sync;
 using Nistec.Threading;
 using Nistec.Caching.Server;
 using Nistec.Data.Entities;
+using System.Threading.Tasks;
 
 namespace Nistec.Caching.Data
 {
@@ -60,6 +61,11 @@ namespace Nistec.Caching.Data
         #endregion
 
         #region properties
+
+        ///// <summary>
+        ///// Get EntitySyncKey
+        ///// </summary>
+        //public string EntitySyncKey { get { return SyncEntity == null ? null : SyncEntity.EntityName + "@" + SyncEntity.ConnectionKey ; } }
 
        
         /// <summary>
@@ -114,7 +120,7 @@ namespace Nistec.Caching.Data
         /// <param name="e"></param>
         protected virtual void OnSyncSourceChanged(SyncDataSourceChangedEventArgs e)
         {
-            CacheLogger.Debug("DataSyncEntity OnSyncSourceChanged : " + e.SourceName);
+            //CacheLogger.Debug("DataSyncEntity OnSyncSourceChanged : " + e.SourceName);
 
             if (SyncSourceChanged != null)
             {
@@ -303,6 +309,16 @@ END
         }
 
         /// <summary>
+        /// Register item to <see cref="DbWatcher"/> table async.
+        /// </summary>
+        /// <param name="Owner"></param>
+        /// <returns></returns>
+        public int RegisterAsync(IDataCache Owner)
+        {
+            return Task.Factory.StartNew<int>(() => Register(Owner)).Result;
+        }
+
+        /// <summary>
         /// Register item to <see cref="DbWatcher"/> table.
         /// </summary>
         /// <param name="Owner"></param>
@@ -322,19 +338,50 @@ END
                 }
                 if (SyncEntity.SourceName == null)
                     return -1;
-                using (IDbCmd dbCmd = Owner.Db.NewCmd())
+
+                using (var db = Owner.Db())
                 {
+                    db.OwnsConnection = true;
+
                     foreach (string sn in SyncEntity.SourceName)
                     {
-                        res += dbCmd.ExecuteNonQuery(string.Format(SqlAddTableToWatcherTable, Owner.TableWatcherName, Owner.ClientId, sn));
+                        try
+                        {
+                            res += db.ExecuteCommandNonQuery(string.Format(SqlAddTableToWatcherTable, Owner.TableWatcherName, Owner.ClientId, sn), null);
+                            Thread.Sleep(10);
+                        }
+                        catch (Exception ex)
+                        {
+                            CacheLogger.Logger.LogAction(CacheAction.SyncTime, CacheActionState.Error, "DataSyncEntity Register item error: " + ex.Message);
+                        }
                     }
+                    db.OwnsConnection = false;
                 }
+
+                //using (IDbCmd dbCmd = Owner.Db.NewCmd())
+                //{
+                //    foreach (string sn in SyncEntity.SourceName)
+                //    {
+                //        res += dbCmd.ExecuteNonQuery(string.Format(SqlAddTableToWatcherTable, Owner.TableWatcherName, Owner.ClientId, sn));
+                //        Thread.Sleep(10);
+                //    }
+                //}
             }
             catch (Exception ex)
             {
                 CacheLogger.Logger.LogAction(CacheAction.SyncTime, CacheActionState.Error, "DataSyncEntity Register error: " + ex.Message);
             }
             return res;
+        }
+
+        /// <summary>
+        /// Create table trigger in table watcher async.
+        /// </summary>
+        /// <param name="Owner"></param>
+        /// <returns></returns>
+        public int CreateTableTriggerAsync(IDataCache Owner)
+        {
+            return Task.Factory.StartNew<int>(() => CreateTableTrigger(Owner)).Result;
         }
 
         /// <summary>
@@ -356,22 +403,50 @@ END
                     throw new Exception("SyncEntity is null or disposed");
                 }
 
-                using (IDbCmd dbCmd = Owner.Db.NewCmd())
+                if (SyncEntity.SourceName == null)
+                    return -1;
+
+                using (var db = Owner.Db())
                 {
-                    string Database = dbCmd.Connection.Database;
-                    if (SyncEntity.SourceName == null)
-                        return -1;
+
+                    string Database = db.Connection.Database;
+
+                    db.OwnsConnection = true;
+
                     foreach (string sn in SyncEntity.SourceName)
                     {
-                        string tgw = sn.Replace(".", "_");
-                        int exists = dbCmd.ExecuteScalar<int>(string.Format(SqlIsTriggerExists, Database, tgw));
-                        if (exists == 0)
+                        try
                         {
-                            
-                            res += dbCmd.ExecuteNonQuery(string.Format(SqlCreateTrigger, Database, sn, Owner.TableWatcherName, tgw));
+                            string tgw = sn.Replace(".", "_");
+                            int exists = db.QueryScalar<int>(string.Format(SqlIsTriggerExists, Database, tgw),0);
+                            if (exists == 0)
+                            {
+                                res += db.ExecuteCommandNonQuery(string.Format(SqlCreateTrigger, Database, sn, Owner.TableWatcherName, tgw),null);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            CacheLogger.Logger.LogAction(CacheAction.SyncTime, CacheActionState.Error, "DataSyncEntity CreateTableTrigger item error: " + ex.Message);
                         }
                     }
+                    db.OwnsConnection = false;
                 }
+
+                //using (IDbCmd dbCmd = Owner.Db.NewCmd())
+                //{
+                //    string Database = dbCmd.Connection.Database;
+                //    if (SyncEntity.SourceName == null)
+                //        return -1;
+                //    foreach (string sn in SyncEntity.SourceName)
+                //    {
+                //        string tgw = sn.Replace(".", "_");
+                //        int exists = dbCmd.ExecuteScalar<int>(string.Format(SqlIsTriggerExists, Database, tgw));
+                //        if (exists == 0)
+                //        {
+                //            res += dbCmd.ExecuteNonQuery(string.Format(SqlCreateTrigger, Database, sn, Owner.TableWatcherName, tgw));
+                //        }
+                //    }
+                //}
 
             }
             catch (Exception ex)
@@ -411,7 +486,7 @@ END
                 {
                     throw new Exception("Invalid DataCache Owner");
                 }
-                using (IDbCmd dbCmd = Owner.Db.NewCmd())
+                using (IDbCmd dbCmd = DbFactory.Create(Owner.ConnectionKey))//Owner.Db.NewCmd())
                 {
                     res = dbCmd.ExecuteNonQuery(string.Format("UPDATE {0} SET Edited=0 WHERE ClientId='{1}'", Owner.TableWatcherName, Owner.ClientId));
                 }
@@ -447,13 +522,33 @@ END
                 }
                 if (SyncEntity.SourceName == null)
                     return -1;
-                using (IDbCmd dbCmd = Owner.Db.NewCmd())
+
+                using (var db = Owner.Db())
                 {
+                    db.OwnsConnection=true;
+
                     foreach (string sn in SyncEntity.SourceName)
                     {
-                        res += dbCmd.ExecuteNonQuery(string.Format("UPDATE {0} SET Edited=0 WHERE ClientId='{1}' and TableName='{2}'", Owner.TableWatcherName, Owner.ClientId, sn));
+                        try
+                        {
+                            res += db.ExecuteCommandNonQuery(string.Format("UPDATE {0} SET Edited=0 WHERE ClientId='{1}' and TableName='{2}'", Owner.TableWatcherName, Owner.ClientId, sn), null);
+                        }
+                        catch(Exception ex)
+                        {
+                            CacheLogger.Logger.LogAction(CacheAction.SyncTime, CacheActionState.Error, "DataSyncEntity ResetEdited item error: " + ex.Message);
+                        }
                     }
+                    db.OwnsConnection = false;
                 }
+
+                //using (IDbCmd dbCmd = Owner.Db.NewCmd())
+                //{
+                //    foreach (string sn in SyncEntity.SourceName)
+                //    {
+                //        res += dbCmd.ExecuteNonQuery(string.Format("UPDATE {0} SET Edited=0 WHERE ClientId='{1}' and TableName='{2}'", Owner.TableWatcherName, Owner.ClientId, sn));
+                //    }
+                //}
+
                 m_Edited = false;
                 m_LastSync = DateTime.Now.ToString("s");
             }
@@ -481,7 +576,8 @@ END
         {
             try
             {
-                CacheLogger.Debug("Store Edited : " + this.ToString());
+                CacheLogger.Debug("SyncAndStore Start, Entity: " + this.ToString());
+
                 if (Owner == null)
                 {
                     throw new Exception("Invalid DataCache Owner");
@@ -498,12 +594,13 @@ END
                 {
                     ResetEdited(Owner);
                 }
+             
                 OnSyncSourceChanged(new SyncDataSourceChangedEventArgs(SyncEntity.EntityName));
             }
             catch (Exception ex)
             {
                 if (Owner == null)
-                    CacheLogger.Logger.LogAction(CacheAction.SyncTime, CacheActionState.Error, "StoreTableSource error: " + ex.Message);
+                    CacheLogger.Logger.LogAction(CacheAction.SyncTime, CacheActionState.Error, "SyncAndStore TableSource error: " + ex.Message);
                 else
                     Owner.RaiseException(ex.Message, DataCacheError.ErrorMergeData);
             }
@@ -523,7 +620,7 @@ END
             {
                 throw new Exception("SyncEntity is null or disposed");
             }
-            using (IDbCmd dbCmd = Owner.Db.NewCmd())
+            using (IDbCmd dbCmd = DbFactory.Create(Owner.ConnectionKey))//Owner.Db.NewCmd())
             {
                 return dbCmd.ExecuteDataTable(SyncEntity.EntityName, string.Format("SELECT * FROM {0}{1}", SyncEntity.ViewName, SyncEntity.EnableNoLock ? " with(nolock)" : ""), SyncEntity.CommandTimeout, SyncEntity.MissingSchemaAction == System.Data.MissingSchemaAction.AddWithKey);
             }

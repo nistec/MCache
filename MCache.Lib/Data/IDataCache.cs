@@ -40,10 +40,18 @@ namespace Nistec.Caching.Data
         /// Get the connection key from config file..
         /// </summary>
         string ConnectionKey { get; }
+
+        ///// <summary>
+        ///// Get Db as <see cref="IDbContext"/>.
+        ///// </summary>
+        //IDbContext Db { get; }
+
         /// <summary>
-        /// Get Db as <see cref="IDbContext"/>.
+        ///  Get Db as <see cref="IDbContext"/>.
         /// </summary>
-        IDbContext Db { get; }
+        /// <returns></returns>
+        IDbContext Db();
+
         /// <summary>
         /// Get table watcher name in db.
         /// </summary>

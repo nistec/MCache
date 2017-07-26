@@ -408,6 +408,16 @@ namespace Nistec.Caching.Remote
         }
 
         /// <summary>
+        /// Get entity count from sync cache using entityName.
+        /// </summary>
+        /// <param name="entityName"></param>
+        /// <returns></returns>
+        public int GetEntityItemsCount(string entityName)
+        {
+            return SendDuplex<int>(SyncCacheCmd.GetEntityItemsCount, entityName);
+        }
+
+        /// <summary>
         /// Get entity keys from sync cache using entityName.
         /// </summary>
         /// <param name="entityName"></param>
