@@ -113,11 +113,6 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <None Include="app.config">
-      <SubType>Designer</SubType>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\..\Nistec.Channels\Nistec.Channels\Nistec.Channels.csproj">
       <Project>{0839a364-a34d-4143-ad4c-aef4c7b232ac}</Project>
       <Name>Nistec.Channels</Name>

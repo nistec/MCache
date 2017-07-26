@@ -126,10 +126,10 @@ namespace Nistec
                                             manager.DoServiceCommand(ServiceCmd.Stop);
                                             break;
                                         case "restart":
-                                            manager.DoServiceCommand(ServiceCmd.Install);
+                                            manager.DoServiceCommand(ServiceCmd.Restart);
                                             break;
                                         case "paus":
-                                            manager.DoServiceCommand(ServiceCmd.Install);
+                                            manager.DoServiceCommand(ServiceCmd.Pause);
                                             break;
                                     }
                                     //CmdController.DoCommandCache(cmdProtocol,cmdName, cmdArg1, cmdargs[2]);

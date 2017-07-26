@@ -24,6 +24,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.ServiceProcess;
 using System.Text;
+using System.Threading;
 using System.Windows.Forms;
 
 namespace Nistec
@@ -50,8 +51,12 @@ namespace Nistec
         //bool tbRestartEnabled = false;
         //bool tbInstallEnabled = false;
 
-        ServiceController m_controller;
+        //ServiceController m_controller;
 
+        //ServiceController GetController()
+        //{
+        //    return new ServiceController();
+        //}
 
         public static void DisplayUsage()
         {
@@ -67,7 +72,17 @@ namespace Nistec
             Console.WriteLine("Service Usage : {0}.", usage);
         }
 
-
+        ServiceController GetService()
+        {
+            foreach (ServiceController service in ServiceController.GetServices())
+            {
+                if (service.ServiceName == Settings.ServiceName)
+                {
+                    return service;
+                }
+            }
+            return null;
+        }
         bool FindIsServiceInstalled()
         {
             foreach (ServiceController service in ServiceController.GetServices())
@@ -83,27 +98,51 @@ namespace Nistec
 
         public bool IsServiceInstalled()
         {
-            if (m_controller == null)
-                return false;
-            return m_controller.ServiceName == Settings.ServiceName;
+            return FindIsServiceInstalled();
+            //if (m_controller == null)
+            //    return false;
+            //return m_controller.ServiceName == Settings.ServiceName;
         }
         public void DispalyServiceStatus()
         {
-            if (m_controller == null)
+            var controller = GetService();
+
+            if (controller == null)
                 Console.WriteLine("service not installed");
-            Console.WriteLine("service status: {0}", m_controller.Status);
+            else
+            {
+                Console.WriteLine("service status: {0}", controller.Status);
+                controller.Dispose();
+                controller = null;
+            }
         }
         public ServiceControllerStatus GetServiceStatus()
         {
-            if (m_controller == null)
-                return (ServiceControllerStatus) 0;
-            return m_controller.Status;
+            ServiceControllerStatus status = (ServiceControllerStatus)0;
+
+            var controller = GetService();
+
+            if (controller != null)
+            {
+                status = controller.Status;
+                controller.Dispose();
+                controller = null;
+            }
+            return status;
+
+            //if (m_controller == null)
+            //    return (ServiceControllerStatus) 0;
+            //else
+            //return m_controller.Status;
         }
         public bool IsServiceStarted()
         {
-            if (m_controller == null)
-                return false;
-            return m_controller.Status == ServiceControllerStatus.Running;
+            return GetServiceStatus() == ServiceControllerStatus.Running;
+
+            //if (m_controller == null)
+            //    return false;
+            //else
+            //return m_controller.Status == ServiceControllerStatus.Running;
         }
 
         public int DoServiceCommand(ServiceCmd cmd)
@@ -116,7 +155,14 @@ namespace Nistec
                         Console.WriteLine("Service allready installed!");
                         return -1;
                     }
-                    System.Diagnostics.Process.Start(Application.StartupPath + "/" + Settings.ServiceProcess, "/i");
+                    System.Diagnostics.Process.Start(Application.StartupPath + "\\" + Settings.ServiceProcess, "/i");
+                    Console.WriteLine("Wait...");
+                    Thread.Sleep(1000);
+                    if (!IsServiceInstalled())
+                    {
+                        Console.WriteLine("Service not installed!");
+                        return -1;
+                    }
                     return 1;
                 case ServiceCmd.Uninstall:
                     if (!IsServiceInstalled())
@@ -124,7 +170,14 @@ namespace Nistec
                         Console.WriteLine("Service not installed!");
                         return -1;
                     }
-                    System.Diagnostics.Process.Start(Application.StartupPath + "/" + Settings.ServiceProcess, "/u");
+                    System.Diagnostics.Process.Start(Application.StartupPath + "\\" + Settings.ServiceProcess, "/u");
+                    Console.WriteLine("Wait...");
+                    Thread.Sleep(1000);
+                    if (IsServiceInstalled())
+                    {
+                        Console.WriteLine("Service is installed!");
+                        return -1;
+                    }
                     return 1;
                 case ServiceCmd.Start:
                     if (!IsServiceInstalled())
@@ -181,11 +234,11 @@ namespace Nistec
                 case ServiceCmd.RunAsWindow:
                     if (Environment.OSVersion.Platform == PlatformID.Unix)
                     {
-                        System.Diagnostics.Process.Start("mono", Application.StartupPath + "/" + Settings.WindowsAppProcess + " -winform");
+                        System.Diagnostics.Process.Start("mono", Application.StartupPath + "\\" + Settings.WindowsAppProcess + " -winform");
                     }
                     else
                     {
-                        System.Diagnostics.Process.Start(Application.StartupPath + "/" + Settings.WindowsAppProcess, "-winform");
+                        System.Diagnostics.Process.Start(Application.StartupPath + "\\" + Settings.WindowsAppProcess, "-winform");
                     }
                     return 1;
             }
@@ -309,56 +362,116 @@ namespace Nistec
         
         private void LoadServiceController()
         {
-            if (m_controller == null)
+            var controller = GetService();
+            if (controller == null)
             {
                 var agent = Settings.GetServiceInstalled();
                 if (agent != null)
                 {
-                    m_controller = agent.ServiceController;
+                    controller = agent.ServiceController;
                 }
             }
+            
+
+            //if (m_controller == null)
+            //{
+            //    var agent = Settings.GetServiceInstalled();
+            //    if (agent != null)
+            //    {
+            //        m_controller = agent.ServiceController;
+            //    }
+            //}
         }
 
         private ServiceController GetServiceController()
         {
-            LoadServiceController();
-            return m_controller;
+            var agent = Settings.GetServiceInstalled();
+            if (agent != null)
+            {
+                return agent.ServiceController;
+            }
+            return null;
+            //LoadServiceController();
+            //return m_controller;
         }
 
         private bool IsServiceControllerInstalled()
         {
-            LoadServiceController();
-            return (m_controller != null);
+            var agent = Settings.GetServiceInstalled();
+            if (agent != null)
+            {
+                return agent.ServiceController!=null;
+            }
+            return false;
+
+            //LoadServiceController();
+            //return (m_controller != null);
         }
 
         private bool IsServiceControllerRunning()
         {
-            LoadServiceController();
-
-            if (m_controller != null)
+            var agent = Settings.GetServiceInstalled();
+            if (agent != null)
             {
-                return m_controller.Status == ServiceControllerStatus.Running;
+                return agent.ServiceController.Status == ServiceControllerStatus.Running;
             }
-
             return false;
+
+
+            //LoadServiceController();
+
+            //if (m_controller != null)
+            //{
+            //    return m_controller.Status == ServiceControllerStatus.Running;
+            //}
+
+            //return false;
+        }
+
+        public void ShowServiceDetails(ServiceController controller)
+        {
+            Console.WriteLine("Service Details...");
+
+            if (controller == null)
+            {
+                Console.WriteLine("Service not installed");
+                return;
+            }
+            Console.WriteLine("Service Name : {0}.", controller.ServiceName);
+            Console.WriteLine("Service Type : {0}.", controller.ServiceType);
+            Console.WriteLine("Service Status : {0}.", controller.Status);
+            DisplayUsage();
+            Console.WriteLine();
+            //SetServiceStatus(m_controller);
         }
 
         public void ShowServiceDetails()
         {
             Console.WriteLine("Service Details...");
-            LoadServiceController();
-            if (m_controller == null)
+            
+            ServiceController controller = null;
+            var agent = Settings.GetServiceInstalled();
+            if (agent != null)
+            {
+                controller= agent.ServiceController;
+            }
+            //return false;
+
+            //LoadServiceController();
+
+            if (controller == null)
             {
                 Console.WriteLine("Service not installed");
                 return;
             }
-            Console.WriteLine("Service Name : {0}.", m_controller.ServiceName);
-            Console.WriteLine("Service Type : {0}.", m_controller.ServiceType);
-            Console.WriteLine("Service Status : {0}.", m_controller.Status);
+            Console.WriteLine("Service Name : {0}.", controller.ServiceName);
+            Console.WriteLine("Service Type : {0}.", controller.ServiceType);
+            Console.WriteLine("Service Status : {0}.", controller.Status);
             DisplayUsage();
             Console.WriteLine();
             //SetServiceStatus(m_controller);
         }
+
         /*
         private void DoRefreshSubAction(bool reset)
         {
@@ -468,11 +581,34 @@ namespace Nistec
             try
             {
                 Console.WriteLine("Install service...");
-                if (DoServiceCommand(ServiceCmd.Install) > 0)
+
+
+                if (IsServiceInstalled())
                 {
-                    //RefreshServiceList();
-                    ShowServiceDetails();
+                    Console.WriteLine("Service allready installed!");
+                    return;
                 }
+                System.Diagnostics.Process.Start(Application.StartupPath + "\\" + Settings.ServiceProcess, "/i");
+                Console.WriteLine("Wait...");
+                Thread.Sleep(1000);
+                if (!IsServiceInstalled())
+                {
+                    Console.WriteLine("Service not installed!");
+                    return;
+                }
+                ServiceController controller = GetServiceController();
+                if (controller == null)
+                {
+                    Console.WriteLine("Service not installed!");
+                    return;
+                }
+                ShowServiceDetails(controller);
+
+                //if (DoServiceCommand(ServiceCmd.Install) > 0)
+                //{
+                //    //RefreshServiceList();
+                //    ShowServiceDetails();
+                //}
             }
             catch (Exception ex)
             {
@@ -566,12 +702,14 @@ namespace Nistec
             {
                 //curSubAction = SubActions.Default;
 
-                if (m_controller == null)
+                ServiceController controller = GetServiceController();
+                if (controller == null)
                     return;
+
                 //WaitDlg.RunProgress("Start...");
                 Console.WriteLine("Start service...");
-                m_controller.Start();
-                m_controller.WaitForStatus(ServiceControllerStatus.Running);
+                controller.Start();
+                controller.WaitForStatus(ServiceControllerStatus.Running);
                 System.Threading.Thread.Sleep(1000);
                 //SetServiceStatus(m_controller);
                 //ShowServiceDetails();
@@ -596,15 +734,17 @@ namespace Nistec
             {
                 //curSubAction = SubActions.Default;
 
-                if (m_controller == null)
+                ServiceController controller = GetServiceController();
+                if (controller == null)
                     return;
+
                 //WaitDlg.RunProgress("Stop...");
                 Console.WriteLine("Stop service...");
-                m_controller.Stop();
-                m_controller.WaitForStatus(ServiceControllerStatus.Stopped);
+                controller.Stop();
+                controller.WaitForStatus(ServiceControllerStatus.Stopped);
                 System.Threading.Thread.Sleep(1000);
                 //SetServiceStatus(m_controller);
-                ShowServiceDetails();
+                ShowServiceDetails(controller);
             }
             catch (Exception ex)
             {
