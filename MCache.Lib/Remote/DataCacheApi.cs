@@ -75,6 +75,22 @@ namespace Nistec.Caching.Remote
         /// <param name="value">value to set</param>
         public void SetValue(string db, string tableName, string column, string filterExpression, object value)
         {
+            if (string.IsNullOrWhiteSpace(db))
+            {
+                throw new ArgumentNullException("db is required");
+            }
+            if (string.IsNullOrWhiteSpace(tableName))
+            {
+                throw new ArgumentNullException("tableName is required");
+            }
+            if (string.IsNullOrWhiteSpace(column))
+            {
+                throw new ArgumentNullException("column is required");
+            }
+            if (value==null)
+            {
+                throw new ArgumentNullException("value is required");
+            }
             using (var message = new CacheMessage()
             {
                 Command = DataCacheCmd.SetValue,
@@ -106,6 +122,18 @@ namespace Nistec.Caching.Remote
         /// </code></example>
         public T GetValue<T>(string db, string tableName, string column, string filterExpression)
         {
+            if (string.IsNullOrWhiteSpace(db))
+            {
+                throw new ArgumentNullException("db is required");
+            }
+            if (string.IsNullOrWhiteSpace(tableName))
+            {
+                throw new ArgumentNullException("tableName is required");
+            }
+            if (string.IsNullOrWhiteSpace(column))
+            {
+                throw new ArgumentNullException("column is required");
+            }
             using (var message = new CacheMessage()
             {
                 Command = DataCacheCmd.GetDataValue,
@@ -127,6 +155,18 @@ namespace Nistec.Caching.Remote
         /// <returns>object value</returns>
         public object GetValue(string db, string tableName, string column, string filterExpression)
         {
+            if (string.IsNullOrWhiteSpace(db))
+            {
+                throw new ArgumentNullException("db is required");
+            }
+            if (string.IsNullOrWhiteSpace(tableName))
+            {
+                throw new ArgumentNullException("tableName is required");
+            }
+            if (string.IsNullOrWhiteSpace(column))
+            {
+                throw new ArgumentNullException("column is required");
+            }
             using (var message = new CacheMessage()
             {
                 Command = DataCacheCmd.GetDataValue,
@@ -159,6 +199,15 @@ namespace Nistec.Caching.Remote
         /// </code></example>
         public IDictionary GetRow(string db, string tableName, string filterExpression)
         {
+            if (string.IsNullOrWhiteSpace(db))
+            {
+                throw new ArgumentNullException("db is required");
+            }
+            if (string.IsNullOrWhiteSpace(tableName))
+            {
+                throw new ArgumentNullException("tableName is required");
+            }
+
             using (var message = new CacheMessage()
             {
                 Command = DataCacheCmd.GetRow,
@@ -189,6 +238,15 @@ namespace Nistec.Caching.Remote
         /// </code></example>
         public DataTable GetDataTable(string db, string tableName)
         {
+            if (string.IsNullOrWhiteSpace(db))
+            {
+                throw new ArgumentNullException("db is required");
+            }
+            if (string.IsNullOrWhiteSpace(tableName))
+            {
+                throw new ArgumentNullException("tableName is required");
+            }
+
             using (var message = new CacheMessage()
             {
                 Command = DataCacheCmd.GetDataTable,
@@ -214,6 +272,15 @@ namespace Nistec.Caching.Remote
         /// </code></example>
         public void RemoveTable(string db, string tableName)
         {
+            if (string.IsNullOrWhiteSpace(db))
+            {
+                throw new ArgumentNullException("db is required");
+            }
+            if (string.IsNullOrWhiteSpace(tableName))
+            {
+                throw new ArgumentNullException("tableName is required");
+            }
+
             using (var message = new CacheMessage()
             {
                 Command = DataCacheCmd.RemoveTable,
@@ -233,6 +300,15 @@ namespace Nistec.Caching.Remote
         /// <returns></returns>
         public DataCacheItem GetItemProperties(string db, string tableName)
         {
+            if (string.IsNullOrWhiteSpace(db))
+            {
+                throw new ArgumentNullException("db is required");
+            }
+            if (string.IsNullOrWhiteSpace(tableName))
+            {
+                throw new ArgumentNullException("tableName is required");
+            }
+
             using (var message = new CacheMessage()
             {
                 Command = DataCacheCmd.GetItemProperties,
@@ -253,6 +329,19 @@ namespace Nistec.Caching.Remote
         /// <param name="tableName"></param>
         public bool AddDataItem(string db, DataTable dt, string tableName)
         {
+            if (string.IsNullOrWhiteSpace(db))
+            {
+                throw new ArgumentNullException("db is required");
+            }
+            if (string.IsNullOrWhiteSpace(tableName))
+            {
+                throw new ArgumentNullException("tableName is required");
+            }
+            if (dt==null)
+            {
+                throw new ArgumentNullException("dt is required");
+            }
+
             using (var message = new CacheMessage()
             {
                 Command = DataCacheCmd.AddDataItem,
@@ -279,6 +368,23 @@ namespace Nistec.Caching.Remote
         /// <param name="ts"></param>
         public void AddDataItemSync(string db, DataTable dt, string tableName, string mappingName, string[] sourceName, SyncType syncType, TimeSpan ts)
         {
+            if (string.IsNullOrWhiteSpace(db))
+            {
+                throw new ArgumentNullException("db is required");
+            }
+            if (string.IsNullOrWhiteSpace(tableName))
+            {
+                throw new ArgumentNullException("tableName is required");
+            }
+            if (string.IsNullOrWhiteSpace(mappingName))
+            {
+                throw new ArgumentNullException("mappingName is required");
+            }
+            if (sourceName==null)
+            {
+                throw new ArgumentNullException("sourceName is required");
+            }
+
             using (var message = new CacheMessage()
             {
                 Command = DataCacheCmd.AddDataItemSync,
@@ -316,6 +422,19 @@ namespace Nistec.Caching.Remote
         /// </code></example>
         public void AddDataItemSync(string db, DataTable dt, string tableName, string mappingName, Nistec.Caching.SyncType syncType, TimeSpan ts)
         {
+            if (string.IsNullOrWhiteSpace(db))
+            {
+                throw new ArgumentNullException("db is required");
+            }
+            if (string.IsNullOrWhiteSpace(tableName))
+            {
+                throw new ArgumentNullException("tableName is required");
+            }
+            if (string.IsNullOrWhiteSpace(mappingName))
+            {
+                throw new ArgumentNullException("mappingName is required");
+            }
+
             using (var message = new CacheMessage()
             {
                 Command = DataCacheCmd.AddDataItemSync,
@@ -338,6 +457,19 @@ namespace Nistec.Caching.Remote
         /// <param name="ts"></param>
         public void AddSyncItem(string db, string tableName, string mappingName, Nistec.Caching.SyncType syncType, TimeSpan ts)
         {
+            if (string.IsNullOrWhiteSpace(db))
+            {
+                throw new ArgumentNullException("db is required");
+            }
+            if (string.IsNullOrWhiteSpace(tableName))
+            {
+                throw new ArgumentNullException("tableName is required");
+            }
+            if (string.IsNullOrWhiteSpace(mappingName))
+            {
+                throw new ArgumentNullException("mappingName is required");
+            }
+
             using (var message = new CacheMessage()
             {
                 Command = DataCacheCmd.AddSyncDataItem,
@@ -360,6 +492,23 @@ namespace Nistec.Caching.Remote
         /// <param name="ts"></param>
         public void AddSyncItem(string db, string tableName, string mappingName, string[] sourceName, Nistec.Caching.SyncType syncType, TimeSpan ts)
         {
+            if (string.IsNullOrWhiteSpace(db))
+            {
+                throw new ArgumentNullException("db is required");
+            }
+            if (string.IsNullOrWhiteSpace(tableName))
+            {
+                throw new ArgumentNullException("tableName is required");
+            }
+            if (string.IsNullOrWhiteSpace(mappingName))
+            {
+                throw new ArgumentNullException("mappingName is required");
+            }
+            if (sourceName==null)
+            {
+                throw new ArgumentNullException("sourceName is required");
+            }
+
             using (var message = new CacheMessage()
             {
                 Command = DataCacheCmd.AddSyncDataItem,
