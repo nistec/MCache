@@ -19,11 +19,37 @@ namespace Nistec.Caching.Demo.RemoteApi
     {
         NetProtocol Protocol = NetProtocol.Tcp;
 
-        const string TcpSyncHostName = "nistec_cache_sync";
+        const string TcpSyncHostName = "nistec_cache_bundle";
         const int TcpSyncPort = 13001;
 
         const string entityName = "contactEntity";
         const string entityKey = "1";
+
+
+        public static void TestValues(NetProtocol protocol, int count)
+        {
+            var arr = SyncCacheApi.Get(protocol).GetEntityKeys(entityName).ToArray();
+            if (arr == null || arr.Length == 0)
+            {
+                Console.WriteLine("items not found!");
+            }
+            else
+            {
+                if (count <= 0)
+                    count = 1;
+                for (int i = 0; i < count; i++)
+                {
+                    foreach (var k in arr)
+                    {
+                        var record = SyncCacheApi.Get(protocol).GetRecord(entityName, k.Split(';'));
+                        var json = JsonSerializer.Serialize(record, null, JsonFormat.Indented);
+                        Console.WriteLine(json);
+                    }
+
+                    Console.WriteLine("finished items: " + arr.Length.ToString());
+                }
+            }
+        }
 
         public static void TestAll(NetProtocol protocol)
         {

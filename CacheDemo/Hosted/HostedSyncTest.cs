@@ -32,7 +32,7 @@ namespace Nistec.Caching.Demo.Hosted
          static HostedSyncTest()
         {
             SyncCache = new SyncCache("SyncCache", true);
-            SyncCache.Start();
+            SyncCache.Start(true);
         }
 
         //Add items to remote cache.

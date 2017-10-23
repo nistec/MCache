@@ -1,0 +1,96 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{0D352E7C-73B4-409A-99A5-4CE2E252219F}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Nistec.Cache.Client</RootNamespace>
+    <AssemblyName>Nistec.Cache.Client</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Channels\Enums.cs" />
+    <Compile Include="Channels\HttpClient.cs" />
+    <Compile Include="Channels\HttpMessage.cs" />
+    <Compile Include="Channels\HttpSettings.cs" />
+    <Compile Include="Channels\MessageAck.cs" />
+    <Compile Include="Channels\MessageException.cs" />
+    <Compile Include="Channels\MessageKey.cs" />
+    <Compile Include="Channels\MessageRequest.cs" />
+    <Compile Include="Channels\MessageStream.cs" />
+    <Compile Include="Channels\PipeClient.cs" />
+    <Compile Include="Channels\PipeMessage.cs" />
+    <Compile Include="Channels\PipeSettings.cs" />
+    <Compile Include="Channels\TcpClient.cs" />
+    <Compile Include="Channels\TcpMessage.cs" />
+    <Compile Include="Channels\TcpSettings.cs" />
+    <Compile Include="NetStream.cs" />
+    <Compile Include="RemoteCache\CacheApi.cs" />
+    <Compile Include="RemoteCache\CacheCmd.cs" />
+    <Compile Include="RemoteCache\CacheSettings.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RemoteCache\SessionCacheApi.cs" />
+    <Compile Include="RemoteCache\SyncCacheApi.cs" />
+    <Compile Include="Runtime\Interfaces.cs" />
+    <Compile Include="Serialization\Binary\BinarySerializer.cs" />
+    <Compile Include="Serialization\Binary\BinaryStreamer.cs" />
+    <Compile Include="Serialization\Binary\Enums.cs" />
+    <Compile Include="Serialization\Binary\Interfaces.cs" />
+    <Compile Include="Serialization\Binary\SerializeInfo.cs" />
+    <Compile Include="Serialization\Binary\SerializerExtension.cs" />
+    <Compile Include="Serialization\Formatters.cs" />
+    <Compile Include="Serialization\Interfaces.cs" />
+    <Compile Include="Serialization\Json\DynamicJson.cs" />
+    <Compile Include="Serialization\Json\Enums.cs" />
+    <Compile Include="Serialization\Json\JsonActivator.cs" />
+    <Compile Include="Serialization\Json\JsonConverter.cs" />
+    <Compile Include="Serialization\Json\JsonParser.cs" />
+    <Compile Include="Serialization\Json\JsonReader.cs" />
+    <Compile Include="Serialization\Json\JsonResult.cs" />
+    <Compile Include="Serialization\Json\JsonSerializer.cs" />
+    <Compile Include="Serialization\Json\JsonSettings.cs" />
+    <Compile Include="Serialization\Json\JsonWriter.cs" />
+    <Compile Include="Serialization\NetSerializer.cs" />
+    <Compile Include="Serialization\NoSerialize.cs" />
+    <Compile Include="Serialization\SerializeTools.cs" />
+  </ItemGroup>
+  <ItemGroup />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

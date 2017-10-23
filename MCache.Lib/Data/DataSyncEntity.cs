@@ -227,6 +227,8 @@ END
                 throw new ArgumentNullException("DataSyncEntity.ctor entity");
             }
             SyncEntity = entity;
+            if (entity.SyncType == SyncType.Event && entity.Interval == TimeSpan.Zero)
+                entity.Interval = TimeSpan.FromSeconds(60);
             SyncTime = new SyncTimer(entity.Interval, entity.SyncType);
         }
 
@@ -243,6 +245,41 @@ END
             }
             SyncEntity = entity;
             SyncTime = syncTimer;
+        }
+
+        /// <summary>
+        /// Initialize a new instance of data sync entity.
+        /// </summary>
+        /// <param name="entityName"></param>
+        /// <param name="mappingName"></param>
+        /// <param name="sourceName"></param>
+        /// <param name="syncType"></param>
+        /// <param name="interval"></param>
+        /// <param name="enableNoLock"></param>
+        /// <param name="commandTimeout"></param>
+        public DataSyncEntity(string entityName, string mappingName, string[] sourceName, SyncType syncType, TimeSpan interval, bool enableNoLock, int commandTimeout)
+        {
+            SyncEntity = new SyncEntity(entityName, mappingName, sourceName, syncType, interval, enableNoLock, commandTimeout);
+            if (syncType == SyncType.Event && interval == TimeSpan.Zero)
+                interval = TimeSpan.FromSeconds(60);
+            SyncTime = new SyncTimer(interval, syncType);
+        }
+
+        /// <summary>
+        /// Initialize a new instance of data sync entity.
+        /// </summary>
+        /// <param name="entityName"></param>
+        /// <param name="mappingName"></param>
+        /// <param name="syncType"></param>
+        /// <param name="interval"></param>
+        /// <param name="enableNoLock"></param>
+        /// <param name="commandTimeout"></param>
+        public DataSyncEntity(string entityName, string mappingName, SyncType syncType, TimeSpan interval, bool enableNoLock=false, int commandTimeout=0)
+        {
+            SyncEntity = new SyncEntity(entityName, mappingName, new string[] { mappingName }, syncType, interval, enableNoLock, commandTimeout);
+            if (syncType == SyncType.Event && interval == TimeSpan.Zero)
+                interval = TimeSpan.FromSeconds(60);
+            SyncTime = new SyncTimer(interval, syncType);
         }
 
         #endregion

@@ -25,6 +25,9 @@ using System.Text;
 using Nistec.Data.Entities;
 using System.Collections;
 using Nistec.Data.Entities.Cache;
+using System.Collections.Concurrent;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace Nistec.Caching.Sync.Embed
 {
@@ -43,20 +46,22 @@ namespace Nistec.Caching.Sync.Embed
         /// <param name="copy"></param>
         public void Reload(SyncBag copy)
         {
-            lock (SyncRoot)
-            {
+            //lock (SyncRoot)
+            //{
                 m_data = copy.m_data;
-            }
+            //}
         }
 
-        Dictionary<string, ISyncItem> m_data;
-        /// <summary>
-        /// Gets an object that can be used to synchronize access to the System.Collections.ICollection.
-        /// </summary>
-        public object SyncRoot
-        {
-            get { return ((ICollection)m_data).SyncRoot; }
-        }
+        ConcurrentDictionary<string, ISyncItem> m_data;
+
+        ///// <summary>
+        ///// Gets an object that can be used to synchronize access to the System.Collections.ICollection.
+        ///// </summary>
+        //public object SyncRoot
+        //{
+        //    get { return ((ICollection)m_data).SyncRoot; }
+        //}
+
         /// <summary>
         /// Get all items from sync bag.
         /// </summary>
@@ -65,10 +70,10 @@ namespace Nistec.Caching.Sync.Embed
         {
             ISyncItem[] items = null;
 
-            lock (SyncRoot)
-            {
+            //lock (SyncRoot)
+            //{
                 items = m_data.Values.ToArray();
-            }
+            //}
             return items;
         }
         /// <summary>
@@ -79,10 +84,10 @@ namespace Nistec.Caching.Sync.Embed
         {
             string[] items = null;
 
-            lock (SyncRoot)
-            {
+            //lock (SyncRoot)
+            //{
                 items = m_data.Keys.ToArray();
-            }
+            //}
             return items;
         }
 
@@ -94,7 +99,7 @@ namespace Nistec.Caching.Sync.Embed
         /// <param name="cacheName"></param>
         public SyncBag(string cacheName)
         {
-            m_data = new Dictionary<string, ISyncItem>();
+            m_data = new ConcurrentDictionary<string, ISyncItem>();
         }
 
        
@@ -116,10 +121,10 @@ namespace Nistec.Caching.Sync.Embed
         /// </summary>
         public void Clear()
         {
-            lock(this.SyncRoot)
-            {
+            //lock(this.SyncRoot)
+            //{
                 m_data.Clear();
-            }
+            //}
         }
         /// <summary>
         ///  Returns the number of elements in a sequence.
@@ -128,14 +133,14 @@ namespace Nistec.Caching.Sync.Embed
         {
             get
             {
-                lock (this.SyncRoot)
-                {
+                //lock (this.SyncRoot)
+                //{
                   return  m_data.Count();
-                }
+                //}
             }
         }
 
-        Dictionary<string, ISyncItem> ISyncEx<ISyncItem>.Items
+        IDictionary<string, ISyncItem> ISyncEx<ISyncItem>.Items
         {
             get { return m_data; }
         }
@@ -152,10 +157,10 @@ namespace Nistec.Caching.Sync.Embed
         /// <returns></returns>
         public bool Contains(CacheKeyInfo info)
         {
-            lock (this.SyncRoot)
-            {
+            //lock (this.SyncRoot)
+            //{
                 return m_data.ContainsKey(info.CacheKey);
-            }
+            //}
         }
         /// <summary>
         /// Get if cache contains spesific item by name and keys.
@@ -187,28 +192,29 @@ namespace Nistec.Caching.Sync.Embed
             {
                 return;
             }
-            lock (this.SyncRoot)
-            {
+            //lock (this.SyncRoot)
+            //{
                 m_data[key] = value;
-            }
+            //}
         }
 
-        /// <summary>
-        /// Set item into sync bag.
-        /// </summary>
-        /// <param name="info"></param>
-        /// <param name="value"></param>
-        public void Set(CacheKeyInfo info, ISyncItem value)
-        {
-            if (info == null || value == null)
-            {
-                return;
-            }
-            lock (this.SyncRoot)
-            {
-                m_data[info.ItemName] = value;
-            }
-        }
+        ///// <summary>
+        ///// Set item into sync bag.
+        ///// </summary>
+        ///// <param name="info"></param>
+        ///// <param name="value"></param>
+        //public void Set(CacheKeyInfo info, ISyncItem value)
+        //{
+        //    if (info == null || value == null)
+        //    {
+        //        return;
+        //    }
+        //    //lock (this.SyncRoot)
+        //    //{
+        //        m_data[info.ItemName] = value;
+        //    //}
+        //}
+
         /// <summary>
         /// Set item into sync bag.
         /// </summary>
@@ -220,29 +226,30 @@ namespace Nistec.Caching.Sync.Embed
             {
                 return;
             }
-            lock (this.SyncRoot)
-            {
+            //lock (this.SyncRoot)
+            //{
                 m_data[key] = value;
-            }
+            //}
         }
-        /// <summary>
-        /// Set item into sync bag.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="info"></param>
-        /// <returns></returns>
-        public SyncItem<T> Get<T>(CacheKeyInfo info) //where T : IEntityItem
-        {
-            ISyncItem item = null;
-            lock (this.SyncRoot)
-            {
-                if (m_data.TryGetValue(info.ItemName, out item))
-                {
-                    return (SyncItem<T>)item;
-                }
-            }
-            return null;
-        }
+
+        ///// <summary>
+        ///// Set item into sync bag.
+        ///// </summary>
+        ///// <typeparam name="T"></typeparam>
+        ///// <param name="info"></param>
+        ///// <returns></returns>
+        //public SyncItem<T> Get<T>(CacheKeyInfo info) //where T : IEntityItem
+        //{
+        //    ISyncItem item = null;
+        //    //lock (this.SyncRoot)
+        //    //{
+        //        if (m_data.TryGetValue(info.ItemName, out item))
+        //        {
+        //            return (SyncItem<T>)item;
+        //        }
+        //    //}
+        //    return null;
+        //}
 
         /// <summary>
         /// Get spesific value from cache using <see cref="CacheKeyInfo"/>, if item not found return null
@@ -253,41 +260,73 @@ namespace Nistec.Caching.Sync.Embed
         public SyncItem<T> Get<T>(string name) //where T : IEntityItem
         {
             ISyncItem item = null;
-            lock (this.SyncRoot)
-            {
+            //lock (this.SyncRoot)
+            //{
                 if (m_data.TryGetValue(name, out item))
                 {
                     return (SyncItem<T>)item;
                 }
-            }
+            //}
             return null;
         }
 
         /// <summary>
-        /// Get spesific value from cache using item name and keys, if item not found return null
+        /// Get array items from cache by name, if item not found return null
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="name"></param>
-        /// <param name="keys"></param>
         /// <returns></returns>
-        public SyncItem<T> Get<T>(string name, string[] keys) //where T : IEntityItem
-        {
-            return Get<T>(CacheKeyInfo.Get(name, keys));
-        }
-        /// <summary>
-        /// Get spesific value from cache using <see cref="CacheKeyInfo"/>, if item not found return null
-        /// </summary>
-        /// <param name="info"></param>
-        /// <returns></returns>
-        public ISyncItem Get(CacheKeyInfo info)
+        public IEnumerable<T> ArrayItems<T>(string name) //where T : IEntityItem
         {
             ISyncItem item = null;
-            lock (this.SyncRoot)
+            if (m_data.TryGetValue(name, out item))
             {
-                m_data.TryGetValue(info.ItemName, out item);
+                return ((SyncItem<T>)item).Items.Values;
             }
-            return item;
+            return null;
         }
+
+        ///// <summary>
+        ///// Get array items from cache by name, if item not found return null
+        ///// </summary>
+        ///// <param name="name"></param>
+        ///// <returns></returns>
+        //public IEnumerable ArrayItems(string name)
+        //{
+        //    ISyncItem item = null;
+        //    if (m_data.TryGetValue(name, out item))
+        //    {
+        //        return item.Values;
+        //    }
+        //    return null;
+        //}
+
+        ///// <summary>
+        ///// Get spesific value from cache using item name and keys, if item not found return null
+        ///// </summary>
+        ///// <typeparam name="T"></typeparam>
+        ///// <param name="name"></param>
+        ///// <param name="keys"></param>
+        ///// <returns></returns>
+        //public SyncItem<T> Get<T>(string name, string[] keys) //where T : IEntityItem
+        //{
+        //    return Get<T>(CacheKeyInfo.Get(name, keys));
+        //}
+        ///// <summary>
+        ///// Get spesific value from cache using <see cref="CacheKeyInfo"/>, if item not found return null
+        ///// </summary>
+        ///// <param name="info"></param>
+        ///// <returns></returns>
+        //public ISyncItem Get(CacheKeyInfo info)
+        //{
+        //    ISyncItem item = null;
+        //    //lock (this.SyncRoot)
+        //    //{
+        //        m_data.TryGetValue(info.ItemName, out item);
+        //    //}
+        //    return item;
+        //}
+
         /// <summary>
         /// Get spesific value from cache using <see cref="CacheKeyInfo"/>, if item not found return null
         /// </summary>
@@ -295,11 +334,11 @@ namespace Nistec.Caching.Sync.Embed
         /// <returns></returns>
         public ISyncItem Get(string name)
         {
-            ISyncItem item = null;
-            lock (this.SyncRoot)
-            {
+             ISyncItem item = null;
+            //lock (this.SyncRoot)
+            //{
                 m_data.TryGetValue(name, out item);
-            }
+            //}
             return item;
         }
 
@@ -315,14 +354,16 @@ namespace Nistec.Caching.Sync.Embed
             {
                 return false;
             }
-            lock (SyncRoot)
-            {
-                if (m_data.ContainsKey(syncName))
-                {
-                    return m_data.Remove(syncName);
-                }
-            }
-            return false;
+            ISyncItem val;
+            return m_data.TryRemove(syncName,out val);
+            //lock (SyncRoot)
+            //{
+            //    if (m_data.ContainsKey(syncName))
+            //    {
+            //        return m_data.Remove(syncName);
+            //    }
+            //}
+            //return false;
         }
 
         /// <summary>
@@ -340,17 +381,23 @@ namespace Nistec.Caching.Sync.Embed
 
             CacheLogger.Debug("SyncBag Refresh : " + syncName);
             ISyncItem syncitem = null;
-            lock (this.SyncRoot)
-            {
+
+            //lock (this.SyncRoot)
+            //{
                 if (!m_data.TryGetValue(syncName, out syncitem))
                 {
                     CacheLogger.Debug("SyncBag Refresh sync item not found : " + syncName);
                     return;
                 }
-            }
+            //}
+
             if (syncitem != null)
             {
-                syncitem.Refresh(null);
+
+                //Lazy<ISyncItem> lazysync = new Lazy<ISyncItem>(LazyThreadSafetyMode.ExecutionAndPublication);
+                //Task.Factory.StartNew(() => lazysync.Value.Refresh(null));
+
+                Task.Factory.StartNew(()=> syncitem.Refresh(null));
             }
         }
 

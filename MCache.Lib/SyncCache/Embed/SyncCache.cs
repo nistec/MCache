@@ -25,6 +25,7 @@ using System.Configuration;
 using System.Data;
 using System.Collections;
 using System.Xml;
+using System.Linq;
 using Nistec.Caching;
 using Nistec.Data;
 using Nistec.Caching.Data;
@@ -195,11 +196,12 @@ namespace Nistec.Caching.Sync.Embed
         /// <summary>
         /// Satart cache.
         /// </summary>
-        public void Start()
+        public void Start(bool loadSyncConfig)
         {
             base.Start(false, false);
 
-            LoadSyncConfig();
+            if (loadSyncConfig)
+                LoadSyncConfig();
 
         }
 
@@ -380,19 +382,19 @@ namespace Nistec.Caching.Sync.Embed
 
         #region Get/Set Items
 
-        /// <summary>
-        /// Get spesific value from cache using <see cref="CacheKeyInfo"/>, if item not found return null
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="info"></param>
-        /// <returns></returns>
-        public SyncItem<T> GetItem<T>(CacheKeyInfo info) where T : IEntityItem
-        {
-            return _SyncBag.Get<T>(info);
-        }
+        ///// <summary>
+        ///// Get spesific value from cache using <see cref="CacheKeyInfo"/>, if item not found return null
+        ///// </summary>
+        ///// <typeparam name="T"></typeparam>
+        ///// <param name="info"></param>
+        ///// <returns></returns>
+        //public SyncItem<T> GetItem<T>(CacheKeyInfo info) where T : IEntityItem
+        //{
+        //    return _SyncBag.Get<T>(info);
+        //}
 
         /// <summary>
-        /// Get spesific value from cache using <see cref="CacheKeyInfo"/>, if item not found return null
+        /// Get spesific item from cache by name, if item not found return null
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="name"></param>
@@ -402,26 +404,28 @@ namespace Nistec.Caching.Sync.Embed
             return _SyncBag.Get<T>(name);
         }
 
-        /// <summary>
-        /// Get spesific value from cache using item name and keys, if item not found return null
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="name"></param>
-        /// <param name="keys"></param>
-        /// <returns></returns>
-        public SyncItem<T> GetItem<T>(string name, string[] keys) where T : IEntityItem
-        {
-            return GetItem<T>(CacheKeyInfo.Get(name, keys));
-        }
-        /// <summary>
-        /// Get spesific value from cache using <see cref="CacheKeyInfo"/>, if item not found return null
-        /// </summary>
-        /// <param name="info"></param>
-        /// <returns></returns>
-        public ISyncItem GetItem(CacheKeyInfo info)
-        {
-            return _SyncBag.Get(info);
-        }
+        ///// <summary>
+        ///// Get spesific value from cache using item name and keys, if item not found return null
+        ///// </summary>
+        ///// <typeparam name="T"></typeparam>
+        ///// <param name="name"></param>
+        ///// <param name="keys"></param>
+        ///// <returns></returns>
+        //public SyncItem<T> GetItem<T>(string name, string[] keys) where T : IEntityItem
+        //{
+        //    return GetItem<T>(CacheKeyInfo.Get(name, keys));
+        //}
+
+        ///// <summary>
+        ///// Get spesific value from cache using <see cref="CacheKeyInfo"/>, if item not found return null
+        ///// </summary>
+        ///// <param name="info"></param>
+        ///// <returns></returns>
+        //public ISyncItem GetItem(CacheKeyInfo info)
+        //{
+        //    return _SyncBag.Get(info);
+        //}
+
         /// <summary>
         /// Get spesific value from cache using <see cref="CacheKeyInfo"/>, if item not found return null
         /// </summary>
@@ -431,6 +435,21 @@ namespace Nistec.Caching.Sync.Embed
         {
             return _SyncBag.Get(name);
         }
+
+        public IEnumerable<T> ArrayItems<T>(string name)
+        {
+            return _SyncBag.ArrayItems<T>(name);
+        }
+
+        public T SelectFirst<T>(string name,Func<T, bool> query)
+        {
+            return ArrayItems<T>(name).Where(query).FirstOrDefault();
+        }
+        public IEnumerable<T> SelectMany<T>(string name,Func<T, bool> query)
+        {
+            return ArrayItems<T>(name).Where(query);
+        }
+
 
         #endregion
 
@@ -444,7 +463,7 @@ namespace Nistec.Caching.Sync.Embed
         /// <returns></returns>
         public T Get<T>(CacheKeyInfo info) where T : IEntityItem
         {
-            SyncItem<T> syncitem = GetItem<T>(info);
+            SyncItem<T> syncitem = GetItem<T>(info.ItemName);
             if (syncitem != null)
             {
                 return syncitem.Get(info.CacheKey);
@@ -470,7 +489,7 @@ namespace Nistec.Caching.Sync.Embed
         /// <returns></returns>
         public object Get(CacheKeyInfo info)
         {
-            ISyncItem syncitem = GetItem(info);
+            ISyncItem syncitem = GetItem(info.ItemName);
             if (syncitem != null)
             {
                 return syncitem.GetItem(info);
@@ -496,7 +515,7 @@ namespace Nistec.Caching.Sync.Embed
         /// <returns></returns>
         public IDictionary GetRecord(CacheKeyInfo info)
         {
-            ISyncItem syncitem = GetItem(info);
+            ISyncItem syncitem = GetItem(info.ItemName);
             if (syncitem != null)
             {
                 return syncitem.GetRecord(info);
@@ -557,7 +576,7 @@ namespace Nistec.Caching.Sync.Embed
 
                 _DataCache.AddSyncSource(item.ConnectionKey, item.SyncSource, IntervalSeconds, true);
 
-                _SyncBag.Set(item.Info, item as ISyncItem);
+                _SyncBag.Set(entityName, item as ISyncItem);
 
                
             }            
@@ -568,7 +587,53 @@ namespace Nistec.Caching.Sync.Embed
 
         }
 
+        /// <summary>
+        /// Add Item to Sync cache
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="connectionKey"></param>
+        /// <param name="entityName"></param>
+        /// <param name="mappingName"></param>
+        /// <param name="entityKeys"></param>
+        /// <param name="interval"></param>
+        /// <param name="syncType"></param>
+        /// <param name="enableNoLock"></param>
+        /// <param name="commandTimeout"></param>
+        public void AddItem<T>(string connectionKey, string entityName, string mappingName, string[] entityKeys, TimeSpan interval, SyncType syncType, bool enableNoLock = false, int commandTimeout = 0)
+        {
+            if (connectionKey == null)
+                throw new ArgumentNullException("AddItem.connectionKey");
+            if (entityName == null)
+                throw new ArgumentNullException("AddItem.entityName");
+            if (mappingName == null)
+                throw new ArgumentNullException("AddItem.mappingName");
+            if (entityKeys == null)
+                throw new ArgumentNullException("AddItem.entityKeys");
 
+            try
+            {
+                string[] sourceName = new string[] { mappingName };
+                EntitySourceType sourceType = EntitySourceType.Table;
+
+                SyncTimer timer = new SyncTimer(interval, syncType);
+
+                SyncItem<T> item = new SyncItem<T>(connectionKey, entityName, mappingName, sourceName, sourceType, entityKeys, timer, enableNoLock, commandTimeout, false);
+
+
+                item.Validate();
+
+                _DataCache.AddSyncSource(item.ConnectionKey, item.SyncSource, IntervalSeconds, true);
+
+                _SyncBag.Set(entityName, item as ISyncItem);
+
+
+            }
+            catch (Exception ex)
+            {
+                OnError("AddItem error " + ex.Message);
+            }
+
+        }
 
         /// <summary>
         /// Add Item to Sync cache
@@ -587,7 +652,7 @@ namespace Nistec.Caching.Sync.Embed
 
                 _DataCache.AddSyncSource(item.ConnectionKey, item.SyncSource, IntervalSeconds, true);
 
-                _SyncBag.Set(item.Info, item);
+                _SyncBag.Set(item.Info.ItemName, item);
 
                
             }

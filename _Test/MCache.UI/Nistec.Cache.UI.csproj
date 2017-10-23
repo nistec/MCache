@@ -1,0 +1,285 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>9.0.30729</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{E688DA05-B45D-4A5A-832E-131808928378}</ProjectGuid>
+    <OutputType>WinExe</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Nistec.Caching.UI</RootNamespace>
+    <AssemblyName>Nistec.Cache.UI</AssemblyName>
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <OldToolsVersion>3.5</OldToolsVersion>
+    <UpgradeBackupLocation>
+    </UpgradeBackupLocation>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <SccProjectName>
+    </SccProjectName>
+    <SccLocalPath>
+    </SccLocalPath>
+    <SccAuxPath>
+    </SccAuxPath>
+    <SccProvider>
+    </SccProvider>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <TargetFrameworkProfile />
+    <PublishUrl>D:\Nistec\Bin_4.0.2\Deploy\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>false</MapFileExtensions>
+    <ProductName>Nistec.Cache.UI</ProductName>
+    <PublisherName>Nistec</PublisherName>
+    <SuiteName>Nistec.Cache.UI</SuiteName>
+    <OpenBrowserOnPublish>false</OpenBrowserOnPublish>
+    <ApplicationRevision>63</ApplicationRevision>
+    <ApplicationVersion>4.0.2.%2a</ApplicationVersion>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <PublishWizardCompleted>true</PublishWizardCompleted>
+    <BootstrapperEnabled>false</BootstrapperEnabled>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>..\References\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>..\References\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ManifestCertificateThumbprint>8DC063ECE4DEAB34BD6A5A144B05EF855479D150</ManifestCertificateThumbprint>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ManifestKeyFile>MCache.UI_TemporaryKey.pfx</ManifestKeyFile>
+  </PropertyGroup>
+  <PropertyGroup>
+    <GenerateManifests>true</GenerateManifests>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignManifests>false</SignManifests>
+  </PropertyGroup>
+  <PropertyGroup>
+    <TargetZone>LocalIntranet</TargetZone>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationManifest>Properties\app.manifest</ApplicationManifest>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Nistec.Cache">
+      <HintPath>..\..\..\Win_4.0.2.1\References\Debug\Nistec.Cache.dll</HintPath>
+    </Reference>
+    <Reference Include="Nistec.Cache.Agent">
+      <HintPath>..\..\..\Win_4.0.2.1\References\Debug\Nistec.Cache.Agent.exe</HintPath>
+    </Reference>
+    <Reference Include="Nistec.Channels">
+      <HintPath>..\..\..\Win_4.0.2.1\References\Debug\Nistec.Channels.dll</HintPath>
+    </Reference>
+    <Reference Include="Nistec.Charts">
+      <HintPath>..\..\..\Win_4.0.2.1\References\Debug\Nistec.Charts.dll</HintPath>
+    </Reference>
+    <Reference Include="Nistec.Data">
+      <HintPath>..\..\..\Win_4.0.2.1\References\Debug\Nistec.Data.dll</HintPath>
+    </Reference>
+    <Reference Include="Nistec.GridView">
+      <HintPath>..\..\..\Win_4.0.2.1\References\Debug\Nistec.GridView.dll</HintPath>
+    </Reference>
+    <Reference Include="Nistec.Lib">
+      <HintPath>..\..\..\Win_4.0.2.1\References\Debug\Nistec.Lib.dll</HintPath>
+    </Reference>
+    <Reference Include="Nistec.Win">
+      <HintPath>..\..\..\Win_4.0.2.1\References\Debug\Nistec.Win.dll</HintPath>
+    </Reference>
+    <Reference Include="Nistec.WinForms">
+      <HintPath>..\..\..\Win_4.0.2.1\References\Debug\Nistec.WinForms.dll</HintPath>
+    </Reference>
+    <Reference Include="Nistec.Wizards">
+      <HintPath>..\..\..\Win_4.0.2.1\References\Debug\Nistec.Wizards.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Data" />
+    <Reference Include="System.Deployment" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.ServiceProcess" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="AddItemDlg.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="AddDataItemDlg.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Install\wfrm_Install.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Install\wfrm_WinForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Install\ResManager.cs" />
+    <EmbeddedResource Include="AddItemDlg.resx">
+      <DependentUpon>AddItemDlg.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="AddDataItemDlg.resx">
+      <DependentUpon>AddDataItemDlg.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="CacheManagmentForm.resx">
+      <DependentUpon>CacheManagmentForm.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+      <DesignTime>True</DesignTime>
+    </Compile>
+    <Compile Include="CacheManagmentForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="CacheManagmentForm.designer.cs">
+      <DependentUpon>CacheManagmentForm.cs</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Resources\xmlDoc.png" />
+    <None Include="MCache.UI_TemporaryKey.pfx" />
+    <None Include="Properties\app.manifest" />
+    <None Include="Resources\algorithm.png" />
+    <None Include="Resources\barcha2.png" />
+    <None Include="Resources\blueOK.png" />
+    <None Include="Resources\bottom.png" />
+    <None Include="app.config" />
+    <None Include="Resources\class.png" />
+    <None Include="Resources\class_obj.png" />
+    <None Include="Resources\column.png" />
+    <None Include="Resources\copy.png" />
+    <None Include="Resources\cut.png" />
+    <None Include="Resources\data_view.png" />
+    <None Include="Resources\dbcanc1.png" />
+    <None Include="Resources\dbdele1.png" />
+    <None Include="Resources\dbinse1.png" />
+    <None Include="Resources\dbnext.png" />
+    <None Include="Resources\dbrefr1.png" />
+    <EmbeddedResource Include="Resources\exit.ico" />
+    <None Include="Resources\delete.png" />
+    <None Include="Resources\Export.png" />
+    <None Include="Resources\file_obj.png" />
+    <None Include="Resources\filter.png" />
+    <None Include="Resources\filter2.png" />
+    <None Include="Resources\filterRemove.png" />
+    <None Include="Resources\GoToPrevious.png" />
+    <None Include="Resources\Help.png" />
+    <None Include="Resources\GoToNextHS.png" />
+    <None Include="Resources\fit_to_size.png" />
+    <None Include="Resources\imagee1.png" />
+    <None Include="Resources\index.png" />
+    <None Include="Resources\install.png" />
+    <None Include="Resources\logoff_small.png" />
+    <None Include="Resources\newfile_wiz.png" />
+    <None Include="Resources\news.png" />
+    <None Include="Resources\news_game.png" />
+    <None Include="Resources\news_info.png" />
+    <None Include="Resources\PauseHS.png" />
+    <None Include="Resources\paste.png" />
+    <None Include="Resources\PlayHS.png" />
+    <None Include="Resources\PropertiesHS.png" />
+    <None Include="Resources\RefreshDocViewHS.png" />
+    <None Include="Resources\RestartHS.png" />
+    <Content Include="Resources\category_obj.png" />
+    <Content Include="Resources\ctxmsc_cls.png" />
+    <Content Include="Resources\cvs_persp.png" />
+    <Content Include="Resources\dbpost.png" />
+    <Content Include="Resources\gears.png" />
+    <Content Include="Resources\history_view.png" />
+    <Content Include="Resources\pie-chart.png" />
+    <Content Include="Resources\piecha1.png" />
+    <Content Include="Resources\printp1.png" />
+    <Content Include="Resources\record.png" />
+    <Content Include="Resources\saveHS.png" />
+    <Content Include="Resources\search.png" />
+    <Content Include="Resources\select1.png" />
+    <Content Include="Resources\settings.png" />
+    <Content Include="Resources\spinner.gif" />
+    <None Include="Resources\StopHS.png" />
+    <None Include="Resources\sum.png" />
+    <EmbeddedResource Include="Resources\trayicon.ico" />
+    <None Include="Resources\summar1.png" />
+    <None Include="Resources\undo.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include=".NETFramework,Version=v4.0">
+      <Visible>False</Visible>
+      <ProductName>Microsoft .NET Framework 4 %28x86 and x64%29</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include=".NETFramework,Version=v4.0,Profile=Client">
+      <Visible>False</Visible>
+      <ProductName>Microsoft .NET Framework 4 Client Profile %28x86 and x64%29</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1 Client Profile</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.2.0">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 2.0 %28x86%29</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.0">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.0 %28x86%29</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

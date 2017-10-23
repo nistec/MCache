@@ -37,6 +37,8 @@ using Nistec.Caching.Server;
 using Nistec.Threading;
 using Nistec.IO;
 using System.Collections.Concurrent;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace Nistec.Caching.Sync.Remote
 {
@@ -162,6 +164,9 @@ namespace Nistec.Caching.Sync.Remote
             {
                 if (_Items == null)
                 {
+
+                    _Items = DictionaryExtension.CreateConcurrentDictionary<string, EntityStream>(10);
+
                     _Items = new ConcurrentDictionary<string, EntityStream>();
                 }
                 return _Items;
@@ -398,7 +403,7 @@ namespace Nistec.Caching.Sync.Remote
             var watch = Stopwatch.StartNew();
             long totalSize = 0;
             int currentCount = Count;
-            ConcurrentDictionary<string, EntityStream> items = null;
+            
             string entityName = null;
 
             try
@@ -409,21 +414,29 @@ namespace Nistec.Caching.Sync.Remote
                 }
 
                 entityName = SyncSource.EntityName;
-
+                ConcurrentDictionary<string, EntityStream> items = null;
                 lock (taskLock)
                 {
-                    items = EntityStream.CreateEntityRecordStream(Context, Filter, out totalSize);//-GenericRecord
-                    if (items == null)
+                    items = EntityStream.CreateConcurrentEntityRecordStream(Context, Filter, out totalSize);//-GenericRecord
+                    if (items == null || items.Count == 0)
                     {
                         throw new Exception("CreateEntityStream is null, Refreshed Sync Item failed.");
                     }
                 }
+
+#if (Synchronize)
+
+                 //Synchronize(items,true);
+                DictionaryUtil util = new DictionaryUtil();
+                util.SynchronizeParallel<string, EntityStream>(_Items,items,true,LogActionSync);
+#else
 
                 lock (syncLock)
                 {
                     _Items = items;
                 }
 
+#endif
                 AgentManager.SyncCache.SizeExchage(_Size, totalSize,currentCount, Count, false);//true);
 
                 _Size = totalSize;
@@ -440,8 +453,12 @@ namespace Nistec.Caching.Sync.Remote
             }
         }
 
-        
+        public void LogActionSync(string text)
+        {
+            CacheLogger.Logger.LogAction(CacheAction.SyncItem, CacheActionState.None, text);
+        }
 
+   
         /// <summary>
         /// Get if contains item by key in Dictionary
         /// </summary>
@@ -453,7 +470,7 @@ namespace Nistec.Caching.Sync.Remote
                 return Items.ContainsKey(key);
 
         }
-        #endregion
+#endregion
 
     }
 }

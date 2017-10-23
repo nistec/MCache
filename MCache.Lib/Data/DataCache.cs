@@ -112,6 +112,14 @@ namespace Nistec.Caching.Data
             get { return _EnableDataSource; }
         }
 
+        /// <summary>
+        /// Get indicate if Store trigger for each table in DataSource 
+        /// </summary>
+        public bool EnableTrigger
+        {
+            get { return true; }
+        }
+
         bool _EnableNoLock = false;
         /// <summary>
         /// Get indicate whether cache should use with nolock statement.

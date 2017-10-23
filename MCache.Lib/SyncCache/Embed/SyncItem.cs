@@ -35,6 +35,7 @@ using Nistec.IO;
 using Nistec.Runtime;
 using Nistec.Threading;
 using Nistec.Caching.Server;
+using System.Collections.Concurrent;
 
 namespace Nistec.Caching.Sync.Embed
 {
@@ -146,54 +147,72 @@ namespace Nistec.Caching.Sync.Embed
 
         #region Collection Properties
 
-        Dictionary<string,T> _Items;
-
-        /// <summary>
-        /// Get Entities Storage
-        /// </summary>
-        public Dictionary<string,T> Items
+        ConcurrentDictionary<string,T> _Items;
+        ConcurrentDictionary<string, T> ItemsInternal
         {
             get
             {
                 if (_Items == null)
                 {
-                    _Items = new Dictionary<string, T>();
+                    _Items = new ConcurrentDictionary<string, T>();
                 }
                 return _Items;
             }
         }
 
-        Dictionary<string, T> ISyncEx<T>.Items
+        /// <summary>
+        /// Get Entities Storage
+        /// </summary>
+        public IDictionary<string,T> Items
         {
-            get { return Items; }
+            get
+            {
+                //if (_Items == null)
+                //{
+                //    _Items = new ConcurrentDictionary<string, T>();
+                //}
+                return ItemsInternal;
+            }
+        }
+
+        IDictionary<string, T> ISyncEx<T>.Items
+        {
+            get { return ItemsInternal; }
         }
 
         IDictionary ISyncEx.Items
         {
-            get { return Items; }
-        }
+            get {
 
-        /// <summary>
-        /// Get Values
-        /// </summary>
-        public ICollection Values
-        {
-            get
-            {
-                return Items.Values;
+                //if (_Items == null)
+                //{
+                //    _Items = new ConcurrentDictionary<string, T>();
+                //}
+                return ItemsInternal;
             }
         }
 
-        /// <summary>
-        /// Get Keys
-        /// </summary>
-        public ICollection Keys
-        {
-            get
-            {
-                return Items.Keys;
-            }
-        }
+        ///// <summary>
+        ///// Get Values
+        ///// </summary>
+        //public ICollection Values
+        //{
+        //    get
+        //    {
+        //        return ((ISyncEx)ItemsInternal).Items.Values;
+        //    }
+        //}
+
+        ///// <summary>
+        ///// Get Keys
+        ///// </summary>
+        //public ICollection Keys
+        //{
+        //    get
+        //    {
+        //        return Items.Keys;
+        //    }
+        //}
 
         /// <summary>
         /// Get Items count
@@ -202,7 +221,7 @@ namespace Nistec.Caching.Sync.Embed
         {
             get
             {
-                return Items.Count;
+                return ItemsInternal.Count;
             }
         }
         #endregion
@@ -288,13 +307,13 @@ namespace Nistec.Caching.Sync.Embed
         {
             T entity = default(T);
   
-            lock (syncLock)
-            {
-                if (Items.TryGetValue(key, out entity))
+            //lock (syncLock)
+            //{
+                if (ItemsInternal.TryGetValue(key, out entity))
                 {
                     return entity;
                 }
-            }
+            //}
 
             return entity;
         }
@@ -398,10 +417,10 @@ namespace Nistec.Caching.Sync.Embed
         {
             CacheLogger.Logger.LogAction(CacheAction.SyncTime, CacheActionState.Debug, "Refreshe Sync Item start : " + this.SyncSource.EntityName);
 
-            Dictionary<string, T> items = null;
+            ConcurrentDictionary<string, T> items = null;
             lock (taskLock)
             {
-                items = EntityExtension.CreateEntityList<T>(_Context, Filter, OnError);
+                items = EntityExtension.CreateConcurrentEntityList<T>(_Context, Filter, OnError);
                 if (items == null)
                 {
                     CacheLogger.Logger.LogAction(CacheAction.SyncTime, CacheActionState.Failed, "Refreshe Sync Item Failed : " + this.SyncSource.EntityName);
@@ -409,18 +428,28 @@ namespace Nistec.Caching.Sync.Embed
                 }
             }
 
+#if (Synchronize)
+
+                //Synchronize(items,true);
+                DictionaryUtil util = new DictionaryUtil();
+                util.SynchronizeParallel<string, T>(_Items, items, true, LogActionSync);
+#else
             lock (syncLock)
             {
                 _Items = items;
             }
-
+#endif
             if (SyncSource != null)
             {
                 CacheLogger.Logger.LogAction(CacheAction.SyncTime, CacheActionState.Ok, "Refresh Sync Item completed : " + this.SyncSource.EntityName);
             }
         }
 
-        
+        public void LogActionSync(string text)
+        {
+            CacheLogger.Logger.LogAction(CacheAction.SyncItem, CacheActionState.None, text);
+        }
+
         /// <summary>
         /// Get if contains item by key in Dictionary
         /// </summary>
@@ -428,11 +457,11 @@ namespace Nistec.Caching.Sync.Embed
         /// <returns></returns>
         internal override bool Contains(string key)
         {
-            lock (syncLock)//(((ICollection)items).SyncRoot)
-            {
-                return Items.ContainsKey(key);
+            //lock (syncLock)//(((ICollection)items).SyncRoot)
+            //{
+                return ItemsInternal.ContainsKey(key);
 
-            }
+            //}
         }
         #endregion
     }

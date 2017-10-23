@@ -10,7 +10,6 @@ using Nistec.Channels;
 using Nistec.Caching.Remote;
 using Nistec.Caching;
 using System.Data;
-//using API = Nistec.Channels.RemoteCache;
 using API = Nistec.Caching.Remote;
 
 namespace Nistec
@@ -125,11 +124,13 @@ namespace Nistec
             cmdSyncCache.Add("GetRecord", "tableName, key");
             cmdSyncCache.Add("GetAllEntityNames", "");
             cmdSyncCache.Add("GetEntityKeys", "tableName");
+            cmdSyncCache.Add("GetEntityItemsCount", "tableName");
+            cmdSyncCache.Add("PrintEntityValues", "tableName");
             cmdSyncCache.Add("Refresh", "");
             cmdSyncCache.Add("RefreshItem", "tableName");
             cmdSyncCache.Add("Reset", "");
             cmdSyncCache.Add("Reply", "text");
-
+            
 
             cmdSessionCache.Add("GetSessionItem", "sessionId, key");
             cmdSessionCache.Add("GetAllSessionsKeys", "sessionId");
@@ -393,6 +394,38 @@ namespace Nistec
                     case "getentitykeys":
                         var ks = API.SyncCacheApi.Get(cmdProtocol).GetEntityKeys(name).ToArray();
                         DisplayArray(cmd, ks);
+                        break;
+                    case "printentityvalues":
+                        {
+                            var arr = API.SyncCacheApi.Get(cmdProtocol).GetEntityKeys(name).ToArray();
+                            if (arr == null || arr.Length == 0)
+                            {
+                                Display(cmd, "items not found!");
+                            }
+                            else
+                            {
+                                int count = Types.ToInt(keys);
+                                if (count <= 0)
+                                    count = 1;
+                                for (int i = 0; i < count; i++)
+                                {
+                                    foreach (var k in arr)
+                                    {
+                                        var record = API.SyncCacheApi.Get(cmdProtocol).GetRecord(name, k.Split(';'));
+                                        var json = JsonSerializer.Serialize(record, null, JsonFormat.Indented);
+                                        Display(cmd, json);
+                                    }
+
+                                    Display(cmd, "finished items: " + arr.Length.ToString());
+                                }
+                            }
+                        }
+                        break;
+                    case "getentityitemscount":
+                        {
+                            var count = API.SyncCacheApi.Get(cmdProtocol).GetEntityItemsCount(name);
+                            Display(cmd, count.ToString());
+                        }
                         break;
                     case "refreshitem":
                         API.SyncCacheApi.Get(cmdProtocol).Refresh(name);

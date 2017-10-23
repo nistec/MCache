@@ -61,8 +61,8 @@ namespace Nistec.Caching.Sync
         private string _ClientId;
         private string _TableWatcherName;
         private CacheSynchronizer _CacheSynchronize;
-        
-        
+
+        private bool _EnableTrigger;
 
         #endregion
 
@@ -158,6 +158,7 @@ namespace Nistec.Caching.Sync
         public SyncDb(string connectionKey)
         {
             SyncState = CacheSyncState.Idle;
+            _EnableTrigger = CacheSettings.EnableSyncTypeEventTrigger;
             _storageName = connectionKey;
             _ClientId = Environment.MachineName + "$" + _storageName;
             _TableWatcherName = DbWatcher.DefaultWatcherName;
@@ -168,7 +169,26 @@ namespace Nistec.Caching.Sync
             _SyncOption = SyncOption.Manual;
             //_DbContext = new DbContext(connectionKey);
         }
- 
+
+        /// <summary>
+        /// SyncDb Ctor 
+        /// </summary>
+        /// <param name="connectionKey"></param>
+        public SyncDb(string connectionKey, SyncOption syncOption,bool enableTrigger)
+        {
+            SyncState = CacheSyncState.Idle;
+            _EnableTrigger = enableTrigger;
+            _storageName = connectionKey;
+            _ClientId = Environment.MachineName + "$" + _storageName;
+            _TableWatcherName = DbWatcher.DefaultWatcherName;
+            initilized = false;
+            _SyncTables = new DataSyncList(this);
+            _CacheSynchronize = new CacheSynchronizer(this);
+            _state = DataCacheState.Closed;
+            _SyncOption = syncOption;
+            //_DbContext = new DbContext(connectionKey);
+        }
+
 
         ///// <summary>
         ///// SyncDb Ctor 
@@ -182,7 +202,7 @@ namespace Nistec.Caching.Sync
         //    ConnectionKey
         //    _DbContext = new DbContext(connection, providerDb);
         //}
- 
+
         ///// <summary>
         ///// SyncDb Ctor 
         ///// </summary>
@@ -280,6 +300,7 @@ namespace Nistec.Caching.Sync
             DbWatcher.CreateTablesTrigger(this.ConnectionKey, Tables, TableWatcherName);
         }
 
+
         /// <summary>
         /// Start Cache Synchronization
         /// </summary>
@@ -293,7 +314,7 @@ namespace Nistec.Caching.Sync
             if (_SyncOption == SyncOption.Auto)
             {
 
-                bool enableTrigger = CacheSettings.EnableSyncTypeEventTrigger;
+                bool enableTrigger = _EnableTrigger;// CacheSettings.EnableSyncTypeEventTrigger;
 
                 if (enableTrigger)
                     CreateTablesTrigger(true, _TableWatcherName);
@@ -312,6 +333,7 @@ namespace Nistec.Caching.Sync
                     _CacheSynchronize.Start(intervalSeconds);
                 
             }
+            initilized = true;
             OnCacheStateChanged(EventArgs.Empty);
         }
 
@@ -386,6 +408,13 @@ namespace Nistec.Caching.Sync
             get { return false; }
         }
 
+        /// <summary>
+        /// Get indicate if Store trigger for each table in DataSource 
+        /// </summary>
+        public bool EnableTrigger
+        {
+            get { return _EnableTrigger; }
+        }
 
         bool _EnableNoLock = false;
         /// <summary>

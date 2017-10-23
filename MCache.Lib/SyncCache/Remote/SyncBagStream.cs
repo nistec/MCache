@@ -142,26 +142,26 @@ namespace Nistec.Caching.Sync.Remote
 
         #region Get/Set Items
 
-        /// <summary>
-        /// Get spesific value from cache using <see cref="CacheKeyInfo"/>, if item not found return null
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="info"></param>
-        /// <returns></returns>
-        public SyncItemStream<T> GetItem<T>(CacheKeyInfo info) where T : IEntityItem
-        {
-            ISyncItemStream item = null;
+        ///// <summary>
+        ///// Get spesific value from cache using <see cref="CacheKeyInfo"/>, if item not found return null
+        ///// </summary>
+        ///// <typeparam name="T"></typeparam>
+        ///// <param name="info"></param>
+        ///// <returns></returns>
+        //public SyncItemStream<T> GetItem<T>(CacheKeyInfo info) where T : IEntityItem
+        //{
+        //    ISyncItemStream item = null;
            
-                if (m_data.TryGetValue(info.ItemName, out item))
-                {
-                    return (SyncItemStream<T>)item;
-                }
+        //        if (m_data.TryGetValue(info.ItemName, out item))
+        //        {
+        //            return (SyncItemStream<T>)item;
+        //        }
             
-            return null;
-        }
+        //    return null;
+        //}
 
         /// <summary>
-        /// Get spesific value from cache using <see cref="CacheKeyInfo"/>, if item not found return null
+        /// Get spesific item from cache by name, if item not found return null
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="name"></param>
@@ -178,30 +178,31 @@ namespace Nistec.Caching.Sync.Remote
             return null;
         }
 
-        /// <summary>
-        /// Get spesific value from cache using item name and keys, if item not found return null
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="name"></param>
-        /// <param name="keys"></param>
-        /// <returns></returns>
-        public SyncItemStream<T> GetItem<T>(string name, string[] keys) where T : IEntityItem
-        {
-            return GetItem<T>(CacheKeyInfo.Get(name, keys));
-        }
-        /// <summary>
-        /// Get spesific value from cache using <see cref="CacheKeyInfo"/>, if item not found return null
-        /// </summary>
-        /// <param name="info"></param>
-        /// <returns></returns>
-        public ISyncItemStream GetItem(CacheKeyInfo info)
-        {
-            ISyncItemStream item = null;
+        ///// <summary>
+        ///// Get spesific value from cache using item name and keys, if item not found return null
+        ///// </summary>
+        ///// <typeparam name="T"></typeparam>
+        ///// <param name="name"></param>
+        ///// <param name="keys"></param>
+        ///// <returns></returns>
+        //public SyncItemStream<T> GetItem<T>(string name, string[] keys) where T : IEntityItem
+        //{
+        //    return GetItem<T>(CacheKeyInfo.Get(name, keys));
+        //}
+        ///// <summary>
+        ///// Get spesific value from cache using <see cref="CacheKeyInfo"/>, if item not found return null
+        ///// </summary>
+        ///// <param name="info"></param>
+        ///// <returns></returns>
+        //public ISyncItemStream GetItem(CacheKeyInfo info)
+        //{
+        //    ISyncItemStream item = null;
             
-                m_data.TryGetValue(info.ItemName, out item);
+        //        m_data.TryGetValue(info.ItemName, out item);
            
-            return item;
-        }
+        //    return item;
+        //}
+
         /// <summary>
         /// Get spesific value from cache using <see cref="CacheKeyInfo"/>, if item not found return null
         /// </summary>
@@ -229,7 +230,7 @@ namespace Nistec.Caching.Sync.Remote
         /// <returns></returns>
         public EntityStream Get<T>(CacheKeyInfo info) where T : IEntityItem
         {
-            SyncItemStream<T> syncitem = GetItem<T>(info);
+            SyncItemStream<T> syncitem = GetItem<T>(info.ItemName);
             if (syncitem != null)
             {
                 return syncitem.GetEntityStream(info.CacheKey);
@@ -282,24 +283,25 @@ namespace Nistec.Caching.Sync.Remote
 
         }
 
-        /// <summary>
-        /// Set item into sync bag stream.
-        /// </summary>
-        /// <param name="info"></param>
-        /// <param name="value"></param>
-        public void Set(CacheKeyInfo info, ISyncItemStream value)
-        {
-            if (info == null || value == null)
-            {
-                return;
-            }
+        ///// <summary>
+        ///// Set item into sync bag stream.
+        ///// </summary>
+        ///// <param name="info"></param>
+        ///// <param name="value"></param>
+        //public void Set(CacheKeyInfo info, ISyncItemStream value)
+        //{
+        //    if (info == null || value == null)
+        //    {
+        //        return;
+        //    }
 
-            ISyncItemStream item;
+        //    ISyncItemStream item;
 
-                m_data.TryGetValue(info.ItemName, out item);
-                m_data[info.ItemName] = value;
+        //        m_data.TryGetValue(info.ItemName, out item);
+        //        m_data[info.ItemName] = value;
           
-        }
+        //}
+
         /// <summary>
         /// Set item into sync bag stream.
         /// </summary>

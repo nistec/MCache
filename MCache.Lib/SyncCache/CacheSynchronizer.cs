@@ -63,11 +63,12 @@ namespace Nistec.Caching.Sync
         /// <param name="owner"></param>
         public CacheSynchronizer(IDataCache owner)
         {
-            enableTrigger = CacheSettings.EnableSyncTypeEventTrigger;
+            enableTrigger = owner.EnableTrigger;// CacheSettings.EnableSyncTypeEventTrigger;
             this.Owner = owner;
             this.watcher = new DbWatcher(this.Owner);
         }
 
+      
         ~CacheSynchronizer()
         {
             Dispose(false);

@@ -68,7 +68,12 @@ namespace Nistec.Caching.Data
         /// Get indicate whether cache should store data on synchronization.
         /// </summary>
         bool EnableDataSource { get; }
-        
+
+        /// <summary>
+        /// Get indicate if Store trigger for each table in DataSource 
+        /// </summary>
+        bool EnableTrigger { get; }
+
         /// <summary>
         /// Get <see cref="CacheSyncState"/> the sync state.
         /// </summary>

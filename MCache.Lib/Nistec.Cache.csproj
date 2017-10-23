@@ -33,12 +33,12 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>..\..\References\Debug\</OutputPath>
+    <OutputPath>..\References\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
-    <DocumentationFile>..\..\References\Debug\Nistec.Cache.XML</DocumentationFile>
+    <DocumentationFile>bin\Debug\Nistec.Cache.XML</DocumentationFile>
     <GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
     <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
@@ -167,9 +167,7 @@
     </Compile>
     <Compile Include="Config\CacheProperties.cs" />
     <Compile Include="Cache\CacheUtil.cs" />
-    <Compile Include="Cache\CacheLogger.cs">
-      <SubType>Component</SubType>
-    </Compile>
+    <Compile Include="Cache\CacheLogger.cs" />
     <Compile Include="Remote\CacheCmd.cs" />
     <Compile Include="Data\DbCache.cs" />
     <Compile Include="Data\DataSyncList.cs" />

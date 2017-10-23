@@ -30,7 +30,7 @@ namespace Nistec.Caching.Sync
 
     internal interface ISyncEx<T>
     {
-        Dictionary<string, T> Items { get; }
+        IDictionary<string, T> Items { get; }
     }
 
     internal interface ISyncEx

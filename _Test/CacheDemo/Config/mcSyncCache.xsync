@@ -1,0 +1,97 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+
+<Nistec>
+		
+  <SyncCache>
+
+    <SyncItem
+	  EntityType="GenericEntity"
+      ConnectionKey="AdventureWorks"
+      EntityName="contactEntity"
+      MappingName="Person.Contact"
+      SourceName="Person.Contact"
+      SourceType="Table"
+      EntityKeys="ContactID"
+      SyncType="Event"
+      SyncTime="00:33:00" />
+
+    <SyncItem
+      EntityType="GenericEntity"
+        ConnectionKey="AdventureWorks"
+        EntityName="ContactTypeEntity"
+        MappingName="Person.ContactType"
+        SourceName="Person.ContactType"
+        SourceType="Table"
+        EntityKeys="ContactTypeID"
+        SyncType="Interval"
+        SyncTime="00:03:00" />
+
+    <SyncItem
+      EntityType="GenericEntity"
+        ConnectionKey="AdventureWorks"
+        EntityName="ProductEntity"
+        MappingName="Production.Product"
+        SourceName="Production.Product"
+        SourceType="Table"
+        EntityKeys="ProductID"
+        SyncType="Event"
+        SyncTime="00:53:00" />
+
+    <SyncItem
+      EntityType="GenericEntity"
+        ConnectionKey="AdventureWorks"
+        EntityName="ProductCategoryEntity"
+        MappingName="Production.ProductCategory"
+        SourceName="Production.ProductCategory"
+        SourceType="Table"
+        EntityKeys="ProductCategoryID"
+        SyncType="Event"
+        SyncTime="01:03:00" />
+
+    <SyncItem
+      EntityType="GenericEntity"
+        ConnectionKey="AdventureWorks"
+        EntityName="CurrencyEntity"
+        MappingName="Sales.Currency"
+        SourceName="Sales.Currency"
+        SourceType="Table"
+        EntityKeys="CurrencyCode"
+        SyncType="Event"
+        SyncTime="01:13:00" />
+
+    <SyncItem
+          EntityType="GenericEntity"
+            ConnectionKey="EnterpriseDB"
+            EntityName="DataTypesEntity"
+            MappingName="DataTypes"
+            SourceName="DataTypes"
+            SourceType="Table"
+            EntityKeys="DataType"
+            SyncType="Event"
+            SyncTime="01:23:00" />
+    <SyncItem
+      EntityType="GenericEntity"
+        ConnectionKey="EnterpriseDB"
+        EntityName="GroupsEntity"
+        MappingName="Groups"
+        SourceName="Groups"
+        SourceType="Table"
+        EntityKeys="GroupID"
+        SyncType="Event"
+        SyncTime="01:33:00" />
+    
+    <SyncItem
+      EntityType="GenericEntity"
+        ConnectionKey="EnterpriseDB"
+        EntityName="ScriptTypesEntity"
+        MappingName="ScriptTypes"
+        SourceName="ScriptTypes"
+        SourceType="Table"
+        EntityKeys="ScriptType"
+        SyncType="Event"
+        SyncTime="01:43:00" />
+
+  </SyncCache>
+</Nistec>
+
+  
