@@ -24,8 +24,8 @@ namespace Nistec
     {
         public static void Run(string[] args)
         {
-            NetProtocol cmdProtocol = NetProtocol.Tcp;
-            string protocol = "tcp";
+            NetProtocol cmdProtocol = NetProtocol.Pipe;
+            string protocol = "pipe";
             string cmd = "";
             string cacheType = CacheType.cache;
             string cmdName = "";

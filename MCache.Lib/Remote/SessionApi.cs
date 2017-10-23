@@ -78,6 +78,15 @@ namespace Nistec.Caching.Remote
         /// <returns></returns>
         public string Get(string sessionId, string key)
         {
+            if (string.IsNullOrWhiteSpace(sessionId))
+            {
+                throw new ArgumentNullException("sessionId is required");
+            }
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                throw new ArgumentNullException("key is required");
+            }
+
             return SendDuplex<string>(SessionCmd.GetSessionItem,key, sessionId );
         }
 
@@ -102,6 +111,15 @@ namespace Nistec.Caching.Remote
         /// </code></example>
         public T Get<T>(string sessionId, string key)
         {
+            if (string.IsNullOrWhiteSpace(sessionId))
+            {
+                throw new ArgumentNullException("sessionId is required");
+            }
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                throw new ArgumentNullException("key is required");
+            }
+
             return SendDuplex<T>(SessionCmd.GetSessionItem, key, sessionId);
         }
         /// <summary>
@@ -113,6 +131,15 @@ namespace Nistec.Caching.Remote
         /// <returns></returns>
         public T Fetch<T>(string sessionId, string key)
         {
+            if (string.IsNullOrWhiteSpace(sessionId))
+            {
+                throw new ArgumentNullException("sessionId is required");
+            }
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                throw new ArgumentNullException("key is required");
+            }
+
             return SendDuplex<T>(SessionCmd.FetchSessionItem, key, sessionId);
         }
         /// <summary>
@@ -134,6 +161,19 @@ namespace Nistec.Caching.Remote
         /// </code></example>
         public int CopyTo(string sessionId, string key, string targetKey, int expiration, bool addToCache = false)
         {
+            if (string.IsNullOrWhiteSpace(sessionId))
+            {
+                throw new ArgumentNullException("sessionId is required");
+            }
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                throw new ArgumentNullException("key is required");
+            }
+            if (string.IsNullOrWhiteSpace(targetKey))
+            {
+                throw new ArgumentNullException("targetKey is required");
+            }
+
             using (var message = new CacheMessage()
             {
                 Command = SessionCmd.CopyTo,
@@ -166,6 +206,19 @@ namespace Nistec.Caching.Remote
         /// </code></example>
         public int FetchTo(string sessionId, string key, string targetKey, int expiration, bool addToCache = false)
         {
+            if (string.IsNullOrWhiteSpace(sessionId))
+            {
+                throw new ArgumentNullException("sessionId is required");
+            }
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                throw new ArgumentNullException("key is required");
+            }
+            if (string.IsNullOrWhiteSpace(targetKey))
+            {
+                throw new ArgumentNullException("targetKey is required");
+            }
+
             using (var message = new CacheMessage()
             {
                 Command = SessionCmd.FetchTo,
@@ -203,6 +256,15 @@ namespace Nistec.Caching.Remote
         /// </code></example>
         public void AddSession(string sessionId, string userId, int timeout, string args)
         {
+            if (string.IsNullOrWhiteSpace(sessionId))
+            {
+                throw new ArgumentNullException("sessionId is required");
+            }
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                throw new ArgumentNullException("userId is required");
+            }
+
             using (var message = new CacheMessage()
             {
                 Command = SessionCmd.AddSession,
@@ -229,6 +291,11 @@ namespace Nistec.Caching.Remote
         /// </code></example>
         public void RemoveSession(string sessionId, bool isAsync = false)
         {
+            if (string.IsNullOrWhiteSpace(sessionId))
+            {
+                throw new ArgumentNullException("sessionId is required");
+            }
+
             using (var message = new CacheMessage()
             {
                 Command = SessionCmd.RemoveSession,
@@ -245,6 +312,11 @@ namespace Nistec.Caching.Remote
         /// <param name="sessionId"></param>
         public void Clear(string sessionId)
         {
+            if (string.IsNullOrWhiteSpace(sessionId))
+            {
+                throw new ArgumentNullException("sessionId is required");
+            }
+
             using (var message = new CacheMessage()
             {
                 Command = SessionCmd.ClearSessionItems,
@@ -282,6 +354,11 @@ namespace Nistec.Caching.Remote
         /// </code></example>
         public SessionBagStream GetOrCreate(string sessionId)
         {
+            if (string.IsNullOrWhiteSpace(sessionId))
+            {
+                throw new ArgumentNullException("sessionId is required");
+            }
+
             using (var message = new CacheMessage()
             {
                 Command = SessionCmd.GetOrCreateSession,
@@ -299,6 +376,11 @@ namespace Nistec.Caching.Remote
         /// <returns></returns>
         public SessionBagStream GetExistingSession(string sessionId)
         {
+            if (string.IsNullOrWhiteSpace(sessionId))
+            {
+                throw new ArgumentNullException("sessionId is required");
+            }
+
             using (var message = new CacheMessage()
             {
                 Command = SessionCmd.GetExistingSession,
@@ -319,6 +401,11 @@ namespace Nistec.Caching.Remote
         /// <param name="sessionId"></param>
         public void Refresh(string sessionId)
         {
+            if (string.IsNullOrWhiteSpace(sessionId))
+            {
+                throw new ArgumentNullException("sessionId is required");
+            }
+
             using (var message = new CacheMessage()
             {
                 Command = SessionCmd.SessionRefresh,
@@ -334,6 +421,11 @@ namespace Nistec.Caching.Remote
         /// <param name="sessionId"></param>
         public void RefreshOrCreate(string sessionId)
         {
+            if (string.IsNullOrWhiteSpace(sessionId))
+            {
+                throw new ArgumentNullException("sessionId is required");
+            }
+
             using (var message = new CacheMessage()
             {
                 Command = SessionCmd.RefreshOrCreate,
@@ -361,6 +453,15 @@ namespace Nistec.Caching.Remote
         /// </code></example>
         public bool Remove(string sessionId, string key)
         {
+            if (string.IsNullOrWhiteSpace(sessionId))
+            {
+                throw new ArgumentNullException("sessionId is required");
+            }
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                throw new ArgumentNullException("key is required");
+            }
+
             using (var message = new CacheMessage()
             {
                 Command = SessionCmd.RemoveSessionItem,
@@ -407,6 +508,20 @@ namespace Nistec.Caching.Remote
         /// </code></example>       
         public int Set(string sessionId, string key, object value, bool validateExisting = false)
         {
+            if (string.IsNullOrWhiteSpace(sessionId))
+            {
+                throw new ArgumentNullException("sessionId is required");
+            }
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                throw new ArgumentNullException("key is required");
+            }
+            if (value==null)
+            {
+                throw new ArgumentNullException("value is required");
+            }
+
+
             string cmd = (validateExisting) ? SessionCmd.AddItemExisting : SessionCmd.AddSessionItem;
             using (var message = new CacheMessage(cmd, key, value, CacheDefaults.SessionTimeout, sessionId))
             {
@@ -436,6 +551,19 @@ namespace Nistec.Caching.Remote
         /// </code></example>
         public int Set(string sessionId, string key, object value, int timeout, bool validateExisting = false)
         {
+            if (string.IsNullOrWhiteSpace(sessionId))
+            {
+                throw new ArgumentNullException("sessionId is required");
+            }
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                throw new ArgumentNullException("key is required");
+            }
+            if (value == null)
+            {
+                throw new ArgumentNullException("value is required");
+            }
+
             string cmd = (validateExisting) ? SessionCmd.AddItemExisting : SessionCmd.AddSessionItem;
             using (var message = new CacheMessage(cmd, key, value, timeout, sessionId))
             {
@@ -450,6 +578,15 @@ namespace Nistec.Caching.Remote
         /// <returns></returns>
         public bool Exists(string sessionId, string key)
         {
+            if (string.IsNullOrWhiteSpace(sessionId))
+            {
+                throw new ArgumentNullException("sessionId is required");
+            }
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                throw new ArgumentNullException("key is required");
+            }
+
             using (var message = new CacheMessage()
             {
                 Command = SessionCmd.Exists,
@@ -498,6 +635,11 @@ namespace Nistec.Caching.Remote
         /// <returns></returns>
         public ICollection<string> GetSessionsItemsKeys(string sessionId)
         {
+            if (string.IsNullOrWhiteSpace(sessionId))
+            {
+                throw new ArgumentNullException("sessionId is required");
+            }
+
             using (var message = new CacheMessage()
             {
                 Command = SessionCmd.GetSessionItemsKeys,
@@ -515,6 +657,11 @@ namespace Nistec.Caching.Remote
         /// <returns></returns>
         public string Reply(string text)
         {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                throw new ArgumentNullException("text is required");
+            }
+
             return SendDuplex<string>(SessionCmd.Reply, text);
         }
     }

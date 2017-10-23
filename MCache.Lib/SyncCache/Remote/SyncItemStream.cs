@@ -405,6 +405,7 @@ namespace Nistec.Caching.Sync.Remote
             int currentCount = Count;
             
             string entityName = null;
+            int syncCount = 0;
 
             try
             {
@@ -412,7 +413,7 @@ namespace Nistec.Caching.Sync.Remote
                 {
                     throw new Exception("Invalid DataSyncEntity in SyncItemStream, SyncSource is null.");
                 }
-
+                
                 entityName = SyncSource.EntityName;
                 ConcurrentDictionary<string, EntityStream> items = null;
                 lock (taskLock)
@@ -422,6 +423,7 @@ namespace Nistec.Caching.Sync.Remote
                     {
                         throw new Exception("CreateEntityStream is null, Refreshed Sync Item failed.");
                     }
+                    syncCount = items.Count;
                 }
 
 #if (Synchronize)
@@ -435,7 +437,7 @@ namespace Nistec.Caching.Sync.Remote
                 {
                     _Items = items;
                 }
-
+                //items = null;
 #endif
                 AgentManager.SyncCache.SizeExchage(_Size, totalSize,currentCount, Count, false);//true);
 
@@ -443,7 +445,7 @@ namespace Nistec.Caching.Sync.Remote
 
                 watch.Stop();
 
-                CacheLogger.Logger.LogAction(CacheAction.SyncTime, CacheActionState.Ok, "Refresh Sync Item completed : {0}, Duration Milliseconds: {1}", entityName, watch.ElapsedMilliseconds.ToString());
+                CacheLogger.Logger.LogAction(CacheAction.SyncTime, CacheActionState.Ok, "Refresh Sync Item completed : {0}, CurrentCount: {1}, SyncCount: {2}, Duration Milliseconds: {3}", entityName, currentCount.ToString(), syncCount.ToString(), watch.ElapsedMilliseconds.ToString());
 
             }
             catch (Exception ex)

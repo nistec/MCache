@@ -74,6 +74,10 @@ namespace Nistec.Caching.Remote
         /// <returns></returns>
         public string GetJson(CacheKeyInfo info, JsonFormat format)
         {
+            if (info == null)
+            {
+                throw new ArgumentNullException("SyncEntity is required");
+            }
             var stream = GetAs(info);
             return RemoteApi.ToJson(stream, format);
         }
@@ -87,6 +91,14 @@ namespace Nistec.Caching.Remote
         /// <returns></returns>
         public string GetJson(string entityName, string[] keys, JsonFormat format)
         {
+            if (string.IsNullOrWhiteSpace(entityName))
+            {
+                throw new ArgumentNullException("entityName is required");
+            }
+            if (keys == null)
+            {
+                throw new ArgumentNullException("keys is required");
+            }
             var stream = GetAs(entityName, keys);
             return RemoteApi.ToJson(stream, format);
         }
@@ -98,6 +110,10 @@ namespace Nistec.Caching.Remote
         /// <param name="entity"></param>
         public void AddItem(SyncEntity entity)
         {
+            if (entity == null)
+            {
+                throw new ArgumentNullException("SyncEntity is required");
+            }
             using (var message = new CacheMessage(SyncCacheCmd.AddSyncEntity, entity.EntityName, entity, 0))
             {
                 SendOut(message);
@@ -111,6 +127,14 @@ namespace Nistec.Caching.Remote
         /// <returns></returns>
         public object GetItem(CacheKeyInfo info, Type type)
         {
+            if (info == null)
+            {
+                throw new ArgumentNullException("CacheKeyInfo is required");
+            }
+            if (type == null)
+            {
+                throw new ArgumentNullException("type is required");
+            }
             return SendDuplex(SyncCacheCmd.GetSyncItem, info.ToString(), type.FullName);
          }
         /// <summary>
@@ -122,6 +146,14 @@ namespace Nistec.Caching.Remote
         /// <returns></returns>
         public object GetItem(string entityName, string[] keys, Type type)
         {
+            if (string.IsNullOrWhiteSpace(entityName))
+            {
+                throw new ArgumentNullException("entityName is required");
+            }
+            if (keys == null)
+            {
+                throw new ArgumentNullException("keys is required");
+            }
             return SendDuplex(SyncCacheCmd.GetSyncItem, CacheKeyInfo.Get(entityName, keys).ToString(), type.FullName);
         }
         /// <summary>
@@ -132,6 +164,10 @@ namespace Nistec.Caching.Remote
         /// <returns></returns>
         public T GetItem<T>(CacheKeyInfo info)
         {
+            if (info == null)
+            {
+                throw new ArgumentNullException("CacheKeyInfo is required");
+            }
             return SendDuplex<T>(SyncCacheCmd.GetSyncItem, info.ToString());
         }
         /// <summary>
@@ -143,6 +179,14 @@ namespace Nistec.Caching.Remote
         /// <returns></returns>
         public T GetItem<T>(string entityName, string[] keys)
         {
+            if (string.IsNullOrWhiteSpace(entityName))
+            {
+                throw new ArgumentNullException("entityName is required");
+            }
+            if (keys == null)
+            {
+                throw new ArgumentNullException("keys is required");
+            }
             return SendDuplex<T>(SyncCacheCmd.GetSyncItem, CacheKeyInfo.Get(entityName, keys).ToString());
         }
 
@@ -168,6 +212,10 @@ namespace Nistec.Caching.Remote
         /// </code></example>
         public GenericRecord GetValue(CacheKeyInfo info)//-GenericRecord
         {
+            if (info == null)
+            {
+                throw new ArgumentNullException("CacheKeyInfo is required");
+            }
             return SendDuplex<GenericRecord>(SyncCacheCmd.GetSyncItem, info.ToString());
         }
 
@@ -179,6 +227,14 @@ namespace Nistec.Caching.Remote
         /// <returns></returns>
         public GenericRecord GetValue(string entityName, string[] keys)//-GenericRecord
         {
+            if (string.IsNullOrWhiteSpace(entityName))
+            {
+                throw new ArgumentNullException("entityName is required");
+            }
+            if (keys == null)
+            {
+                throw new ArgumentNullException("keys is required");
+            }
             return SendDuplex<GenericRecord>(SyncCacheCmd.GetSyncItem, CacheKeyInfo.Get(entityName, keys).ToString());
         }
 
@@ -201,6 +257,10 @@ namespace Nistec.Caching.Remote
         /// </code></example>
         public IDictionary GetRecord(CacheKeyInfo info)
         {
+            if (info == null)
+            {
+                throw new ArgumentNullException("CacheKeyInfo is required");
+            }
             return SendDuplex<Dictionary<string, object>>(SyncCacheCmd.GetRecord, info.ToString());
         }
         /// <summary>
@@ -211,6 +271,14 @@ namespace Nistec.Caching.Remote
         /// <returns></returns>
         public IDictionary GetRecord(string entityName, string[] keys)
         {
+            if (string.IsNullOrWhiteSpace(entityName))
+            {
+                throw new ArgumentNullException("entityName is required");
+            }
+            if (keys == null)
+            {
+                throw new ArgumentNullException("keys is required");
+            }
             return SendDuplex<Dictionary<string, object>>(SyncCacheCmd.GetRecord, CacheKeyInfo.Get(entityName, keys).ToString());
         }
  
@@ -222,6 +290,10 @@ namespace Nistec.Caching.Remote
         /// <returns></returns>
         public NetStream GetAs(CacheKeyInfo info, CacheEntityTypes entityType = CacheEntityTypes.GenericEntity)
         {
+            if (info == null)
+            {
+                throw new ArgumentNullException("CacheKeyInfo is required");
+            }
             using (CacheMessage message = new CacheMessage()
             {
                 Command = SyncCacheCmd.GetAs,
@@ -243,6 +315,14 @@ namespace Nistec.Caching.Remote
         /// <returns></returns>
         public NetStream GetAs(string entityName, string[] keys, CacheEntityTypes entityType = CacheEntityTypes.GenericEntity)
         {
+            if (string.IsNullOrWhiteSpace(entityName))
+            {
+                throw new ArgumentNullException("entityName is required");
+            }
+            if (keys == null)
+            {
+                throw new ArgumentNullException("keys is required");
+            }
             using (CacheMessage message = new CacheMessage()
             {
                 Command = SyncCacheCmd.GetAs,
@@ -276,7 +356,10 @@ namespace Nistec.Caching.Remote
         /// </code></example>
         public T GetEntity<T>(CacheKeyInfo info)
         {
-
+            if (info==null)
+            {
+                throw new ArgumentNullException("CacheKeyInfo is required");
+            }
             NetStream stream = SendDuplex<NetStream>(SyncCacheCmd.GetEntity, info.ToString());
             if (stream == null)
                 return default(T);
@@ -293,6 +376,14 @@ namespace Nistec.Caching.Remote
         /// <returns></returns>
         public T GetEntity<T>(string entityName, string[] keys)
         {
+            if (string.IsNullOrWhiteSpace(entityName))
+            {
+                throw new ArgumentNullException("entityName is required");
+            }
+            if (keys == null)
+            {
+                throw new ArgumentNullException("keys is required");
+            }
             return GetEntity<T>(CacheKeyInfo.Get(entityName, keys));
         }
         
@@ -324,6 +415,10 @@ namespace Nistec.Caching.Remote
         /// </code></example>
         public void Refresh(string syncName)
         {
+            if (string.IsNullOrWhiteSpace(syncName))
+            {
+                throw new ArgumentNullException("syncName is required");
+            }
             SendOut(SyncCacheCmd.RefreshItem, syncName);
         }
         /// <summary>
@@ -339,6 +434,10 @@ namespace Nistec.Caching.Remote
         /// </code></example>
         public void RemoveItem(string syncName)
         {
+            if (string.IsNullOrWhiteSpace(syncName))
+            {
+                throw new ArgumentNullException("syncName is required");
+            }
             SendOut(SyncCacheCmd.RemoveSyncItem, syncName);
         }
         /// <summary>
@@ -404,6 +503,10 @@ namespace Nistec.Caching.Remote
         /// <returns></returns>
         public GenericKeyValue GetEntityItems(string entityName)
         {
+            if (string.IsNullOrWhiteSpace(entityName))
+            {
+                throw new ArgumentNullException("entityName is required");
+            }
             return SendDuplex<GenericKeyValue>(SyncCacheCmd.GetEntityItems, entityName);
         }
 
@@ -414,6 +517,10 @@ namespace Nistec.Caching.Remote
         /// <returns></returns>
         public int GetEntityItemsCount(string entityName)
         {
+            if (string.IsNullOrWhiteSpace(entityName))
+            {
+                throw new ArgumentNullException("entityName is required");
+            }
             return SendDuplex<int>(SyncCacheCmd.GetEntityItemsCount, entityName);
         }
 
@@ -424,6 +531,10 @@ namespace Nistec.Caching.Remote
         /// <returns></returns>
         public ICollection<string> GetEntityKeys(string entityName)
         {
+            if(string.IsNullOrWhiteSpace(entityName))
+            {
+                throw new ArgumentNullException("entityName is required");
+            }
             return SendDuplex<ICollection<string>>(SyncCacheCmd.GetEntityKeys, entityName);
         }
 
@@ -470,6 +581,10 @@ namespace Nistec.Caching.Remote
         /// <returns></returns>
         public DataTable GetItemsReport(string entityName)
         {
+            if (string.IsNullOrWhiteSpace(entityName))
+            {
+                throw new ArgumentNullException("entityName is required");
+            }
             return (DataTable)SendDuplex(SyncCacheCmd.GetItemsReport, entityName, typeof(ICollection<string>).FullName);
         }
         /// <summary>
@@ -478,6 +593,10 @@ namespace Nistec.Caching.Remote
         /// <returns></returns>
         public string Reply(string text)
         {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                throw new ArgumentNullException("text is required");
+            }
             return SendDuplex<string>(SyncCacheCmd.Reply, text);
         }
 

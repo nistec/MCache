@@ -86,6 +86,10 @@ namespace Nistec.Caching.Remote
         /// <returns></returns>
         public string Reply(string text)
         {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                throw new ArgumentNullException("text is required");
+            }
             return SendDuplex<string>(CacheCmd.Reply, text);
         }
         
@@ -107,6 +111,10 @@ namespace Nistec.Caching.Remote
         /// </example>
         public CacheState RemoveItem(string cacheKey)
         {
+            if (string.IsNullOrWhiteSpace(cacheKey))
+            {
+                throw new ArgumentNullException("cacheKey is required");
+            }
             return (CacheState)SendDuplex<int>(CacheCmd.RemoveItem, cacheKey);
         }
 
@@ -116,6 +124,10 @@ namespace Nistec.Caching.Remote
         /// <param name="cacheKey"></param>
         public void RemoveItemAsync(string cacheKey)
         {
+            if (string.IsNullOrWhiteSpace(cacheKey))
+            {
+                throw new ArgumentNullException("cacheKey is required");
+            }
             SendOut(CacheCmd.RemoveItemAsync, cacheKey);
         }
 
@@ -137,6 +149,11 @@ namespace Nistec.Caching.Remote
         /// </example>
         public NetStream GetStream(string cacheKey)
         {
+            if (string.IsNullOrWhiteSpace(cacheKey))
+            {
+                throw new ArgumentNullException("cacheKey is required");
+            }
+
             return SendDuplex<NetStream>(CacheCmd.GetValue, cacheKey);
         }
         /// <summary>
@@ -158,6 +175,11 @@ namespace Nistec.Caching.Remote
         /// </example>
         public T GetValue<T>(string cacheKey)
         {
+            if (string.IsNullOrWhiteSpace(cacheKey))
+            {
+                throw new ArgumentNullException("cacheKey is required");
+            }
+
             return SendDuplex<T>(CacheCmd.GetValue, cacheKey);
         }
 
@@ -168,6 +190,11 @@ namespace Nistec.Caching.Remote
         /// <returns></returns>
         public object GetValue(string cacheKey)
         {
+            if (string.IsNullOrWhiteSpace(cacheKey))
+            {
+                throw new ArgumentNullException("cacheKey is required");
+            }
+
             return SendDuplex(CacheCmd.GetValue, cacheKey,typeof(object).FullName);
         }
 
@@ -190,6 +217,11 @@ namespace Nistec.Caching.Remote
         /// </example>
         public T FetchValue<T>(string cacheKey)
         {
+            if (string.IsNullOrWhiteSpace(cacheKey))
+            {
+                throw new ArgumentNullException("cacheKey is required");
+            }
+
             return SendDuplex<T>(CacheCmd.FetchValue, cacheKey);
         }
         /// <summary>
@@ -222,6 +254,7 @@ namespace Nistec.Caching.Remote
         /// <returns>return <see cref="CacheState"/></returns>
         public CacheState AddItem(CacheEntry item)
         {
+
             if (item == null || item.IsEmpty)
                 return CacheState.ArgumentsError;
             using (var message = new CacheMessage() { Command = CacheCmd.AddItem, Key = item.Key, BodyStream = item.BodyStream })
@@ -284,6 +317,11 @@ namespace Nistec.Caching.Remote
         /// <returns>return <see cref="CacheEntry"/></returns>
         public CacheEntry ViewItem(string cacheKey)
         {
+            if (string.IsNullOrWhiteSpace(cacheKey))
+            {
+                throw new ArgumentNullException("cacheKey is required");
+            }
+
             return SendDuplex<CacheEntry>(CacheCmd.ViewItem, cacheKey);
         }
 
