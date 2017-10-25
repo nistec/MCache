@@ -56,6 +56,9 @@ namespace Nistec.Caching.Sync
 
         const string DefaultCacheName = "SyncCache";
 
+        internal SyncEntity[] SyncEntityItems;
+
+
         internal SyncDbCache _DataCache;
         internal SysFileWatcher _SyncFileWatcher;
         internal SyncBox _SyncBox;

@@ -50,7 +50,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>..\References\Debug\</OutputPath>
+    <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -98,7 +98,7 @@
       <HintPath>..\..\References\Debug\Nistec.WinForms.dll</HintPath>
     </Reference>
     <Reference Include="Nistec.Wizards">
-      <HintPath>..\..\References\Debug\Nistec.Wizards.dll</HintPath>
+      <HintPath>..\..\Win_4.0.2.1\References\Debug\Nistec.Wizards.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core">
@@ -260,11 +260,11 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\Lib\Data\Nistec.Data.csproj">
+    <ProjectReference Include="..\..\Nistec.Data\Nistec.Data\Nistec.Data.csproj">
       <Project>{d5fd6c68-86ea-48bf-8f6d-29ce57419500}</Project>
       <Name>Nistec.Data</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\Lib\Lib\Nistec.Lib.csproj">
+    <ProjectReference Include="..\..\Nistec.Lib\Nistec.Lib.csproj">
       <Project>{54f52ed5-aecd-47c6-93d8-7b3358ba7f8c}</Project>
       <Name>Nistec.Lib</Name>
     </ProjectReference>

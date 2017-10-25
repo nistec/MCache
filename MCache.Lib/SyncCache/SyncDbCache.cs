@@ -136,7 +136,6 @@ namespace Nistec.Caching.Sync
         internal void Reload(SyncDbCache copy)
         {
 
-
             foreach (var entry in copy.m_data)
             {
                 m_data[entry.Key] = entry.Value;
@@ -343,7 +342,6 @@ namespace Nistec.Caching.Sync
 
             bool exists = m_data.TryGetValue(connectionKey, out rdc);
 
-
             //add if not exists
             if (!exists)
             {
@@ -357,8 +355,6 @@ namespace Nistec.Caching.Sync
                 m_data[connectionKey] = rdc;
             }
 
-
-
             if (rdc != null)
             {
                 //sc.FunctionSyncChanged = FunctionSyncChanged;
@@ -368,7 +364,6 @@ namespace Nistec.Caching.Sync
                     rdc.Start(intervalSeconds);
                 }
             }
-
         }
 
         /// <summary>

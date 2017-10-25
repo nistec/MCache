@@ -135,30 +135,37 @@ namespace Nistec.Caching.Demo.Mass
 
         static void CacheRemoteGetTest(object state)
         {
-            int index = GetRandomIndex();
-            var key = GetRandomKey(index);
-
-            var watch = Stopwatch.StartNew();
-            var entity = SyncCacheApi.Get(Protocol).GetRecord(itemName, key);
-
-            watch.Stop();
-            Console.WriteLine("SyncCacheRemote duration: " + watch.ElapsedMilliseconds);
-
-            Interlocked.Add(ref ElapsedMilliseconds, watch.ElapsedMilliseconds);
-            Interlocked.Increment(ref TransComplete);
-
-            string result = string.Format("{0}", entity == null ? "Not found" : entity[printField]);
-
-            bool isValid = (entity == null) ? false : ValidateResult(index, result);
-
-            Console.WriteLine(result);
-
-            if (entity == null)
+            try
             {
-                Netlog.Error("Test client item Not found:");
-            }
+                int index = GetRandomIndex();
+                var key = GetRandomKey(index);
 
-            Netlog.InfoFormat("SyncCacheRemote : {0}, item: {1}, index: {2}, isValid: {3}", watch.ElapsedMilliseconds, result, index, isValid);
+                var watch = Stopwatch.StartNew();
+                var entity = SyncCacheApi.Get(Protocol).GetRecord(itemName, key);
+
+                watch.Stop();
+                Console.WriteLine("SyncCacheRemote duration: " + watch.ElapsedMilliseconds);
+
+                Interlocked.Add(ref ElapsedMilliseconds, watch.ElapsedMilliseconds);
+                Interlocked.Increment(ref TransComplete);
+
+                string result = string.Format("{0}", entity == null ? "Not found" : entity[printField]);
+
+                bool isValid = (entity == null) ? false : ValidateResult(index, result);
+
+                Console.WriteLine(result);
+
+                if (entity == null)
+                {
+                    Netlog.Error("Test client item Not found:");
+                }
+
+                Netlog.InfoFormat("SyncCacheRemote : {0}, item: {1}, index: {2}, isValid: {3}", watch.ElapsedMilliseconds, result, index, isValid);
+            }
+            catch(Exception ex)
+            {
+                Netlog.ErrorFormat("SyncCacheRemote Error: {0}", ex.Message);
+            }
         }
 
         static void CacheRemoteWrongTest(object state)

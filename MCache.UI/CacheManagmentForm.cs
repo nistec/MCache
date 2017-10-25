@@ -80,7 +80,7 @@ namespace Nistec.Caching.Remote.UI
             this.tbBack.Enabled = false;
             this.tbForward.Enabled = false;
             this.mcManagment.TreeView.ImageList = this.imageList1;
-
+            
             //CreateNodeList();
             //remote = new RemoteQueueClient("");// RemoteQueue.Instance;
 
@@ -1857,7 +1857,7 @@ namespace Nistec.Caching.Remote.UI
                         {
                             return;
                         }
-                        GenericEntity ge = (GenericEntity)ManagerApi.SyncCacheApi.GetItem(CacheKeyInfo.Get(name, CacheKeyInfo.SplitKey(key)), typeof(GenericEntity));
+                        GenericRecord ge = (GenericRecord)ManagerApi.SyncCacheApi.GetItem(CacheKeyInfo.Get(name, CacheKeyInfo.SplitKey(key)), typeof(GenericRecord));
                         if (ge == null)
                             return;
                         obj = ge.ToDataRow();
@@ -2388,19 +2388,8 @@ namespace Nistec.Caching.Remote.UI
             base.AsyncBeginInvoke(null);
         }
 
-        
-        protected override void OnAsyncExecutingWorker(Nistec.Threading.AsyncCallEventArgs e)
-        {
-            base.OnAsyncExecutingWorker(e);
-            try
-            {
-                //SetStatistic();
-                //--FillPerformanceControl();
-            }
-            catch { }
-        }
-                                
-        protected override void OnAsyncCompleted(Nistec.Threading.AsyncCallEventArgs e)
+        //protected virtual void OnAsyncCancelExecuting(EventArgs e);
+        protected virtual void OnAsyncCompleted(Extension.Nistec.Threading.AsyncCallEventArgs e)
         {
             base.OnAsyncCompleted(e);
 
@@ -2416,7 +2405,49 @@ namespace Nistec.Caching.Remote.UI
             {
                 base.AsyncDispose();
             }
+
         }
+        //protected virtual void OnAsyncExecutingProgress(AsyncProgressEventArgs e);
+        protected override void OnAsyncExecutingWorker(Extension.Nistec.Threading.AsyncCallEventArgs e)
+        {
+            base.OnAsyncExecutingWorker(e);
+            try
+            {
+                //SetStatistic();
+                //--FillPerformanceControl();
+            }
+            catch { }
+
+        }
+
+        //protected override void OnAsyncExecutingWorker(Nistec.Threading.AsyncCallEventArgs e)
+        //{
+        //    base.OnAsyncExecutingWorker(e);
+        //    try
+        //    {
+        //        //SetStatistic();
+        //        //--FillPerformanceControl();
+        //    }
+        //    catch { }
+        //}
+                                
+        //protected override void OnAsyncCompleted(Nistec.Threading.AsyncCallEventArgs e)//Nistec.Threading.AsyncCallEventArgs e)
+        //{
+        //    base.OnAsyncCompleted(e);
+
+        //    try
+        //    {
+        //        Task.Factory.StartNew(() => FillPerformanceControl());
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        string s = ex.Message;
+        //    }
+        //    finally
+        //    {
+        //        base.AsyncDispose();
+        //    }
+        //}
 
         private void timer1_Tick(object sender, EventArgs e)
         {

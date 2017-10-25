@@ -124,11 +124,12 @@ namespace Nistec.Caching.Sync.Remote
         }
 
         int synchronized;
+
         internal override void LoadSyncItems(XmlNode node, bool EnableAsyncTask)
         {
             if (node == null)
                 return;
-            
+
             bool hasChange = false;
             try
             {
@@ -136,7 +137,18 @@ namespace Nistec.Caching.Sync.Remote
                 {
                     XmlNodeList list = node.ChildNodes;
                     if (list == null)
+                    {
+                        CacheLogger.Logger.LogAction(CacheAction.SyncItem, CacheActionState.Error, "LoadSyncItems is empty");
                         return;
+                    }
+
+                    var newSyncEntityItems = SyncEntity.GetItems(list);
+
+                    if (newSyncEntityItems == null || newSyncEntityItems.Length == 0)
+                    {
+                        throw new Exception("Can not LoadSyncItems, SyncEntity Items not found");
+                    }
+
 
                     if (EnableAsyncTask)
                     {
@@ -144,30 +156,75 @@ namespace Nistec.Caching.Sync.Remote
                         var bagCopy = BagCopy();
                         //var syncBox = SyncBox.Instance;
 
-                        foreach (XmlNode n in list)
+                        if (SyncEntityItems != null)
                         {
-                            if (n.NodeType == XmlNodeType.Comment)
-                                continue;
-                            SyncEntity sync = new SyncEntity(new XmlTable(n));
-                            if (sync.SyncType == SyncType.Remove)
+                            foreach (SyncEntity sync in SyncEntityItems)
                             {
-                                if (RemoveItem(sync.EntityName))
+                                //var item = newSyncEntityItems.Contains()//Where(i => i.EntityName == sync.EntityName).FirstOrDefault();
+                                if (!newSyncEntityItems.Any(s=> s.EntityName == sync.EntityName && s.ConnectionKey==sync.ConnectionKey))
                                 {
-                                    this._DataCache.RemoveSyncSource(sync.ConnectionKey, sync.EntityName);
-                                    this._SyncBag.RemoveItem(sync.EntityName);
+                                    if (RemoveItem(sync.EntityName))
+                                    {
+                                        this._DataCache.RemoveSyncSource(sync.ConnectionKey, sync.EntityName);
+                                        this._SyncBag.RemoveItem(sync.EntityName);
+
+                                        //dbCopy.RemoveSyncSource(sync.ConnectionKey, sync.EntityName);
+                                        //bagCopy.RemoveItem(sync.EntityName);
+
+                                        hasChange = true;
+                                    }
+                                }
+                            }
+
+                            foreach (SyncEntity nsync in newSyncEntityItems)
+                            {
+                                if (!SyncEntityItems.Any(s => s.EntityName == nsync.EntityName && s.ConnectionKey == nsync.ConnectionKey))
+                                {
+                                    AddItem(nsync, dbCopy, bagCopy);
+                                    hasChange = true;
+                                }
+                                else if(SyncEntityItems.Any(cur => 
+                                                             (nsync.EntityType != cur.EntityType ||
+                                                              nsync.Interval != cur.Interval ||
+                                                              nsync.SourceType != cur.SourceType ||
+                                                              nsync.SyncType != cur.SyncType ||
+                                                              nsync.ViewName != cur.ViewName ||
+                                                              string.Join(",", nsync.EntityKeys) != string.Join(",", cur.EntityKeys) ||
+                                                              string.Join(",", nsync.SourceName) != string.Join(",", cur.SourceName)
+                                                              )
+                                                              && (nsync.EntityName == cur.EntityName &&
+                                                              nsync.ConnectionKey == cur.ConnectionKey
+
+
+                                )))
+                                {
+                                    AddItem(nsync, dbCopy, bagCopy);
                                     hasChange = true;
                                 }
                             }
-                            else
+                       }
+                        else
+                        {
+                            foreach (SyncEntity sync in newSyncEntityItems)
                             {
                                 if (!this._DataCache.SyncSourceExists(sync))
                                 {
                                     AddItem(sync, dbCopy, bagCopy);
                                     hasChange = true;
                                 }
-
                             }
                         }
+
+                        //foreach (SyncEntity sync in newSyncEntityItems)
+                        //{
+ 
+                        //    if (!this._DataCache.SyncSourceExists(sync))
+                        //    {
+                        //        AddItem(sync, dbCopy, bagCopy);
+                        //        hasChange = true;
+                        //    }
+                        //}
+
                         if (hasChange)
                         {
                             lock (ThreadLock)
@@ -177,6 +234,8 @@ namespace Nistec.Caching.Sync.Remote
                                 Reload(bagCopy);
 
                                 _DataCache.Start(IntervalSeconds);
+
+                                SyncEntityItems = newSyncEntityItems;
                             }
                         }
                     }
@@ -187,14 +246,21 @@ namespace Nistec.Caching.Sync.Remote
                         {
                             Clear(true);
                         }
-                        foreach (XmlNode n in list)
-                        {
-                            if (n.NodeType == XmlNodeType.Comment)
-                                continue;
 
-                            AddItem(new XmlTable(n), false);
+                        foreach (SyncEntity sync in newSyncEntityItems)
+                        {
+                            AddItem(sync);
                         }
+
+                        //foreach (XmlNode n in list)
+                        //{
+                        //    if (n.NodeType == XmlNodeType.Comment)
+                        //        continue;
+
+                        //    AddItem(new XmlTable(n), false);
+                        //}
                     }
+                    
                 }
             }
             catch (Exception ex)
@@ -210,6 +276,93 @@ namespace Nistec.Caching.Sync.Remote
 
             }
         }
+
+        //internal override void LoadSyncItems(XmlNode node, bool EnableAsyncTask)
+        //{
+        //    if (node == null)
+        //        return;
+            
+        //    bool hasChange = false;
+        //    try
+        //    {
+        //        if (0 == Interlocked.Exchange(ref synchronized, 1))
+        //        {
+        //            XmlNodeList list = node.ChildNodes;
+        //            if (list == null)
+        //                return;
+
+        //            if (EnableAsyncTask)
+        //            {
+        //                var dbCopy = DataCacheCopy();
+        //                var bagCopy = BagCopy();
+        //                //var syncBox = SyncBox.Instance;
+
+        //                foreach (XmlNode n in list)
+        //                {
+        //                    if (n.NodeType == XmlNodeType.Comment)
+        //                        continue;
+        //                    SyncEntity sync = new SyncEntity(new XmlTable(n));
+        //                    if (sync.SyncType == SyncType.Remove)
+        //                    {
+        //                        if (RemoveItem(sync.EntityName))
+        //                        {
+        //                            this._DataCache.RemoveSyncSource(sync.ConnectionKey, sync.EntityName);
+        //                            this._SyncBag.RemoveItem(sync.EntityName);
+        //                            hasChange = true;
+        //                        }
+        //                    }
+        //                    else
+        //                    {
+        //                        if (!this._DataCache.SyncSourceExists(sync))
+        //                        {
+        //                            AddItem(sync, dbCopy, bagCopy);
+        //                            hasChange = true;
+        //                        }
+
+        //                    }
+        //                }
+        //                if (hasChange)
+        //                {
+        //                    lock (ThreadLock)
+        //                    {
+        //                        _DataCache.Reload(dbCopy);
+
+        //                        Reload(bagCopy);
+
+        //                        _DataCache.Start(IntervalSeconds);
+        //                    }
+        //                }
+        //            }
+        //            else
+        //            {
+
+        //                if (_reloadOnChange)
+        //                {
+        //                    Clear(true);
+        //                }
+        //                foreach (XmlNode n in list)
+        //                {
+        //                    if (n.NodeType == XmlNodeType.Comment)
+        //                        continue;
+
+        //                    AddItem(new XmlTable(n), false);
+        //                }
+        //            }
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        CacheLogger.Logger.LogAction(CacheAction.SyncItem, CacheActionState.Error, string.Format("LoadSyncItems error: {0}", ex.Message));
+
+        //        OnError("LoadSyncItems error " + ex.Message);
+        //    }
+        //    finally
+        //    {
+        //        //Release the lock
+        //        Interlocked.Exchange(ref synchronized, 0);
+
+        //    }
+        //}
 
         internal void AddItem(SyncEntity entity, SyncDbCache dbCopy, SyncBagStream bagCopy) //where T : IEntityItem
         {

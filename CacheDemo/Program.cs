@@ -60,8 +60,8 @@ namespace Nistec.Caching.Demo
                           Console.WriteLine("Write count");
                           int okCount=Types.ToInt( Console.ReadLine(),1000);
 
-                          Console.WriteLine("Write wrong count");
-                          int wrongCount=Types.ToInt( Console.ReadLine(),0);
+                          //Console.WriteLine("Write wrong count");
+                        int wrongCount = 0;// Types.ToInt( Console.ReadLine(),0);
 
                           Nistec.Caching.Demo.Mass.SyncCacheRemoteMass.SyncCacheTestMass(netProtocol,okCount, wrongCount);
                           break;

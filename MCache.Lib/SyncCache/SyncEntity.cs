@@ -447,11 +447,64 @@ namespace Nistec.Caching.Sync
 
             return strArray;
         }
-        
+
+        public static SyncEntity[] GetItems(XmlNodeList list)
+        {
+            List<SyncEntity> items = new List<SyncEntity>();
+            foreach (XmlNode n in list)
+            {
+                if (n.NodeType == XmlNodeType.Comment)
+                    continue;
+                SyncEntity sync = new SyncEntity(new XmlTable(n));
+                if (items.Exists(s => s.EntityName == sync.EntityName && s.ConnectionKey==sync.ConnectionKey))
+                {
+                    CacheLogger.Logger.LogAction(CacheAction.SyncItem, CacheActionState.Debug, "Duplicate in SyncFile, entity: " + sync.EntityName);
+                    continue;
+                }
+                items.Add(sync);
+            }
+            return items.ToArray();
+        }
+
+        public static IEnumerable<SyncEntity> GetItemsToSync(IEnumerable<SyncEntity> curItems, IEnumerable<SyncEntity> syncItems)
+        {
+           
+            var result = (from sync in syncItems
+                          from cur in curItems
+                          where
+                          ((sync.EntityType != cur.EntityType ||
+                          sync.Interval != cur.Interval ||
+                          sync.SourceType != cur.SourceType ||
+                          sync.SyncType != cur.SyncType ||
+                          sync.ViewName != cur.ViewName ||
+                          string.Join(",", sync.EntityKeys)!= string.Join(",", cur.EntityKeys) ||
+                          string.Join(",", sync.SourceName) != string.Join(",", cur.SourceName)
+                          )
+                          && (sync.EntityName == cur.EntityName &&
+                          sync.ConnectionKey == cur.ConnectionKey
+                           ))
+                          select sync).Distinct();
+
+            //List<SyncEntity> modifiedItems = new List<SyncEntity>(result);
+            //return modifiedItems;
+
+            return result;
+            
+            //syncItems.Where()
+            //syncItems.Except(curItems);
+
+            //foreach(var item in syncItems)
+            //{
+            //    curItems.Where(i=> i.IsEquals(..FirstOrDefault()
+            //    //if()
+            //}
+
+
+        }
 
 
         #endregion
 
-        
+
     }
 }

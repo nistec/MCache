@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 
-
 <Nistec>
+ 
  
   <SyncCache>
  
@@ -15,7 +15,7 @@
       EntityKeys="ContactID"
 	  EnableNoLock="true"
       SyncType="Interval"
-      SyncTime="00:01:00" />
+      SyncTime="00:20:00" />
 	  
 	  <SyncItem
 	  EntityType="GenericEntity"
@@ -26,8 +26,8 @@
       SourceType="View"
       EntityKeys="ContactID"
       SyncType="Daily"
-      SyncTime="23:39:00" />
-  
+      SyncTime="23:39:01" />
+ 
 	<SyncItem
       EntityType="GenericEntity"
         ConnectionKey="AdventureWorks"
@@ -42,7 +42,7 @@
     <SyncItem
       EntityType="GenericEntity"
         ConnectionKey="AdventureWorks"
-        EntityName="ContactTypeEntity"
+        EntityName="ContactTypeEntity2"
         MappingName="Person.ContactType"
         SourceName="Person.ContactType"
         SourceType="Table"
@@ -82,7 +82,8 @@
         EntityKeys="CurrencyCode"
         SyncType="Interval"
         SyncTime="00:02:00" />
-
+	
+<!--
     <SyncItem
           EntityType="GenericEntity"
             ConnectionKey="EnterpriseDB"
@@ -114,7 +115,7 @@
         EntityKeys="ScriptType"
         SyncType="Interval"
         SyncTime="00:04:00" />
-
+-->
   </SyncCache>
 </Nistec>
 
