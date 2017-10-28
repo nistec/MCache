@@ -75,6 +75,7 @@ namespace Nistec.Caching.Server.Pipe
         {
             return new PipeSettings()
             {
+                HostName= "nistec_cache_manager",
                 ConnectTimeout = 5000,
                 InBufferSize = 8192,
                 MaxAllowedServerInstances = 255,

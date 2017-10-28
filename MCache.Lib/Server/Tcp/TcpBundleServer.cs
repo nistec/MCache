@@ -61,6 +61,8 @@ namespace Nistec.Caching.Server.Tcp
                 AgentManager.SyncCache.Start(CacheSettings.EnableSyncFileWatcher, CacheSettings.ReloadSyncOnChange);
             if (isSession)
                 AgentManager.Session.Start();
+
+            CacheLogger.Logger.LogAction(CacheAction.General, CacheActionState.Debug, "TcpBundleServer.OnStart : " + Settings.HostName);
         }
         /// <summary>
         /// OnStop
@@ -77,6 +79,8 @@ namespace Nistec.Caching.Server.Tcp
                 AgentManager.SyncCache.Stop();
             if (isSession)
                 AgentManager.Session.Stop();
+
+            CacheLogger.Logger.LogAction(CacheAction.General, CacheActionState.Debug, "TcpBundleServer.OnStop : " + Settings.HostName);
         }
         /// <summary>
         /// OnLoad
@@ -86,6 +90,13 @@ namespace Nistec.Caching.Server.Tcp
             base.OnLoad();
             
         }
+
+        protected override void OnFault(string message, Exception ex)
+        {
+            //base.OnFault(message, ex);
+            CacheLogger.Logger.LogAction(CacheAction.General, CacheActionState.Error, "TcpBundleServer.OnFault : " + this.Settings.HostName + ", " + message + " " + ex.Message);
+        }
+
         #endregion
 
         #region ctor

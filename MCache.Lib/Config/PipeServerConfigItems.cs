@@ -86,7 +86,7 @@ namespace Nistec.Caching.Config
         /// <returns></returns>
         protected override object GetElementKey(System.Configuration.ConfigurationElement element)
         {
-            return ((PipeServerConfigItem)element).PipeName;
+            return ((PipeServerConfigItem)element).HostName;
         }
     }
 }

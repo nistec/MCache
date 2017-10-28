@@ -140,7 +140,7 @@ namespace Nistec.Caching.Config
         /// Get <see cref="PipeServerConfigItems"/> collection.
         /// </summary>
         [System.Configuration.ConfigurationProperty("PipeServerSettings")]
-        [ConfigurationCollection(typeof(PipeServerConfigItem), AddItemName = "pipe")]
+        [ConfigurationCollection(typeof(PipeServerConfigItem), AddItemName = "host")]
         public PipeServerConfigItems PipeServerSettings
         {
             get
@@ -152,11 +152,11 @@ namespace Nistec.Caching.Config
         /// <summary>
         /// Find pipe server item.
         /// </summary>
-        /// <param name="pipeName"></param>
+        /// <param name="hostName"></param>
         /// <returns></returns>
-        public PipeServerConfigItem FindPipeServer(string pipeName)
+        public PipeServerConfigItem FindPipeServer(string hostName)
         {
-            return PipeServerSettings[pipeName];
+            return PipeServerSettings[hostName];
         }
         
     

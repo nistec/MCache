@@ -121,10 +121,11 @@ namespace Nistec.Caching.Sync
 
 
         long _Started=0;
+
         /// <summary>
         /// Start Cache Synchronization.
         /// </summary>
-        public void Start(bool enableSyncFileWatcher, bool reloadOnChange)
+        public void Start(bool enableSyncFileWatcher=true, bool reloadOnChange = true)
         {
             if (Interlocked.Read(ref _Started)==1)
                 return;

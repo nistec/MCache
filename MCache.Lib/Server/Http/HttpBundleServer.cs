@@ -53,7 +53,17 @@ namespace Nistec.Caching.Server.Http
         protected override void OnStart()
         {
             base.OnStart();
-            
+
+            if (isCache)
+                AgentManager.Cache.Start();
+            if (isDataCache)
+                AgentManager.DbCache.Start();
+            if (isSyncCache)
+                AgentManager.SyncCache.Start();
+            if (isSession)
+                AgentManager.Session.Start();
+
+            CacheLogger.Logger.LogAction(CacheAction.General, CacheActionState.Debug, "HttpBundleServer.OnStart : " + Settings.HostName);
         }
         /// <summary>
         /// OnStop
@@ -70,6 +80,8 @@ namespace Nistec.Caching.Server.Http
                 AgentManager.SyncCache.Stop();
             if (isSession)
                 AgentManager.Session.Stop();
+
+            CacheLogger.Logger.LogAction(CacheAction.General, CacheActionState.Debug, "HttpBundleServer.OnStop : " + Settings.HostName);
         }
         /// <summary>
         /// OnLoad
@@ -85,6 +97,12 @@ namespace Nistec.Caching.Server.Http
                 AgentManager.SyncCache.Start(CacheSettings.EnableSyncFileWatcher, CacheSettings.ReloadSyncOnChange);
             if (isSession)
                 AgentManager.Session.Start();
+        }
+
+        protected override void OnFault(string message, Exception ex)
+        {
+            //base.OnFault(message, ex);
+            CacheLogger.Logger.LogAction(CacheAction.General, CacheActionState.Error, "HttpBundleServer.OnFault : " + this.Settings.Address + ", " + message + " " + ex.Message);
         }
         #endregion
 

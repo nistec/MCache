@@ -34,6 +34,17 @@ namespace Nistec.Caching.Config
         /// <summary>
         /// Get pipe name.
         /// </summary>
+        [ConfigurationProperty("HostName", IsRequired = true)]
+        public string HostName
+        {
+            get
+            {
+                return this["HostName"] as string;
+            }
+        }
+        /// <summary>
+        /// Get pipe name.
+        /// </summary>
         [ConfigurationProperty("PipeName", IsRequired = true)]
         public string PipeName
         {

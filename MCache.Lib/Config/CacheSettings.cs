@@ -123,24 +123,25 @@ namespace Nistec.Caching.Config
         /// <summary>
         /// LoadPipeConfigClient
         /// </summary>
-        /// <param name="configPipe"></param>
+        /// <param name="hostName"></param>
         /// <returns></returns>
-        public static PipeSettings LoadPipeConfigClient(string configPipe)
+        public static PipeSettings LoadPipeConfigClient(string hostName)
         {
-            if (string.IsNullOrEmpty(configPipe))
+            if (string.IsNullOrEmpty(hostName))
             {
                 throw new ArgumentNullException("PipeCacheSettings.LoadPipeConfigClient name");
             }
 
             var config = CacheConfigClient.GetConfig();
 
-            var settings = config.FindPipeClient(configPipe);
+            var settings = config.FindPipeClient(hostName);
             if (settings == null)
             {
-                throw new ArgumentException("Invalid PipeCacheSettings with PipeName:" + configPipe);
+                throw new ArgumentException("Invalid PipeCacheSettings with PipeName:" + hostName);
             }
             return new PipeSettings()
             {
+                HostName = settings.HostName,
                 PipeName = settings.PipeName,
                 PipeDirection = EnumExtension.Parse<PipeDirection>(settings.PipeDirection, PipeDirection.InOut),
                 PipeOptions = EnumExtension.Parse<PipeOptions>(settings.PipeOptions, PipeOptions.None),
@@ -299,24 +300,25 @@ namespace Nistec.Caching.Config
         /// <summary>
         /// LoadPipeConfigServer
         /// </summary>
-        /// <param name="configPipe"></param>
+        /// <param name="hostName"></param>
         /// <returns></returns>
-        public static PipeSettings LoadPipeConfigServer(string configPipe)
+        public static PipeSettings LoadPipeConfigServer(string hostName)
         {
-            if (string.IsNullOrEmpty(configPipe))
+            if (string.IsNullOrEmpty(hostName))
             {
                 throw new ArgumentNullException("PipeCacheSettings.LoadPipeConfigServer name");
             }
 
             var config = CacheConfigServer.GetConfig();
 
-            var settings = config.FindPipeServer(configPipe);
+            var settings = config.FindPipeServer(hostName);
             if (settings == null)
             {
-                throw new ArgumentException("Invalid PipeCacheSettings with PipeName:" + configPipe);
+                throw new ArgumentException("Invalid PipeCacheSettings with PipeName:" + hostName);
             }
             return new PipeSettings()
            {
+               HostName = settings.HostName,
                PipeName = settings.PipeName,
                PipeDirection = EnumExtension.Parse<PipeDirection>(settings.PipeDirection, PipeDirection.InOut),
                PipeOptions = EnumExtension.Parse<PipeOptions>(settings.PipeOptions, PipeOptions.None),
@@ -331,21 +333,21 @@ namespace Nistec.Caching.Config
         /// <summary>
         /// LoadTcpConfigServer
         /// </summary>
-        /// <param name="configHost"></param>
+        /// <param name="hostName"></param>
         /// <returns></returns>
-        public static TcpSettings LoadTcpConfigServer(string configHost)
+        public static TcpSettings LoadTcpConfigServer(string hostName)
         {
-            if (string.IsNullOrEmpty(configHost))
+            if (string.IsNullOrEmpty(hostName))
             {
                 throw new ArgumentNullException("TcpCacheSettings.LoadTcpConfigServer name");
             }
 
             var config = CacheConfigServer.GetConfig();
 
-            var settings = config.FindTcpServer(configHost);
+            var settings = config.FindTcpServer(hostName);
             if (settings == null)
             {
-                throw new ArgumentException("Invalid TcpCacheSettings with TcpName:" + configHost);
+                throw new ArgumentException("Invalid TcpCacheSettings with TcpName:" + hostName);
             }
 
             return new TcpSettings()

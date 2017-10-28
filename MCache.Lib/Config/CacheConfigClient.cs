@@ -67,7 +67,7 @@ namespace Nistec.Caching.Config
         /// Get <see cref="PipeClientConfigItems"/> collection.
         /// </summary>
         [System.Configuration.ConfigurationProperty("PipeClientSettings")]
-        [ConfigurationCollection(typeof(PipeClientConfigItems), AddItemName = "pipe")]
+        [ConfigurationCollection(typeof(PipeClientConfigItems), AddItemName = "host")]
         public PipeClientConfigItems PipeClientSettings
         {
             get
@@ -193,7 +193,7 @@ namespace Nistec.Caching.Config
         /// <returns></returns>
         protected override object GetElementKey(System.Configuration.ConfigurationElement element)
         {
-            return ((PipeConfigItem)element).PipeName;
+            return ((PipeConfigItem)element).HostName;
         }
     }
 

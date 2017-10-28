@@ -60,6 +60,8 @@ namespace Nistec.Caching.Server.Pipe
                 AgentManager.SyncCache.Start(CacheSettings.EnableSyncFileWatcher, CacheSettings.ReloadSyncOnChange);
             if (isSession)
                 AgentManager.Session.Start();
+
+            CacheLogger.Logger.LogAction(CacheAction.General, CacheActionState.Debug, "PipeBundleServer.OnStart : " + this.FullPipeName);
         }
         /// <summary>
         /// OnStop
@@ -76,6 +78,8 @@ namespace Nistec.Caching.Server.Pipe
                 AgentManager.SyncCache.Stop();
             if (isSession)
                 AgentManager.Session.Stop();
+
+            CacheLogger.Logger.LogAction(CacheAction.General, CacheActionState.Debug, "PipeBundleServer.OnStop : " + this.FullPipeName);
         }
         /// <summary>
         /// OnLoad
@@ -84,6 +88,12 @@ namespace Nistec.Caching.Server.Pipe
         {
             base.OnLoad();
             
+        }
+
+        protected override void OnFault(string message, Exception ex)
+        {
+            //base.OnFault(message, ex);
+            CacheLogger.Logger.LogAction(CacheAction.General, CacheActionState.Error, "PipeBundleServer.OnFault : " + this.FullPipeName + ", " + message + " " + ex.Message);
         }
         #endregion
 

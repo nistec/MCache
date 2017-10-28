@@ -180,7 +180,7 @@ namespace Nistec.Caching.Channels
             if (PipeDirection != System.IO.Pipes.PipeDirection.In)
             {
                 // Send a request from client to server
-                message.EntityWrite(pipeClient, null);
+                message.EntityWrite(pipeClientStream, null);
             }
 
             if (PipeDirection == System.IO.Pipes.PipeDirection.Out)
@@ -189,7 +189,7 @@ namespace Nistec.Caching.Channels
             }
 
             // Receive a response from server.
-            response = message.ReadResponse(pipeClient, type, Settings.InBufferSize);
+            response = message.ReadResponse(pipeClientStream, type, Settings.InBufferSize);
 
             return response;
         }
@@ -206,7 +206,7 @@ namespace Nistec.Caching.Channels
             if (PipeDirection != System.IO.Pipes.PipeDirection.In)
             {
                 // Send a request from client to server
-                message.EntityWrite(pipeClient, null);
+                message.EntityWrite(pipeClientStream, null);
             }
 
             if (PipeDirection == System.IO.Pipes.PipeDirection.Out)
@@ -215,7 +215,7 @@ namespace Nistec.Caching.Channels
             }
 
             // Receive a response from server.
-            response = message.ReadResponse<TResponse>(pipeClient, Settings.InBufferSize);
+            response = message.ReadResponse<TResponse>(pipeClientStream, Settings.InBufferSize);
 
             return response;
         }
