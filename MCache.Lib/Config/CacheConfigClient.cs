@@ -27,6 +27,7 @@ using System.Collections.Specialized;
 using System.Xml;
 using Nistec.Generic;
 using Nistec.Runtime;
+using Nistec.Channels.Config;
 
 namespace Nistec.Caching.Config
 {

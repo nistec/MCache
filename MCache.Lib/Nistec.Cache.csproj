@@ -77,9 +77,6 @@
     <Compile Include="Channels\HttpClientCache.cs" />
     <Compile Include="Channels\TcpClientCache.cs" />
     <Compile Include="Config\ConfigFileWatcher.cs" />
-    <Compile Include="Config\HttpConfigItem.cs" />
-    <Compile Include="Config\HttpServerConfigItem.cs" />
-    <Compile Include="Config\HttpServerConfigItems.cs" />
     <Compile Include="Config\CacheConfigServer.cs" />
     <Compile Include="Cache\CacheException.cs" />
     <Compile Include="Cache\CachePreformance.cs" />
@@ -94,12 +91,6 @@
     </Compile>
     <Compile Include="Config\CacheDefaults.cs" />
     <Compile Include="Config\CacheApiSettings.cs" />
-    <Compile Include="Config\TcpConfigItem.cs" />
-    <Compile Include="Config\TcpServerConfigItem.cs" />
-    <Compile Include="Config\TcpServerConfigItems.cs" />
-    <Compile Include="Config\PipeServerConfigItems.cs" />
-    <Compile Include="Config\PipeConfigItem.cs" />
-    <Compile Include="Config\PipeServerConfigItem.cs" />
     <Compile Include="Data\IDataSyncEntity.cs" />
     <Compile Include="Data\IDataCache.cs" />
     <Compile Include="Remote\CacheApi.cs" />

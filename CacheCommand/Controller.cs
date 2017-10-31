@@ -407,13 +407,15 @@ namespace Nistec
                                 int count = Types.ToInt(keys);
                                 if (count <= 0)
                                     count = 1;
+                                int counter = 0;
                                 for (int i = 0; i < count; i++)
                                 {
                                     foreach (var k in arr)
                                     {
                                         var record = API.SyncCacheApi.Get(cmdProtocol).GetRecord(name, k.Split(';'));
                                         var json = JsonSerializer.Serialize(record, null, JsonFormat.Indented);
-                                        Display(cmd, json);
+                                        counter++;
+                                        Display(cmd, json,counter);
                                     }
 
                                     Display(cmd, "finished items: " + arr.Length.ToString());
@@ -547,6 +549,11 @@ namespace Nistec
             }
         }
 
+        static void Display(string cmd, string val, int counter)
+        {
+            Console.WriteLine("command - {0} counter - {1} :", cmd,counter);
+            Console.WriteLine(val);
+        }
         static void Display(string cmd, string val)
         {
             Console.WriteLine("command - {0} :", cmd);

@@ -119,5 +119,17 @@ namespace Nistec.Caching.Config
                 return Types.ToInt(this["OutBufferSize"], 8192);
             }
         }
+
+        /// <summary>
+        /// Get indicate if host server is async.
+        /// </summary>
+        [ConfigurationProperty("IsAsync", DefaultValue = true, IsRequired = false)]
+        public bool IsAsync
+        {
+            get
+            {
+                return Types.ToBool(this["IsAsync"], true);
+            }
+        }
     }
 }
