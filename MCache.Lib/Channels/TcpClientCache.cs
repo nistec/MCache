@@ -50,17 +50,17 @@ namespace Nistec.Caching.Channels
         /// <param name="request"></param>
         /// <param name="hostAddress"></param>
         /// <param name="port"></param>
-        /// <param name="readTimeout"></param>
+        /// <param name="timeout"></param>
         /// <param name="IsAsync"></param>
         /// <param name="enableException"></param>
         /// <returns></returns>
-        public static object SendDuplex(CacheMessage request, string hostAddress, int port,int readTimeout, bool IsAsync, bool enableException = false)
+        public static object SendDuplex(CacheMessage request, string hostAddress, int port,int timeout, bool IsAsync, bool enableException = false)
         {
             Type type = request.BodyType;
             request.IsDuplex = true;
-            using (TcpClientCache client = new TcpClientCache(hostAddress, port, readTimeout, IsAsync))
+            using (TcpClientCache client = new TcpClientCache(hostAddress, port, timeout, IsAsync))
             {
-                return client.Execute(request, type, enableException);
+                return client.Execute(request, enableException);
             }
         }
         /// <summary>
@@ -70,14 +70,14 @@ namespace Nistec.Caching.Channels
         /// <param name="request"></param>
         /// <param name="hostAddress"></param>
         /// <param name="port"></param>
-        /// <param name="readTimeout"></param>
+        /// <param name="timeout"></param>
         /// <param name="IsAsync"></param>
         /// <param name="enableException"></param>
         /// <returns></returns>
-        public static T SendDuplex<T>(CacheMessage request, string hostAddress, int port, int readTimeout, bool IsAsync, bool enableException = false)
+        public static T SendDuplex<T>(CacheMessage request, string hostAddress, int port, int timeout, bool IsAsync, bool enableException = false)
         {
             request.IsDuplex = true;
-            using (TcpClientCache client = new TcpClientCache(hostAddress, port, readTimeout, IsAsync))
+            using (TcpClientCache client = new TcpClientCache(hostAddress, port, timeout, IsAsync))
             {
                 return client.Execute<T>(request, enableException);
             }
@@ -88,16 +88,16 @@ namespace Nistec.Caching.Channels
         /// <param name="request"></param>
         /// <param name="hostAddress"></param>
         /// <param name="port"></param>
-        /// <param name="readTimeout"></param>
+        /// <param name="timeout"></param>
         /// <param name="IsAsync"></param>
         /// <param name="enableException"></param>
-        public static void SendOut(CacheMessage request, string hostAddress, int port,int readTimeout, bool IsAsync, bool enableException = false)
+        public static void SendOut(CacheMessage request, string hostAddress, int port,int timeout, bool IsAsync, bool enableException = false)
         {
-            Type type = request.BodyType;
+            //Type type = request.BodyType;
             request.IsDuplex = false;
-            using (TcpClientCache client = new TcpClientCache(hostAddress, port, readTimeout, IsAsync))
+            using (TcpClientCache client = new TcpClientCache(hostAddress, port, timeout, IsAsync))
             {
-                client.Execute(request, type, enableException);
+                client.ExecuteOut(request, enableException);
             }
         }
         /// <summary>
@@ -109,11 +109,11 @@ namespace Nistec.Caching.Channels
         /// <returns></returns>
         public static object SendDuplex(CacheMessage request, string hostName, bool enableException = false)
         {
-            Type type = request.BodyType;
+            //Type type = request.BodyType;
             request.IsDuplex = true;
             using (TcpClientCache client = new TcpClientCache(hostName))
             {
-                return client.Execute(request, type, enableException);
+                return client.Execute(request, enableException);
             }
         }
         /// <summary>
@@ -133,6 +133,22 @@ namespace Nistec.Caching.Channels
             }
         }
         /// <summary>
+        /// Send Duplex
+        /// </summary>
+        /// <param name="request"></param>
+        /// <param name="hostName"></param>
+        /// <param name="enableException"></param>
+        /// <returns></returns>
+        public static TransStream SendDuplexStream(CacheMessage request, string hostName, bool enableException = false)
+        {
+            request.IsDuplex = true;
+            //request.TransformType = TransformType.Stream;
+            using (TcpClientCache client = new TcpClientCache(hostName))
+            {
+                return client.Execute<TransStream>(request, enableException);
+            }
+        }
+        /// <summary>
         /// Send message one way.
         /// </summary>
         /// <param name="request"></param>
@@ -140,11 +156,11 @@ namespace Nistec.Caching.Channels
         /// <param name="enableException"></param>
         public static void SendOut(CacheMessage request, string hostName, bool enableException = false)
         {
-            Type type = request.BodyType;
+            //Type type = request.BodyType;
             request.IsDuplex = false;
             using (TcpClientCache client = new TcpClientCache(hostName))
             {
-                client.Execute(request, type, enableException);
+                client.ExecuteOut(request, enableException);
             }
         }
 
@@ -157,9 +173,9 @@ namespace Nistec.Caching.Channels
         /// </summary>
         /// <param name="hostAddress"></param>
         /// <param name="port"></param>
-        /// <param name="readTimeout"></param>
-        public TcpClientCache(string hostAddress, int port, int readTimeout)
-            : base(hostAddress, port,readTimeout, false)
+        /// <param name="timeout"></param>
+        public TcpClientCache(string hostAddress, int port, int timeout)
+            : base(hostAddress, port,timeout, false)
         {
 
         }
@@ -169,10 +185,10 @@ namespace Nistec.Caching.Channels
         /// </summary>
         /// <param name="hostAddress"></param>
         /// <param name="port"></param>
-        /// <param name="readTimeout"></param>
+        /// <param name="timeout"></param>
         /// <param name="isAsync"></param>
-        public TcpClientCache(string hostAddress, int port, int readTimeout, bool isAsync)
-            : base(hostAddress, port, readTimeout, isAsync)
+        public TcpClientCache(string hostAddress, int port, int timeout, bool isAsync)
+            : base(hostAddress, port, timeout, isAsync)
         {
 
         }
@@ -182,12 +198,12 @@ namespace Nistec.Caching.Channels
         /// </summary>
         /// <param name="hostAddress"></param>
         /// <param name="port"></param>
-        /// <param name="readTimeout"></param>
+        /// <param name="timeout"></param>
         /// <param name="inBufferSize"></param>
         /// <param name="outBufferSize"></param>
         /// <param name="isAsync"></param>
-        public TcpClientCache(string hostAddress, int port, int readTimeout, int inBufferSize, int outBufferSize,bool isAsync)
-            : base(hostAddress, port, readTimeout,inBufferSize, outBufferSize, isAsync)
+        public TcpClientCache(string hostAddress, int port, int timeout, int inBufferSize, int outBufferSize,bool isAsync)
+            : base(hostAddress, port, timeout,inBufferSize, outBufferSize, isAsync)
         {
 
         }
@@ -198,7 +214,7 @@ namespace Nistec.Caching.Channels
         /// <param name="configHost"></param>
         public TcpClientCache(string configHost)
         {
-            Settings = TcpClientCacheSettings.GetTcpClientSettings(configHost);
+            Settings = TcpClientCacheSettings.GetClientSettings(configHost);
         }
 
         /// <summary>
@@ -219,27 +235,26 @@ namespace Nistec.Caching.Channels
         /// </summary>
         /// <param name="stream"></param>
         /// <param name="message"></param>
-        protected override void ExecuteMessage(NetworkStream stream, CacheMessage message)
+        protected override void ExecuteOneWay(NetworkStream stream, CacheMessage message)
         {
             // Send a request from client to server
             message.EntityWrite(stream, null);
 
-            if (message.IsDuplex == false)
-            {
-                return;
-            }
+            //if (message.IsDuplex == false)
+            //{
+            //    return;
+            //}
 
-            // Receive a response from server.
-            message.ReadAck(stream, Settings.ReadTimeout, Settings.ReceiveBufferSize);
+            //// Receive a response from server.
+            //message.ReadAck(stream, Settings.ProcessTimeout, Settings.ReceiveBufferSize);
         }
         /// <summary>
         /// ExecuteMessage
         /// </summary>
         /// <param name="stream"></param>
         /// <param name="message"></param>
-        /// <param name="type"></param>
         /// <returns></returns>
-        protected override object ExecuteMessage(NetworkStream stream, CacheMessage message, Type type)
+        protected override object ExecuteMessage(NetworkStream stream, CacheMessage message)//, Type type)
         {
             object response = null;
 
@@ -253,7 +268,7 @@ namespace Nistec.Caching.Channels
             }
 
             // Receive a response from server.
-            response = message.ReadAck(stream, type, Settings.ReadTimeout, Settings.ReceiveBufferSize);
+            response = message.ReadResponse(stream, Settings.ProcessTimeout, Settings.ReceiveBufferSize, message.TransformType, false);
 
             return response;
         }
@@ -278,7 +293,7 @@ namespace Nistec.Caching.Channels
             }
 
             // Receive a response from server.
-            response = message.ReadAck<TResponse>(stream, Settings.ReadTimeout, Settings.ReceiveBufferSize);
+            response = message.ReadResponse<TResponse>(stream, Settings.ProcessTimeout, Settings.ReceiveBufferSize);
 
             return response;
         }

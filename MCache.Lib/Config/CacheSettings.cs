@@ -33,126 +33,7 @@ using System.IO.Pipes;
 
 namespace Nistec.Caching.Config
 {
-    /// <summary>
-    /// Represent a tcp client settings.
-    /// </summary>
-    public class TcpClientCacheSettings
-    {
-        static readonly Dictionary<string, TcpSettings> ClientSettingsCache = new Dictionary<string, TcpSettings>();
-
-        /// <summary>
-        /// Get Tcp Client Settings
-        /// </summary>
-        /// <param name="hostName"></param>
-        /// <returns></returns>
-        public static TcpSettings GetTcpClientSettings(string hostName)
-        {
-            TcpSettings settings = null;
-            if (ClientSettingsCache.TryGetValue(hostName, out settings))
-            {
-                return settings;
-            }
-            settings = LoadTcpConfigClient(hostName);
-            if (settings == null)
-            {
-                throw new Exception("Invalid configuration for tcp cache client settings with host name:" + hostName);
-            }
-            ClientSettingsCache[hostName] = settings;
-            return settings;
-        }
-        /// <summary>
-        /// LoadTcpConfigClient
-        /// </summary>
-        /// <param name="configHost"></param>
-        /// <returns></returns>
-        public static TcpSettings LoadTcpConfigClient(string configHost)
-        {
-            if (string.IsNullOrEmpty(configHost))
-            {
-                throw new ArgumentNullException("TcpCacheSettings.LoadTcpConfigClient name");
-            }
-
-            var config = CacheConfigClient.GetConfig();
-
-            var settings = config.FindTcpClient(configHost);
-            if (settings == null)
-            {
-                throw new ArgumentException("Invalid TcpCacheSettings with TcpName:" + configHost);
-            }
-
-            return new TcpSettings()
-            {
-                HostName = settings.HostName,
-                Address = TcpSettings.EnsureHostAddress(settings.Address),
-                Port = settings.Port,
-                IsAsync = settings.IsAsync,
-                ReceiveBufferSize = settings.ReceiveBufferSize,
-                SendBufferSize = settings.SendBufferSize,
-                SendTimeout = settings.SendTimeout,
-                ReadTimeout = settings.ReadTimeout,
-            };
-        }
-   }
-    /// <summary>
-    /// Represent a pipe client settings.
-    /// </summary>
-    public class PipeClientCacheSettings
-    {
-        static readonly Dictionary<string, PipeSettings> ClientSettingsCache = new Dictionary<string, PipeSettings>();
-        /// <summary>
-        /// Get pipe client settings
-        /// </summary>
-        /// <param name="hostName"></param>
-        /// <returns></returns>
-        public static PipeSettings GetPipeClientSettings(string hostName)
-        {
-            PipeSettings settings = null;
-            if (ClientSettingsCache.TryGetValue(hostName, out settings))
-            {
-                return settings;
-            }
-            settings = LoadPipeConfigClient(hostName);
-            if (settings == null)
-            {
-                throw new Exception("Invalid configuration for pipe cache client settings with host name:" + hostName);
-            }
-            ClientSettingsCache[hostName] = settings;
-            return settings;
-        }
-
-        /// <summary>
-        /// LoadPipeConfigClient
-        /// </summary>
-        /// <param name="hostName"></param>
-        /// <returns></returns>
-        public static PipeSettings LoadPipeConfigClient(string hostName)
-        {
-            if (string.IsNullOrEmpty(hostName))
-            {
-                throw new ArgumentNullException("PipeCacheSettings.LoadPipeConfigClient name");
-            }
-
-            var config = CacheConfigClient.GetConfig();
-
-            var settings = config.FindPipeClient(hostName);
-            if (settings == null)
-            {
-                throw new ArgumentException("Invalid PipeCacheSettings with PipeName:" + hostName);
-            }
-            return new PipeSettings()
-            {
-                HostName = settings.HostName,
-                PipeName = settings.PipeName,
-                PipeDirection = EnumExtension.Parse<PipeDirection>(settings.PipeDirection, PipeDirection.InOut),
-                PipeOptions = EnumExtension.Parse<PipeOptions>(settings.PipeOptions, PipeOptions.None),
-                VerifyPipe = settings.VerifyPipe,
-                ConnectTimeout = (uint)settings.ConnectTimeout,
-                InBufferSize = settings.InBufferSize
-            };
-
-        }
-
-    }
+   
 
     /// <summary>
     /// Represent the cache settings as read only.
@@ -160,69 +41,140 @@ namespace Nistec.Caching.Config
     public class CacheSettings
     {
         /// <summary>EnableDynamic.</summary>
-        public readonly static bool EnableDynamic = false;
+        public static bool EnableDynamic { get; private set; } = false;
+
+        /// <summary>EnableConnectionProvider.</summary>
+        public static bool EnableConnectionProvider { get; private set; } = true;
 
         /// <summary>EnableSyncTypeEvent.</summary>
-        public readonly static bool EnableSyncTypeEventTrigger = true;
+        public static bool EnableSyncTypeEventTrigger { get; private set; } = true;
         /// <summary>MaxSize.</summary>
-        public readonly static long MaxSize = CacheDefaults.DefaultCacheMaxSize;
+        public static long MaxSize { get; private set; } = CacheDefaults.DefaultCacheMaxSize;
         /// <summary>DefaultExpiration.</summary>
-        public readonly static int DefaultExpiration = 30;
+        public static int DefaultExpiration { get; private set; } = 30;
         /// <summary>RemoveExpiredItemOnSync.</summary>
-        public readonly static bool RemoveExpiredItemOnSync = true;
+        public static bool RemoveExpiredItemOnSync { get; private set; } = true;
         /// <summary>Sync Interval in seconds.</summary>
-        public readonly static int SyncInterval = CacheDefaults.DefaultIntervalSeconds;
+        public static int SyncInterval { get; private set; } = CacheDefaults.DefaultIntervalSeconds;
         /// <summary>SyncBox Interval in seconds.</summary>
-        public readonly static int SyncBoxInterval = CacheDefaults.DefaultIntervalSeconds;
+        public static int SyncBoxInterval { get; private set; } = CacheDefaults.DefaultIntervalSeconds;
         /// <summary>SyncOption.</summary>
-        public readonly static string SyncOption = "Auto";
+        public static string SyncOption { get; private set; } = "Auto";
         /// <summary>SessionTimeout.</summary>
-        public readonly static int SessionTimeout = CacheDefaults.DefaultSessionTimeout;
+        public static int SessionTimeout { get; private set; } = CacheDefaults.DefaultSessionTimeout;
         /// <summary>MaxSessionTimeout.</summary>
-        public readonly static int MaxSessionTimeout = 1440;
+        public static int MaxSessionTimeout { get; private set; } = 1440;
         /// <summary>EnableLog.</summary>
-        public readonly static bool EnableLog = false;
-        
-         /// <summary>SyncConfigFile.</summary>
-        public readonly static string SyncConfigFile = "";
+        public static bool EnableLog = false;
+        /// <summary>LogActionDebugEnabled.</summary>
+        public static bool LogMonitorDebugEnabled { get; private set; } = true;
+        /// <summary>LogActionCapacity.</summary>
+        public static int LogMonitorCapacityLines { get; private set; } = 1000;
+
+        /// <summary>SyncConfigFile.</summary>
+        public static string SyncConfigFile { get; private set; } = "";
         /// <summary>DbConfigFile.</summary>
-        public readonly static string DbConfigFile = "";
+        public static string DbConfigFile { get; private set; } = "";
         /// <summary>EnableSyncFileWatcher.</summary>
-        public readonly static bool EnableSyncFileWatcher = false;
+        public static bool EnableSyncFileWatcher { get; private set; } = false;
         /// <summary>ReloadSyncOnChange.</summary>
-        public readonly static bool ReloadSyncOnChange = false;
+        public static bool ReloadSyncOnChange { get; private set; } = false;
         /// <summary>SyncTaskerTimeout.</summary>
-        public readonly static int SyncTaskerTimeout = 60;
+        public static int SyncTaskerTimeout { get; private set; } = 60;
         /// <summary>EnableAsyncTask.</summary>
-        public readonly static bool EnableAsyncTask = true;
+        public static bool EnableAsyncTask { get; private set; } = true;
+        /// <summary>EnableAsyncLoader.</summary>
+        public static bool EnableAsyncLoader { get; private set; } = true;
+        /// <summary>EnableSyncTypeEvent.</summary>
+        public static bool EnableSyncTypeEvent { get; private set; } = false;
+
         /// <summary>Get the interval in hours for auto reset performance counter.</summary>
-        public readonly static int AutoResetIntervalHours = CacheDefaults.DefaultAutoResetIntervalHours;
-
+        public static int AutoResetIntervalHours { get; private set; } = CacheDefaults.DefaultAutoResetIntervalHours;
         
-        /// <summary>EnableSizeHandler.</summary>
-        public readonly static bool EnableSizeHandler = false;
-        /// <summary>EnablePerformanceCounter.</summary>
-        public readonly static bool EnablePerformanceCounter = false;
 
-         /// <summary>EnableRemoteCache.</summary>
-        public readonly static NetProtocol RemoteCacheProtocol = NetProtocol.NA;
-        /// <summary>EnableSyncCache.</summary>
-        public readonly static NetProtocol SyncCacheProtocol = NetProtocol.NA;
-        /// <summary>EnableSessionCache.</summary>
-        public readonly static NetProtocol SessionCacheProtocol = NetProtocol.NA;
-        /// <summary>EnableDataCache.</summary>
-        public readonly static NetProtocol DataCacheProtocol = NetProtocol.NA;
-        /// <summary>EnableCacheManager.</summary>
-        public readonly static NetProtocol CacheManagerProtocol = NetProtocol.NA;
+    /// <summary>EnableSizeHandler.</summary>
+    public static bool EnableSizeHandler { get; private set; } = false;
+        /// <summary>EnablePerformanceCounter.</summary>
+        public static bool EnablePerformanceCounter { get; private set; } = false;
 
         /// <summary>EnablePipeBundle.</summary>
-        public readonly static bool EnablePipeBundle = false;
+        public static bool EnablePipeBundle { get; private set; } = false;
         /// <summary>EnableTcpBundle.</summary>
-        public readonly static bool EnableTcpBundle = false;
-        ///// <summary>MaxTcpBundlePool.</summary>
-        //public readonly static int MaxTcpBundlePool = 10;
+        public static bool EnableTcpBundle { get; private set; } = false;
         /// <summary>EnableHttpBundle.</summary>
-        public readonly static bool EnableHttpBundle = false;
+        public static bool EnableHttpBundle { get; private set; } = false;
+
+        ///// <summary>EnablePipeBundle.</summary>
+        //public readonly static bool EnablePipeJsonBundle = false;
+        ///// <summary>EnableTcpBundle.</summary>
+        //public readonly static bool EnableTcpJsonBundle = false;
+        ///// <summary>EnableHttpBundle.</summary>
+        //public readonly static bool EnableHttpJsonBundle = false;
+
+        //internal static long GetValidCacheMaxSize(long maxSize)
+        //{
+        //    return maxSize < CacheDefaults.MinCacheMaxSize ? CacheDefaults.DefaultCacheMaxSize : maxSize;
+        //}
+
+        internal static int GetValidSessionTimeout(int timeout)
+        {
+            return timeout== -1 ? MaxSessionTimeout: timeout <= 0 ? SessionTimeout : timeout;
+        }
+
+
+        #region BundleFormatter
+
+        /// <summary>PipeBundleFormatter.</summary>
+        public static BundleFormatter PipeBundleFormatter { get; private set; } = BundleFormatter.NA;
+        /// <summary>TcpBundleFormatter.</summary>
+        public static BundleFormatter TcpBundleFormatter { get; private set; } = BundleFormatter.NA;
+        /// <summary>HttpBundleFormatter.</summary>
+        public static BundleFormatter HttpBundleFormatter { get; private set; } = BundleFormatter.NA;
+
+        internal static BundleFormatter GetBundleFormatter(string formatter)
+        {
+            return EnumExtension.Parse<BundleFormatter>(formatter, BundleFormatter.NA);
+        }
+
+        //internal static BundleFormatter GetBundleFormatter(string formatter)
+        //{
+        //    BundleFormatter modFlags = BundleFormatter.NA;
+        //    if (!string.IsNullOrEmpty(formatter))
+        //    {
+        //        BundleFormatter[] mflags = EnumExtension.GetEnumFlags<BundleFormatter>(formatter, BundleFormatter.NA);
+        //        foreach (BundleFormatter flg in mflags)
+        //        {
+        //            modFlags = modFlags | flg;
+        //        }
+        //    }
+        //    return modFlags;
+        //}
+        ///// <summary>
+        ///// Has Formatter Flag
+        ///// </summary>
+        ///// <param name="e"></param>
+        ///// <param name="flag"></param>
+        ///// <returns></returns>
+        //public static bool HasFormatterFlag(BundleFormatter e, Enum flag)
+        //{
+        //    return e.HasFlag(flag);
+        //}
+        #endregion
+
+        #region NetProtocol
+
+        /// <summary>EnableRemoteCache.</summary>
+        public static NetProtocol RemoteCacheProtocol { get; private set; } = NetProtocol.NA;
+        /// <summary>EnableSyncCache.</summary>
+        public static NetProtocol SyncCacheProtocol { get; private set; } = NetProtocol.NA;
+        /// <summary>EnableSessionCache.</summary>
+        public static NetProtocol SessionCacheProtocol { get; private set; } = NetProtocol.NA;
+        /// <summary>EnableDataCache.</summary>
+        public static NetProtocol DataCacheProtocol { get; private set; } = NetProtocol.NA;
+        /// <summary>EnableCacheManager.</summary>
+        public static NetProtocol CacheManagerProtocol { get; private set; } = NetProtocol.NA;
+
+
         internal static NetProtocol GetNetProtocol(string protocol)
         {
             NetProtocol modFlags = NetProtocol.NA;
@@ -236,6 +188,18 @@ namespace Nistec.Caching.Config
             }
             return modFlags;
         }
+
+        internal static NetProtocol[] GetSupportProtocol(string protocol)
+        {
+            if (!string.IsNullOrEmpty(protocol))
+            {
+                NetProtocol[] mflags = EnumExtension.GetEnumFlags<NetProtocol>(protocol, NetProtocol.NA);
+                return mflags;
+            }
+
+            return new NetProtocol[] { NetProtocol.NA };
+        }
+
         /// <summary>
         /// Has Protocol Flag
         /// </summary>
@@ -246,55 +210,150 @@ namespace Nistec.Caching.Config
         {
             return e.HasFlag(flag);
         }
+        #endregion
+
+        #region NetFormatter
+        /*
+        /// <summary>EnableRemoteCache.</summary>
+        public readonly static NetFormatter RemoteCacheFormatter = NetFormatter.Binary;
+        /// <summary>EnableSyncCache.</summary>
+        public readonly static NetFormatter SyncCacheFormatter = NetFormatter.Binary;
+        /// <summary>EnableSessionCache.</summary>
+        public readonly static NetFormatter SessionCacheFormatter = NetFormatter.Binary;
+        /// <summary>EnableDataCache.</summary>
+        public readonly static NetFormatter DataCacheFormatter = NetFormatter.Binary;
+
+
+        internal static NetFormatter GetNetFormatter(string formatter)
+        {
+            NetFormatter modFlags = NetFormatter.Binary;
+            if (!string.IsNullOrEmpty(formatter))
+            {
+                NetFormatter[] mflags = EnumExtension.GetEnumFlags<NetFormatter>(formatter, NetFormatter.Binary);
+                foreach (NetFormatter flg in mflags)
+                {
+                    modFlags = modFlags | flg;
+                }
+            }
+            return modFlags;
+        }
+        /// <summary>
+        /// Has Formatter Flag
+        /// </summary>
+        /// <param name="e"></param>
+        /// <param name="flag"></param>
+        /// <returns></returns>
+        public static bool HasFormatterFlag(NetFormatter e, Enum flag)
+        {
+            return e.HasFlag(flag);
+        }
+        */
+        #endregion
+
         static CacheSettings()
         {
+            var section = CacheConfigServer.GetConfig();
+            if (section == null)
+            {
+                throw new ArgumentException("CacheSettings.GetConfig");
+            }
+            LoadCacheSettings(section.CacheSettings, false);
+        }
+
+        internal static void LoadCacheSettings(NetConfigItems table, bool isReload)
+        {
             //XmlTable table = NetConfig.GetCustomConfig("CacheSettings");
-
-            var section= CacheConfigServer.GetConfig();
-            var table = section.CacheSettings;
-
             if (table == null)
             {
-                throw new ArgumentException("Can not load XmlTable config");
+                throw new ArgumentException("Could not load XmlTable config");
             }
 
             MaxSize = table.Get<long>("MaxSize", CacheDefaults.DefaultCacheMaxSize);
-            DefaultExpiration = table.Get<int>("DefaultExpiration", 30);
+            if (MaxSize <= 0)
+                MaxSize = CacheDefaults.DefaultCacheMaxSize;
+            if (MaxSize > CacheDefaults.CacheMaxSizeLimit)
+                MaxSize = CacheDefaults.CacheMaxSizeLimit;
+
+            DefaultExpiration = table.Get<int>("DefaultExpiration", CacheDefaults.DefaultCacheExpiration);
+            if (DefaultExpiration <= 0)
+                DefaultExpiration = CacheDefaults.DefaultCacheExpiration;
+
             RemoveExpiredItemOnSync = table.Get<bool>("RemoveExpiredItemOnSync", true);
             SyncInterval = table.Get<int>("SyncInterval", 60);
             SyncBoxInterval = table.Get<int>("SyncBoxInterval", 60);
+
             SessionTimeout = table.Get<int>("SessionTimeout", CacheDefaults.DefaultSessionTimeout);
-            MaxSessionTimeout = table.Get<int>("MaxSessionTimeout", 1440);
+            if (SessionTimeout <= 0)
+                SessionTimeout = CacheDefaults.DefaultSessionTimeout;
+
+            MaxSessionTimeout = table.Get<int>("MaxSessionTimeout", CacheDefaults.DefaultMaxSessionTimeout);//1 month 1440);
+            if (MaxSessionTimeout <= 0)
+                MaxSessionTimeout = CacheDefaults.DefaultMaxSessionTimeout;
+
             EnableLog = table.Get<bool>("EnableLog", false);
+
+            LogMonitorDebugEnabled = table.Get<bool>("LogMonitorDebugEnabled", false);
+            LogMonitorCapacityLines = table.Get<int>("LogMonitorCapacityLines", 1000);
+            if (LogMonitorCapacityLines > 10000)
+                LogMonitorCapacityLines = 10000;
+
+            CacheLogger.debugEnabled = LogMonitorDebugEnabled;
+            CacheLogger.logCapacity = LogMonitorCapacityLines;
+
             SyncConfigFile = table.Get("SyncConfigFile");
             DbConfigFile = table.Get("DbConfigFile");
             EnableSyncFileWatcher = table.Get<bool>("EnableSyncFileWatcher", false);
             ReloadSyncOnChange = table.Get<bool>("ReloadSyncOnChange", false);
             SyncTaskerTimeout = table.Get<int>("SyncTaskerTimeout", 60);
             EnableAsyncTask = table.Get<bool>("EnableAsyncTask", true);
+            EnableAsyncLoader = table.Get<bool>("EnableAsyncLoader", true);
+            EnableSyncTypeEvent = table.Get<bool>("EnableSyncTypeEvent", false);
+
             AutoResetIntervalHours = table.Get<int>("AutoResetIntervalHours", CacheDefaults.DefaultAutoResetIntervalHours);
 
             EnableSizeHandler = table.Get<bool>("EnableSizeHandler", false);
             EnablePerformanceCounter = table.Get<bool>("EnablePerformanceCounter", false);
 
-            EnableTcpBundle = table.Get<bool>("EnableTcpBundle", false);
-            EnablePipeBundle = table.Get<bool>("EnablePipeBundle", false);
-            EnableHttpBundle = table.Get<bool>("EnableHttpBundle", false);
+            //EnableTcpBundle = table.Get<bool>("EnableTcpBundle", false);
+            //EnablePipeBundle = table.Get<bool>("EnablePipeBundle", false);
+            //EnableHttpBundle = table.Get<bool>("EnableHttpBundle", false);
+
+            //EnablePipeJsonBundle = table.Get<bool>("EnablePipeJsonBundle", false);
+            //EnableTcpJsonBundle = table.Get<bool>("EnableTcpJsonBundle", false);
+            //EnableHttpJsonBundle = table.Get<bool>("EnableHttpJsonBundle", false);
+
 
             EnableSyncTypeEventTrigger = table.Get<bool>("EnableSyncTypeEventTrigger", true);
 
             //MaxTcpBundlePool = table.Get<int>("MaxTcpBundlePool", 0);
 
-            RemoteCacheProtocol = GetNetProtocol(table.Get("RemoteCacheProtocol"));
-            SyncCacheProtocol = GetNetProtocol(table.Get("SyncCacheProtocol"));
-            SessionCacheProtocol = GetNetProtocol(table.Get("SessionCacheProtocol"));
-            DataCacheProtocol = GetNetProtocol(table.Get("DataCacheProtocol"));
-            CacheManagerProtocol = GetNetProtocol(table.Get("CacheManagerProtocol"));
+            if (!isReload)
+            {
 
-            CacheDefaults.MaxSessionTimeout = MaxSessionTimeout;
-            CacheDefaults.SessionTimeout = SessionTimeout;
-            CacheDefaults.DefaultExpiration = DefaultExpiration;
-            CacheDefaults.EnableLog = EnableLog;
+                PipeBundleFormatter = GetBundleFormatter(table.Get("PipeBundleFormatter"));
+                TcpBundleFormatter = GetBundleFormatter(table.Get("TcpBundleFormatter"));
+                HttpBundleFormatter = GetBundleFormatter(table.Get("HttpBundleFormatter"));
+
+                RemoteCacheProtocol = GetNetProtocol(table.Get("RemoteCacheProtocol"));
+                SyncCacheProtocol = GetNetProtocol(table.Get("SyncCacheProtocol"));
+                SessionCacheProtocol = GetNetProtocol(table.Get("SessionCacheProtocol"));
+                DataCacheProtocol = GetNetProtocol(table.Get("DataCacheProtocol"));
+                CacheManagerProtocol = GetNetProtocol(table.Get("CacheManagerProtocol"));
+
+                //RemoteCacheFormatter = GetNetFormatter(table.Get("RemoteCacheFormatter"));
+                //SyncCacheFormatter = GetNetFormatter(table.Get("SyncCacheFormatter"));
+                //SessionCacheFormatter = GetNetFormatter(table.Get("SessionCacheFormatter"));
+                //DataCacheFormatter = GetNetFormatter(table.Get("DataCacheFormatter"));
+
+                EnableTcpBundle = TcpBundleFormatter != BundleFormatter.NA && (RemoteCacheProtocol.HasFlag(NetProtocol.Tcp) || SyncCacheProtocol.HasFlag(NetProtocol.Tcp) || SessionCacheProtocol.HasFlag(NetProtocol.Tcp) || DataCacheProtocol.HasFlag(NetProtocol.Tcp));
+                EnablePipeBundle = PipeBundleFormatter != BundleFormatter.NA && (RemoteCacheProtocol.HasFlag(NetProtocol.Pipe) || SyncCacheProtocol.HasFlag(NetProtocol.Pipe) || SessionCacheProtocol.HasFlag(NetProtocol.Pipe) || DataCacheProtocol.HasFlag(NetProtocol.Pipe));
+                EnableHttpBundle = HttpBundleFormatter != BundleFormatter.NA && (RemoteCacheProtocol.HasFlag(NetProtocol.Http) || SyncCacheProtocol.HasFlag(NetProtocol.Http) || SessionCacheProtocol.HasFlag(NetProtocol.Http) || DataCacheProtocol.HasFlag(NetProtocol.Http));
+            }
+
+            //CacheDefaults.MaxSessionTimeout = MaxSessionTimeout;
+            //CacheDefaults.SessionTimeout = SessionTimeout;
+            //CacheDefaults.DefaultExpiration = DefaultExpiration;
+            //CacheDefaults.EnableLog = EnableLog;
         }
 
         /// <summary>
@@ -316,7 +375,10 @@ namespace Nistec.Caching.Config
             {
                 throw new ArgumentException("Invalid PipeCacheSettings with PipeName:" + hostName);
             }
-            return new PipeSettings()
+
+           //~Console.WriteLine("Debuger-LoadPipeConfigServer.IsAsync: " + settings.IsAsync.ToString());
+
+           return new PipeSettings()
            {
                HostName = settings.HostName,
                PipeName = settings.PipeName,
@@ -324,11 +386,13 @@ namespace Nistec.Caching.Config
                PipeOptions = EnumExtension.Parse<PipeOptions>(settings.PipeOptions, PipeOptions.None),
                VerifyPipe = settings.VerifyPipe,
                ConnectTimeout = (uint)settings.ConnectTimeout,
-               InBufferSize = settings.InBufferSize,
-               OutBufferSize = settings.OutBufferSize,
+               ReceiveBufferSize = settings.ReceiveBufferSize,
+               SendBufferSize = settings.SendBufferSize,
                MaxServerConnections = settings.MaxServerConnections,
-               MaxAllowedServerInstances = settings.MaxAllowedServerInstances
-           };
+               MaxAllowedServerInstances = settings.MaxAllowedServerInstances,
+               IsAsync= settings.IsAsync
+
+            };
         }
         /// <summary>
         /// LoadTcpConfigServer
@@ -358,9 +422,9 @@ namespace Nistec.Caching.Config
                 IsAsync = settings.IsAsync,
                 ReceiveBufferSize = settings.ReceiveBufferSize,
                 SendBufferSize = settings.SendBufferSize,
-                SendTimeout = settings.SendTimeout,
+                ConnectTimeout = settings.ConnectTimeout,
                 ProcessTimeout=settings.ProcessTimeout,
-                ReadTimeout=settings.ReadTimeout,
+                //ReadTimeout=settings.ReadTimeout,
                 MaxSocketError = settings.MaxSocketError,
                 MaxServerConnections = Math.Max(1, settings.MaxServerConnections)
             };

@@ -9,6 +9,7 @@ using Nistec.Caching.Demo.Mass;
 using Nistec.Caching.Demo.Entities;
 using Nistec.IO;
 using Nistec.Channels;
+using MControl.Caching.Demo;
 
 namespace Nistec.Caching.Demo
 {
@@ -20,15 +21,27 @@ namespace Nistec.Caching.Demo
           static void Main(string[] args)
           {
 
-              Console.WriteLine("Start test...");
-             
-              //string mode = "remote-sync";
-              string protocol="tcp";
+            Console.WriteLine("Start test...");
+
+            //RemoteSyncTest.TestAll();
+            //Console.ReadLine();
+
+            //DelayWorker.Run();
+            //Console.ReadLine();
+            //return;
+
+            //string mode = "remote-sync";
+            string protocol ="tcp";
               string cmd="";
               string menu = "commands: remote-cache, remote-sync,remote-sync-mass, remote-api, remote-session";
               NetProtocol netProtocol = NetProtocol.Tcp;
-              
-              do
+              Nistec.Caching.Demo.Remote.DataCacheTest.TestAll(NetProtocol.Pipe,false);
+              Nistec.Caching.Demo.Remote.CacheTest.TestAll(NetProtocol.Pipe, false);
+              Nistec.Caching.Demo.Remote.SessionCacheTest.TestAll(NetProtocol.Pipe, false);
+              Nistec.Caching.Demo.Remote.SyncCacheTest.TestAll(NetProtocol.Pipe, false);
+            return;
+
+            do
               {
                   Console.WriteLine("Choos protocol : tcp , pipe");
                   protocol = Console.ReadLine().ToLower();

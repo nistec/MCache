@@ -29,23 +29,79 @@ using System.Collections.Concurrent;
 namespace Nistec.Caching.Data
 {
 
-    /// <summary>
-    /// Represent the  HashSet of <see cref="DataSyncEntity"/>  data sync entities in cache.
-    /// </summary>
+        /// <summary>
+        /// Represent the  HashSet of <see cref="DataSyncEntity"/>  data sync entities in cache.
+        /// </summary>
     public class DataSyncList : IDisposable
     {
+        internal static readonly DataSyncList Global = new DataSyncList();
+
+        public DataSyncList Copy()
+        {
+
+            var copy = new ConcurrentDictionary<string, DataSyncEntity>();
+
+            foreach (var entry in m_data)
+            {
+                copy[entry.Key] = entry.Value.Copy();
+            }
+
+            return new DataSyncList()
+            {
+                Owner =this.Owner,// ((SyncDb)this.Owner).Copy(),
+                m_data = copy
+            };
+        }
+
+        //internal DataSyncList CopyInternal()
+        //{
+        //    var copy = new ConcurrentDictionary<string, DataSyncEntity>();
+
+        //    foreach (var entry in m_data)
+        //    {
+        //        copy[entry.Key] = entry.Value.Copy();
+        //    }
+
+        //    return new DataSyncList()
+        //    {
+        //        Owner = this.Owner,//CopyOwner(),
+        //        m_data = CopyData()
+        //    };
+        //}
+        //internal IDataCache CopyOwner()
+        //{
+        //    return Owner.Copy();
+        //}
+        //internal ConcurrentDictionary<string, DataSyncEntity> CopyData()
+        //{
+        //    var copy = new ConcurrentDictionary<string, DataSyncEntity>();
+
+        //    foreach (var entry in m_data)
+        //    {
+        //        copy[entry.Key] = entry.Value.Copy();
+        //    }
+        //    return copy;
+        //}
+
         //static object SyncRoot = new object();
-  
+
         ConcurrentDictionary<string, DataSyncEntity> m_data;
 
-        internal IDataCache Owner;
+        IDataCache Owner;
+        bool IsGlobal;
+        internal DataSyncList()
+        {
+            IsGlobal = true;
+            m_data = new ConcurrentDictionary<string, DataSyncEntity>();
 
+        }
         /// <summary>
         /// Initialize a new instance of dtaa sync list.
         /// </summary>
         /// <param name="owner"></param>
         public DataSyncList(IDataCache owner)
         {
+            IsGlobal = false;
             m_data = new ConcurrentDictionary<string, DataSyncEntity>();
             Owner = owner;
         }
@@ -74,10 +130,10 @@ namespace Nistec.Caching.Data
         {
             if (disposing)
             {
-                if (Owner != null)
-                {
-                    this.Owner = null;
-                }
+                //if (Owner != null)
+                //{
+                //    this.Owner = null;
+                //}
             }
             m_data = null;
         }
@@ -162,18 +218,17 @@ namespace Nistec.Caching.Data
             {
                 return 0;
             }
-           
+            //m_data.AddOrUpdate(syncsource.EntityName, syncsource, (key, oldValue) => syncsource);
 
             m_data[syncsource.EntityName] = syncsource;
 
-            return m_data.Count - 1;
-
+            return m_data.Count;
         }
 
         /// <summary>
         /// Registered All Tables that has sync option by event.
         /// </summary>
-        private void RegisteredTablesEvent()
+        private void RegisteredTablesEvent(IDataCache owner)
         {
             if (this.Count == 0)
                 return;
@@ -184,7 +239,7 @@ namespace Nistec.Caching.Data
             {
                 if (o.SyncType == SyncType.Event)
                 {
-                    o.RegisterAsync(Owner);
+                    o.RegisterAsync(owner);
                 }
             }
         }
@@ -235,11 +290,10 @@ namespace Nistec.Caching.Data
 
 
         /// <summary>
-        /// Add a new <see cref="DataSyncEntity"/> item to the list.
+        /// Add or Update a new <see cref="DataSyncEntity"/> item to the list.
         /// </summary>
         /// <param name="entity"></param>
-        /// <param name="replaceExists"></param>
-        public void AddSafe(DataSyncEntity entity, bool replaceExists)
+        public void Set(DataSyncEntity entity)
         {
 
             //m_data.AddOrUpdate(entity.EntityName, entity, (key, oldValue) => entity);
@@ -286,6 +340,17 @@ namespace Nistec.Caching.Data
 
         }
 
+        public bool IsEqual(DataSyncList list)
+        {
+            foreach (var dc in list.GetItems())
+            {
+                if (Contains(dc) &&
+                   IsExists(dc.SyncEntity))
+                    return true;
+            }
+            return false;
+        }
+
         /// <summary>
         /// Determines whether a HashSet list contains the specified element.
         /// </summary>
@@ -294,9 +359,9 @@ namespace Nistec.Caching.Data
         public bool Contains(DataSyncEntity entity)
         {
             return m_data.ContainsKey(entity.EntityName);
-
-            
         }
+
+
 
         /// <summary>
         /// Determines whether a HashSet list contains the specified element.
@@ -336,7 +401,32 @@ namespace Nistec.Caching.Data
             return (items == null) ? false : items.Count() >0 ;
 
         }
+        /// <summary>
+        /// Get indicate whether the list contains the specified item in list.
+        /// </summary>
+        /// <param name="viewName"></param>
+        /// <param name="clientId"></param>
+        /// <returns></returns>
+        public bool IsExists(string viewName, string clientId)
+        {
 
+            var items = m_data.Values.Where(p => p.ViewName == viewName && p.ClientId==clientId);
+            return (items == null) ? false : items.Count() > 0;
+
+        }
+        /// <summary>
+        /// Get indicate whether the list contains the specified item in list.
+        /// </summary>
+        /// <param name="entityName"></param>
+        /// <param name="clientId"></param>
+        /// <returns></returns>
+        public bool IsEntityExists(string entityName, string clientId)
+        {
+
+            var items = m_data.Values.Where(p => p.EntityName == entityName && p.ClientId == clientId);
+            return (items == null) ? false : items.Count() > 0;
+
+        }
 
         /// <summary>
         /// Get item from list using the DataSyncEntity.ViewName.
@@ -346,6 +436,29 @@ namespace Nistec.Caching.Data
         public DataSyncEntity GetItemByView(string viewName)
         {
             return m_data.Values.Where(p => p.ViewName == viewName).FirstOrDefault();
+
+        }
+
+        /// <summary>
+        /// Get item from list using the DataSyncEntity.ViewName.
+        /// </summary>
+        /// <param name="connectionKey"></param>
+        /// <returns></returns>
+        public IEnumerable<DataSyncEntity> GetItemsByConnection(string connectionKey)
+        {
+            return m_data.Values.Where(p => p.ConnectionKey == connectionKey);
+
+        }
+
+
+        /// <summary>
+        /// Get items from list using the DataSyncEntity.SourceName.
+        /// </summary>
+        /// <param name="tableName"></param>
+        /// <returns></returns>
+        public IEnumerable<DataSyncEntity> GetItemBySorce(string tableName)
+        {
+            return m_data.Values.Where(p => p.SourceName.Contains(tableName));
 
         }
     }

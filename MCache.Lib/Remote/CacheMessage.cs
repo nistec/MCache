@@ -36,7 +36,7 @@ using System.Net.Sockets;
 using Nistec.Serialization;
 using Nistec.Channels.Http;
 using System.Net;
-
+using Nistec.Caching.Config;
 
 namespace Nistec.Caching.Remote
 {
@@ -52,71 +52,119 @@ namespace Nistec.Caching.Remote
         /// Initialize a new instance of cache message.
         /// </summary>
         public CacheMessage() : base() { Formatter = MessageStream.DefaultFormatter; }
+
         /// <summary>
         /// Initialize a new instance of cache message.
         /// </summary>
-        /// <param name="command"></param>
-        /// <param name="key"></param>
-        /// <param name="value"></param>
-        /// <param name="expiration"></param>
-        public CacheMessage(string command, string key, object value, int expiration)
-            : this()
+        /// <param name="body"></param>
+        public CacheMessage(object body) : this()
         {
-            Command = command;
-            Key = key;
-            Expiration = expiration;
-            SetBody(value);
-        }
-        /// <summary>
-        /// Initialize a new instance of cache message.
-        /// </summary>
-        /// <param name="command"></param>
-        /// <param name="key"></param>
-        /// <param name="value"></param>
-        /// <param name="expiration"></param>
-        /// <param name="sessionId"></param>
-        public CacheMessage(string command, string key, object value, int expiration, string sessionId)
-            : this()
-        {
-            Command = command;
-            Key = key;
-            Expiration = expiration;
-            Id = sessionId;
-            SetBody(value);
+            Formatter = MessageStream.DefaultFormatter;
+            SetBody(body);
         }
 
+        /// <summary>
+        /// Initialize a new instance of cache message.
+        /// </summary>
+        /// <param name="command"></param>
+        /// <param name="id"></param>
+        /// <param name="value"></param>
+        /// <param name="expiration"></param>
+        public CacheMessage(string command, string id, object value, int expiration)
+            : this()
+        {
+            Command = command;
+            Id = id;
+            Expiration = expiration;
+            SetBody(value);
+        }
+        ///// <summary>
+        ///// Initialize a new instance of cache message.
+        ///// </summary>
+        ///// <param name="command"></param>
+        ///// <param name="key"></param>
+        ///// <param name="value"></param>
+        ///// <param name="expiration"></param>
+        ///// <param name="detail"></param>
+        //public CacheMessage(string command, string key, object value, int expiration, string detail)
+        //    : this()
+        //{
+        //    Command = command;
+        //    Id = key;
+        //    Expiration = expiration;
+        //    Label = detail;
+        //    SetBody(value);
+        //}
+
+        internal CacheMessage(MessageStream message)
+            : this()
+        {
+            Command = message.Command;
+            Id = message.Id;
+            Expiration = message.Expiration;
+            Label = message.Label;
+            GroupId = message.GroupId;
+            BodyStream = message.BodyStream;
+            TypeName = message.TypeName;
+            Args = message.Args;
+            Formatter = message.Formatter;
+            IsDuplex = message.IsDuplex;
+            Modified = message.Modified;
+            Sender = message.Sender;
+            //Size = message.Size;
+            TransformType = message.TransformType;
+        }
         #endregion   
 
+#if(false)
         #region Read/Write pipe
 
-        internal object ReadResponse(NamedPipeClientStream stream, Type type, int InBufferSize = 8192)
-        {
-          
+        internal string ReadResponseAsJson(NamedPipeClientStream stream, int ReceiveBufferSize, TransformType transformType, bool isTransStream)
+        {// = 8192
 
-            using (AckStream ack = AckStream.Read(stream,type, InBufferSize))
+            if (isTransStream)
             {
-                if (ack.State > MessageState.Ok)
+                using (TransStream ts = TransStream.CopyFrom(stream, ReceiveBufferSize))
                 {
-                    throw new Exception(ack.Message);
+                    return ts.ReadJson();
                 }
-                return ack.Value;
+            }
+
+            using (TransStream ack = new TransStream(stream, ReceiveBufferSize, transformType, isTransStream))
+            {
+                return ack.ReadJson();
             }
         }
 
-        internal TResponse ReadResponse<TResponse>(NamedPipeClientStream stream, int InBufferSize = 8192)
+        internal object ReadResponse(NamedPipeClientStream stream, int ReceiveBufferSize, TransformType transformType, bool isTransStream)
         {
-
-            using (AckStream ack = AckStream.Read(stream, typeof(TResponse), InBufferSize))
+            if (isTransStream)//transformType == TransformType.Stream)
             {
-                if (ack.State > MessageState.Ok)
-                {
-                    throw new Exception(ack.Message);
-                }
-                return ack.GetValue<TResponse>();
+                return TransStream.CopyFrom(stream, ReceiveBufferSize);
+                //return new TransStream(stream, ReceiveBufferSize);
+            }
+            using (TransStream ack = new TransStream(stream,  ReceiveBufferSize, TransformType.Object,isTransStream))
+            {
+                return ack.ReadValue();
             }
         }
 
-        internal static CacheMessage ReadRequest(NamedPipeServerStream pipeServer, int InBufferSize = 8192)
+        internal TResponse ReadResponse<TResponse>(NamedPipeClientStream stream, int ReceiveBufferSize = 8192)
+        {
+            if (TransReader.IsTransStream(typeof(TResponse)))
+            {
+                TransStream ts = TransStream.CopyFrom(stream, ReceiveBufferSize);
+                //TransStream ack = new TransStream(stream, ReceiveBufferSize);
+                return GenericTypes.Cast<TResponse>(ts, true);
+            }
+            using (TransStream ack = new TransStream(stream, ReceiveBufferSize,TransformType.Object,false))
+            {
+                return ack.ReadValue<TResponse>();
+            }
+        }
+
+
+        internal static CacheMessage ReadRequest(NamedPipeServerStream pipeServer, int ReceiveBufferSize = 8192)
         {
             CacheMessage message = new CacheMessage();
             message.EntityRead(pipeServer, null);
@@ -129,18 +177,47 @@ namespace Nistec.Caching.Remote
             {
                 return;
             }
-
-            int cbResponse = bResponse.iLength;
-
-            pipeServer.Write(bResponse.ToArray(), 0, cbResponse);
+            pipeServer.Write(bResponse.ToArray(), 0, bResponse.iLength);
 
             pipeServer.Flush();
-
         }
 
         #endregion
 
         #region Read/Write tcp
+        //= 8192
+        //internal string ReadResponseAsJson(NetworkStream stream, int ReceiveBufferSize , TransformType transformType)
+        //{
+        //    using (TransStream ack = new TransStream(stream, 0, ReceiveBufferSize, transformType))
+        //    {
+        //        return ack.ReadJson();
+        //    }
+        //}
+
+        //internal object ReadResponse(NetworkStream stream, int readTimeout, int ReceiveBufferSize, TransformType transformType)
+        //{
+        //    if (transformType == TransformType.Stream)
+        //    {
+        //        return new TransStream(stream,  0, ReceiveBufferSize);
+        //    }
+        //    using (TransStream ack = new TransStream(stream,  0,ReceiveBufferSize, TransformType.Object))
+        //    {
+        //        return ack.ReadValue();
+        //    }
+        //}
+
+        //internal TResponse ReadResponse<TResponse>(NetworkStream stream, int readTimeout, int ReceiveBufferSize = 8192)
+        //{
+        //    if (TransReader.IsTransStream(typeof(TResponse)))
+        //    {
+        //        var ts = new TransStream(stream,  0, ReceiveBufferSize);
+        //        return GenericTypes.Cast<TResponse>(ts, true);
+        //    }
+        //    using (TransStream ack = new TransStream(stream,  0,ReceiveBufferSize, TransformType.Object))
+        //    {
+        //        return ack.ReadValue<TResponse>();
+        //    }
+        //}
 
         internal static NetStream FaultStream(string faultDescription)
         {
@@ -148,7 +225,7 @@ namespace Nistec.Caching.Remote
             return message.Serialize();
         }
 
-        internal static CacheMessage ReadRequest(NetworkStream streamServer, int InBufferSize = 8192)
+        internal static CacheMessage ReadRequest(NetworkStream streamServer, int ReceiveBufferSize = 8192)
         {
             var message = new CacheMessage();
             message.EntityRead(streamServer, null);
@@ -177,9 +254,24 @@ namespace Nistec.Caching.Remote
 
         internal static CacheMessage ReadRequest(HttpRequestInfo request)
         {
-            var message = new CacheMessage();
-            message.EntityRead(request.Body, null);
-            return message;
+            if (request.BodyStream != null)
+            {
+                var msg = MessageStream.ParseStream(request.BodyStream, NetProtocol.Http);
+                return new CacheMessage(msg);
+            }
+            else
+            {
+
+                var message = new CacheMessage();
+                if (request.BodyType == HttpBodyType.QueryString)
+                    message.EntityRead(request.QueryString, null);
+                else if (request.Body != null)
+                    message.EntityRead(request.Body, null);
+                else if (request.Url.LocalPath != null && request.Url.LocalPath.Length > 1)
+                    message.EntityRead(request.Url.LocalPath.TrimStart('/').TrimEnd('/'), null);
+
+                return message;
+            }
         }
 
         internal static void WriteResponse(HttpListenerContext context, NetStream bResponse)
@@ -207,38 +299,16 @@ namespace Nistec.Caching.Remote
 
 
         #endregion
+#endif
 
         #region extension
 
-        internal static string[] SplitArg(IKeyValue dic, string key, string valueIfNull)
+        internal string CommandType
         {
-            string val = dic.Get<string>(key, valueIfNull);
-            if (val == null)
-                return valueIfNull == null ? null : new string[] { valueIfNull };
-            return val.SplitTrim('|');
-        }
-
-       
-        internal static TimeSpan TimeArg(IKeyValue dic, string key, string valueIfNull)
-        {
-            string val = dic.Get<string>(key, valueIfNull);
-            TimeSpan time = string.IsNullOrEmpty(val) ? TimeSpan.Zero : TimeSpan.Parse(val);
-            return time;
-        }
-
-        internal static string[] SplitArg(IDictionary dic, string key, string valueIfNull)
-        {
-            string val = dic.Get<string>(key, valueIfNull);
-            if (val == null)
-                return valueIfNull == null ? null : new string[] { valueIfNull };
-            return val.SplitTrim('|');
-        }
-
-        internal static TimeSpan TimeArg(IDictionary dic, string key, string valueIfNull)
-        {
-            string val = dic.Get<string>(key, valueIfNull);
-            TimeSpan time = string.IsNullOrEmpty(val) ? TimeSpan.Zero : TimeSpan.Parse(val);
-            return time;
+            get
+            {
+                return Command.Substring(0, 5);
+            }
         }
 
         /// <summary>
@@ -251,14 +321,16 @@ namespace Nistec.Caching.Remote
             CacheMessage message = new CacheMessage()
             {
                 Command = dict.Get<string>("Command"),
-                Key = dict.Get<string>("Key"),
-                Args = dict.Get<GenericNameValue>("Args"),
+                Sender = dict.Get<string>("Sender"),
+                Id = dict.Get<string>("Id"),
+                Args = dict.Get<NameValueArgs>("Args"),
                 BodyStream = dict.Get<NetStream>("Body", null),//, ConvertDescriptor.Implicit),
                 Expiration = dict.Get<int>("Expiration", 0),
                 IsDuplex = dict.Get<bool>("IsDuplex", true),
                 Modified = dict.Get<DateTime>("Modified", DateTime.Now),
                 TypeName = dict.Get<string>("TypeName"),
-                Id = dict.Get<string>("Id")
+                Label = dict.Get<string>("Label"),
+                TransformType= (TransformType)dict.Get<byte>("TransformType")
             };
 
             return message;
@@ -281,102 +353,7 @@ namespace Nistec.Caching.Remote
             }
         }
         #endregion
-
-        #region ReadAck tcp
-
-        /// <summary>
-        /// Read response from server.
-        /// </summary>
-        /// <param name="stream"></param>
-        /// <param name="readTimeout"></param>
-        /// <param name="InBufferSize"></param>
-        public object ReadAck(NetworkStream stream, int readTimeout, int InBufferSize)
-        {
-            using (AckStream ack = AckStream.Read(stream,typeof(object), readTimeout, InBufferSize))
-            {
-                if (ack.State > MessageState.Ok)
-                {
-                    throw new MessageException(ack);
-                }
-                return ack.Value;
-            }
-        }
-
-        /// <summary>
-        /// Read response from server.
-        /// </summary>
-        /// <param name="stream"></param>
-        /// <param name="type"></param>
-        /// <param name="readTimeout"></param>
-        /// <param name="InBufferSize"></param>
-        /// <returns></returns>
-        public object ReadAck(NetworkStream stream, Type type, int readTimeout, int InBufferSize)
-        {
-
-            using (AckStream ack = AckStream.Read(stream,type, readTimeout, InBufferSize))
-            {
-                if (ack.State > MessageState.Ok)
-                {
-                    throw new MessageException(ack);
-                }
-                return ack.Value;
-            }
-        }
-
-        /// <summary>
-        /// Read response from server.
-        /// </summary>
-        /// <typeparam name="TResponse"></typeparam>
-        /// <param name="stream"></param>
-        /// <param name="readTimeout"></param>
-        /// <param name="InBufferSize"></param>
-        /// <returns></returns>
-        public TResponse ReadAck<TResponse>(NetworkStream stream, int readTimeout, int InBufferSize)
-        {
-
-            using (AckStream ack = AckStream.Read(stream, typeof(TResponse), readTimeout, InBufferSize))
-            {
-                if (ack.State > MessageState.Ok)
-                {
-                    throw new MessageException(ack);
-                }
-                return ack.GetValue<TResponse>();
-            }
-        }
-
-        #endregion
-
-        #region ReadAck pipe
-
-        public object ReadAck(NamedPipeClientStream stream, Type type, int InBufferSize = 8192)
-        {
-
-            using (AckStream ack = AckStream.Read(stream, type, InBufferSize))
-            {
-                if (ack.State > MessageState.Ok)
-                {
-                    throw new Exception(ack.Message);
-                }
-                return ack.Value;
-            }
-        }
-
-        public TResponse ReadAck<TResponse>(NamedPipeClientStream stream, int InBufferSize = 8192)
-        {
-
-            using (AckStream ack = AckStream.Read(stream, typeof(TResponse), InBufferSize))
-            {
-                if (ack.State > MessageState.Ok)
-                {
-                    throw new Exception(ack.Message);
-                }
-                return ack.GetValue<TResponse>();
-            }
-        }
-
  
-        #endregion
-
     }
 
 }

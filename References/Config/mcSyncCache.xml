@@ -1,0 +1,133 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+
+<Nistec>
+   <SyncCache>
+
+	<SyncItem
+	  EntityType="GenericEntity"
+      ConnectionKey="AdventureWorks"
+      EntityName="contactEntity"
+      MappingName="Person.vContactTop"
+      SourceName="Person.Contact"
+      SourceType="View"
+      EntityKeys="ContactID"
+	  Columns="[ContactID],[NameStyle],[Title],[FirstName],[MiddleName],[LastName],[Suffix],[EmailAddress],[EmailPromotion],[Phone]"
+      SyncType="Interval"
+      SyncTime="00:51:30" />
+	  
+ 
+ <SyncItem
+  	  EntityType="GenericEntity"
+      ConnectionKey="AdventureWorks"
+      EntityName="contactEntityTable"
+      MappingName="Person.Contact"
+      SourceName="Person.Contact"
+      SourceType="Table"
+      EntityKeys="ContactID"
+	  EnableNoLock="true"
+      SyncType="Interval"
+      SyncTime="00:52:00" />
+  
+ 	
+	<SyncItem
+      EntityType="GenericEntity"
+        ConnectionKey="AdventureWorks"
+        EntityName="ContactTypeEntity"
+        MappingName="Person.ContactType"
+        SourceName="Person.ContactType"
+        SourceType="Table"
+        EntityKeys="ContactTypeID"
+        SyncType="Event"
+        SyncTime="00:52:30" />
+		
+	<SyncItem
+      EntityType="GenericEntity"
+        ConnectionKey="AdventureWorks"
+        EntityName="EmployeeDepartmentHistory"
+        MappingName="[HumanResources].[EmployeeDepartmentHistory]"
+        SourceName="[HumanResources].[EmployeeDepartmentHistory]"
+        SourceType="Table"
+        EntityKeys="[EmployeeID],[DepartmentID],[ShiftID],[StartDate]"
+        SyncType="Interval"
+        SyncTime="00:24:30" />
+<!--
+    <SyncItem
+      EntityType="GenericEntity"
+        ConnectionKey="AdventureWorks"
+        EntityName="ContactTypeEntity2"
+        MappingName="Person.ContactType"
+        SourceName="Person.ContactType"
+        SourceType="Table"
+        EntityKeys="ContactTypeID"
+        SyncType="Event"
+        SyncTime="00:01:30" />
+
+    <SyncItem
+      EntityType="GenericEntity"
+        ConnectionKey="AdventureWorks"
+        EntityName="ProductEntity"
+        MappingName="Production.Product"
+        SourceName="Production.Product"
+        SourceType="Table"
+        EntityKeys="ProductID"
+        SyncType="Remove"
+        SyncTime="00:02:00" />
+
+    <SyncItem
+      EntityType="GenericEntity"
+        ConnectionKey="AdventureWorks"
+        EntityName="ProductCategoryEntity"
+        MappingName="Production.ProductCategory"
+        SourceName="Production.ProductCategory"
+        SourceType="Table"
+        EntityKeys="ProductCategoryID"
+        SyncType="Remove"
+        SyncTime="00:02:30" />
+
+    <SyncItem
+      EntityType="GenericEntity"
+        ConnectionKey="AdventureWorks"
+        EntityName="CurrencyEntity"
+        MappingName="Sales.Currency"
+        SourceName="Sales.Currency"
+        SourceType="Table"
+        EntityKeys="CurrencyCode"
+        SyncType="Remove"
+        SyncTime="00:02:00" />
+
+    <SyncItem
+          EntityType="GenericEntity"
+            ConnectionKey="EnterpriseDB"
+            EntityName="DataTypesEntity"
+            MappingName="DataTypes"
+            SourceName="DataTypes"
+            SourceType="Table"
+            EntityKeys="DataType"
+            SyncType="Remove"
+            SyncTime="00:04:30" />
+    <SyncItem
+      EntityType="GenericEntity"
+        ConnectionKey="EnterpriseDB"
+        EntityName="GroupsEntity"
+        MappingName="Groups"
+        SourceName="Groups"
+        SourceType="Table"
+        EntityKeys="GroupID"
+        SyncType="Remove"
+        SyncTime="00:05:00" />
+    
+    <SyncItem
+      EntityType="GenericEntity"
+        ConnectionKey="EnterpriseDB"
+        EntityName="ScriptTypesEntity"
+        MappingName="ScriptTypes"
+        SourceName="ScriptTypes"
+        SourceType="Table"
+        EntityKeys="ScriptType"
+        SyncType="Remove"
+        SyncTime="00:04:00" />
+-->
+  </SyncCache>
+</Nistec>
+
+  

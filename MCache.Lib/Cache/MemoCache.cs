@@ -43,6 +43,7 @@ using Nistec.Caching.Config;
 using Nistec.IO;
 using Nistec.Data;
 using Nistec.Data.Factory;
+using Nistec.Channels;
 
 namespace Nistec.Caching
 {
@@ -50,8 +51,60 @@ namespace Nistec.Caching
     /// Represent memory cache include hash functionality.
     /// </summary>
     [Serializable]
-    public class MemoCache :  IEnumerable, IDisposable//, ICacheFinder
+    public class MemoCache :  ICachePerformance,IEnumerable, IDisposable//, ICacheFinder
     {
+
+        #region ICachePerformance
+
+        CachePerformanceCounter m_Perform;
+        /// <summary>
+        /// Get <see cref="CachePerformanceCounter"/> Performance Counter.
+        /// </summary>
+        public CachePerformanceCounter PerformanceCounter
+        {
+            get { return m_Perform; }
+        }
+
+        /// <summary>
+        ///  Sets the memory size as an atomic operation.
+        /// </summary>
+        /// <param name="memorySize"></param>
+        void ICachePerformance.MemorySizeExchange(ref long memorySize)
+        {
+            this.LogAction(CacheAction.MemorySizeExchange, CacheActionState.None, "Memory Size Exchange:" + CacheName);
+            long size = 0;
+            ICollection<CacheEntry> items = m_cacheList.Values;
+            foreach (var entry in items)
+            {
+                size += entry.Size;
+            }
+
+            Interlocked.Exchange(ref memorySize, size);
+
+        }
+
+        /// <summary>
+        /// Get the max size defined by user for current item.
+        /// </summary>
+        long ICachePerformance.GetMaxSize()
+        {
+            return MaxSize;
+        }
+        bool ICachePerformance.IsRemote
+        {
+            get { return this.IsRemote; }
+        }
+        int ICachePerformance.IntervalSeconds
+        {
+            get { return this.IntervalSeconds; }
+        }
+        bool ICachePerformance.Initialized
+        {
+            get { return this.Initialized; }
+        }
+
+        #endregion
+
 
         static MemoCache _Current;
         public static MemoCache Current
@@ -83,16 +136,16 @@ namespace Nistec.Caching
             {
                 return null;
             }
-            IEnumerable<string> k = from n in m_cacheList.Values.Cast<CacheEntry>() where n.Id == sessionId select n.Key;
+            IEnumerable<string> k = from n in m_cacheList.Values.Cast<CacheEntry>() where n.GroupId == sessionId select n.Id;
             return k;
         }
 
         internal bool _disposed;
-        internal long _maxSize;
+        internal readonly long _maxSize;
         private int _timeout;
         
         internal ConcurrentDictionary<string,CacheEntry> m_cacheList;
-        TimerDispatcher m_Timer;
+        internal TimerDispatcher m_Timer;
 
         private string m_cacheName;
         internal bool m_IsRemoteCache;
@@ -136,7 +189,7 @@ namespace Nistec.Caching
         {
             this.m_cacheName = Types.NZorEmpty(prop.CacheName,"MCache");
             EnableDynamicCache = true;
-            this._maxSize = prop.MaxSize;
+            this._maxSize = isRemote ? CacheSettings.MaxSize: prop.MaxSize;
             this._timeout = prop.DefaultExpiration;
             int initialCapacity = prop.InitialCapacity;
 
@@ -148,6 +201,7 @@ namespace Nistec.Caching
             this.m_cacheList = new ConcurrentDictionary<string, CacheEntry>(concurrencyLevel, initialCapacity);
             m_Timer = new TimerDispatcher(prop.SyncIntervalSeconds, initialCapacity, isRemote);
             m_IsRemoteCache = isRemote;
+            m_Perform = new CachePerformanceCounter(this, CacheAgentType.Cache, this.CacheName);
 
             this._disposed = false;
             this.m_numItems = 0;
@@ -158,7 +212,7 @@ namespace Nistec.Caching
         /// </summary>
         /// <param name="cacheName"></param>
         public MemoCache(string cacheName)
-            : this(new CacheProperties(cacheName, 1000000L),false)
+            : this(new CacheProperties(cacheName, CacheSettings.MaxSize),false)
         {
         }
         /// <summary>
@@ -203,8 +257,8 @@ namespace Nistec.Caching
             Dispose(false);
         }
 
-     
-      
+
+
         #endregion
 
         #region Add item
@@ -213,16 +267,16 @@ namespace Nistec.Caching
         /// </summary>
         /// <param name="item"></param>
         /// <returns></returns>
-        public virtual CacheState AddItemAsync(CacheEntry item)
+        public virtual CacheState AddAsync(CacheEntry item)
         {
-            return ExecuteTask<CacheState>(() => AddItem(item));
+            return ExecuteTask<CacheState>(() => Add(item));
         }
         /// <summary>
         /// Add new item to cache.
         /// </summary>
         /// <param name="item"></param>
         /// <returns></returns>
-        internal protected virtual CacheState AddItem(CacheEntry item)
+        internal protected virtual CacheState Add(CacheEntry item)
         {
             if (this._disposed)
             {
@@ -233,7 +287,125 @@ namespace Nistec.Caching
             {
                 return CacheState.InvalidItem;
             }
-            string cacheKey = item.Key;
+            string cacheKey = item.Id;
+            CacheState state = CacheState.Ok;
+
+            try
+            {
+                state = SizeValidate(item.Size);//, 0.5f);
+                if ((int)state > 500)
+                {
+                    return state;
+                }
+
+                if (m_cacheList.TryAdd(cacheKey, item))
+                {
+                    state = CacheState.ItemAdded;
+                    SizeExchage(0, item.Size, 0, 1, false);
+                }
+                else
+                {
+                    return CacheState.ItemAllreadyExists;
+
+                    //CacheEntry curitem;
+                    //if (m_cacheList.TryGetValue(cacheKey, out curitem))
+                    //{
+                    //    SizeExchage(curitem.Size, item.Size, 0, 0, false);
+                    //    curitem = item;
+                    //}
+                    //else
+                    //{
+                    //    throw new CacheException(CacheState.AddItemFailed, "Could not find existing specified item with key: " + cacheKey);
+                    //}
+                    //state = CacheState.ItemChanged;
+                }
+                if (item.AllowExpires)
+                {
+                    m_Timer.AddOrUpdate(TimerSource.Cache, item.Id, item.ExpirationTime);
+                }
+
+                this.OnItemAdded(item);
+
+                //if (state == CacheState.ItemAdded)
+                //    this.OnItemAdded(item);
+                //else
+                //    this.OnItemChanged(item.Id, item.Size);
+
+                return state;
+            }
+            catch (Exception ex)
+            {
+                OnCacheException(ex.Message, CacheErrors.ErrorSetValue);
+                return CacheState.AddItemFailed;
+            }
+
+        }
+        /// <summary>
+        /// Add new item to cache async
+        /// </summary>
+        /// <param name="cacheKey"></param>
+        /// <param name="value"></param>
+        /// <param name="expiration"></param>
+        /// <returns></returns>
+        public virtual CacheState AddAsync(string cacheKey, object value, int expiration)
+        {
+            return ExecuteTask<CacheState>(() => Add(cacheKey, value, expiration));
+        }
+        /// <summary>
+        /// Add item to cache.
+        /// </summary>
+        /// <param name="cacheKey"></param>
+        /// <param name="value"></param>
+        /// <param name="expiration"></param>
+        /// <returns></returns>
+        public CacheState Add(string cacheKey, object value, int expiration)
+        {
+            CacheEntry item = new CacheEntry(cacheKey, value, null, expiration, this.m_IsRemoteCache);
+            return this.Add(item);
+        }
+        /// <summary>
+        /// Add item to cache.
+        /// </summary>
+        /// <param name="cacheKey"></param>
+        /// <param name="value"></param>
+        /// <param name="sessionId"></param>
+        /// <param name="expiration"></param>
+        /// <returns></returns>
+        public CacheState Add(string cacheKey, object value, string sessionId, int expiration)
+        {
+            CacheEntry item = new CacheEntry(cacheKey, value, sessionId, expiration, this.m_IsRemoteCache);
+            return this.Add(item);
+        }
+
+        #endregion
+
+        #region Set item
+        /// <summary>
+        /// Add new item to cache async.
+        /// </summary>
+        /// <param name="item"></param>
+        /// <returns></returns>
+        public virtual CacheState SetAsync(CacheEntry item)
+        {
+            return ExecuteTask<CacheState>(() => Set(item));
+        }
+        /// <summary>
+        /// Add new item to cache.
+        /// </summary>
+        /// <param name="item"></param>
+        /// <returns></returns>
+        internal protected virtual CacheState Set(CacheEntry item)
+        {
+            if (this._disposed)
+            {
+                return CacheState.CacheNotReady;
+            }
+
+            if (item == null)
+            {
+                return CacheState.InvalidItem;
+            }
+            string cacheKey = item.Id;
             CacheState state = CacheState.Ok;
 
             try
@@ -255,7 +427,10 @@ namespace Nistec.Caching
                     if (m_cacheList.TryGetValue(cacheKey, out curitem))
                     {
                         SizeExchage(curitem.Size, item.Size, 0,0, false);
-                        curitem = item;
+                        //var sessionId = curitem.Id;
+                        curitem = item.Copy(true);
+                        //if (item.Id == null && !string.IsNullOrEmpty(sessionId))
+                        //    curitem.Id = sessionId;
                     }
                     else
                     {
@@ -265,12 +440,12 @@ namespace Nistec.Caching
                 }
                 if (item.AllowExpires)
                 {
-                    m_Timer.Add(item);
+                    m_Timer.AddOrUpdate(TimerSource.Cache, item.Id, item.ExpirationTime);
                 }
                 if (state == CacheState.ItemAdded)
                     this.OnItemAdded(item);
                 else
-                    this.OnItemChanged(item.Key, item.Size);
+                    this.OnItemChanged(item.Id, item.Size);
 
                 return state;
             }
@@ -288,9 +463,9 @@ namespace Nistec.Caching
         /// <param name="value"></param>
         /// <param name="expiration"></param>
         /// <returns></returns>
-        public virtual CacheState AddItemAsync(string cacheKey, object value, int expiration)
+        public virtual CacheState SetAsync(string cacheKey, object value, int expiration)
         {
-            return ExecuteTask<CacheState>(() => AddItem(cacheKey, value, expiration));
+            return ExecuteTask<CacheState>(() => Set(cacheKey, value, expiration));
         }
         /// <summary>
         /// Add item to cache.
@@ -299,24 +474,23 @@ namespace Nistec.Caching
         /// <param name="value"></param>
         /// <param name="expiration"></param>
         /// <returns></returns>
-        public CacheState AddItem(string cacheKey, object value, int expiration)
+        public CacheState Set(string cacheKey, object value, int expiration)
         {
             CacheEntry item = new CacheEntry(cacheKey, value,null, expiration, this.m_IsRemoteCache);
-            return this.AddItem(item);
+            return this.Set(item);
         }
         /// <summary>
         /// Add item to cache.
         /// </summary>
         /// <param name="cacheKey"></param>
         /// <param name="value"></param>
-        /// <param name="cacheObjType"></param>
         /// <param name="sessionId"></param>
         /// <param name="expiration"></param>
         /// <returns></returns>
-        public CacheState AddItem(string cacheKey, object value, CacheObjType cacheObjType, string sessionId, int expiration)
+        public CacheState Set(string cacheKey, object value, string sessionId, int expiration)
         {
             CacheEntry item = new CacheEntry(cacheKey, value, sessionId, expiration, this.m_IsRemoteCache);
-            return this.AddItem(item);
+            return this.Set(item);
         }
 
         #endregion
@@ -329,7 +503,7 @@ namespace Nistec.Caching
         /// <param name="dest"></param>
         /// <param name="expiration"></param>
         /// <returns></returns>
-        public virtual CacheState CopyItem(string source, string dest, int expiration)
+        public virtual CacheState CopyTo(string source, string dest, int expiration)
         {
             if (this._disposed)
             {
@@ -341,23 +515,23 @@ namespace Nistec.Caching
             CacheEntry item = null;
             if (m_cacheList.TryGetValue(source, out item))
             {
-                return AddItem(item.Copy(dest, expiration));
+                return Set(item.CopyTo(dest, expiration));
             }
             return CacheState.InvalidItem;
 
         }
 
-        internal AckStream CopyItemInternal(string source, string dest, int expiration)
-        {
-            var state = CopyItem(source, dest, expiration);
-            return CacheEntry.GetAckStream(state, "CopyItem");
-        }
+        //internal TransStream CopyItemInternal(string source, string dest, int expiration)
+        //{
+        //    var state = CopyItem(source, dest, expiration);
+        //    return TransStream.GetAckState((int)state); //CacheEntry.GetAckStream(state, "CopyItem");
+        //}
 
-        internal AckStream CutItemInternal(string source, string dest, int expiration)
-        {
-            var state = CutItem(source, dest, expiration);
-            return CacheEntry.GetAckStream(state, "CutItem");
-        }
+        //internal TransStream CutItemInternal(string source, string dest, int expiration)
+        //{
+        //    var state = CutItem(source, dest, expiration);
+        //    return TransStream.GetAckState((int)state); //CacheEntry.GetAckStream(state, "CutItem");
+        //}
 
         /// <summary>
         /// Cut item from cache an place it with a new cacheKey.
@@ -366,16 +540,16 @@ namespace Nistec.Caching
         /// <param name="dest"></param>
         /// <param name="expiration"></param>
         /// <returns></returns>
-        public virtual CacheState CutItem(string source, string dest, int expiration)
+        public virtual CacheState CutTo(string source, string dest, int expiration)
         {
             if (this._disposed)
             {
                 return CacheState.CacheNotReady;
             }
-            CacheState state=(CacheState) CopyItem(source, dest, expiration);
+            CacheState state=(CacheState) CopyTo(source, dest, expiration);
             if (state == CacheState.ItemChanged || state == CacheState.ItemAdded)
             {
-                RemoveItem(source);
+                Remove(source);
             }
             return state;
         }
@@ -420,9 +594,9 @@ namespace Nistec.Caching
                     SizeExchage(curSize, item.Size, 0,0, false);
                     if (item.AllowExpires)
                     {
-                        m_Timer.Add(item);
+                        m_Timer.AddOrUpdate(TimerSource.Cache, item.Id, item.ExpirationTime);
                     }
-                    this.OnItemChanged(item.Key, item.Size);
+                    this.OnItemChanged(item.Id, item.Size);
 
                     return CacheState.ItemChanged;
                 }
@@ -478,9 +652,9 @@ namespace Nistec.Caching
                     SizeExchage(curSize, item.Size, 0,0, false);
                     if (item.AllowExpires)
                     {
-                        m_Timer.Add(item);
+                        m_Timer.AddOrUpdate(TimerSource.Cache, item.Id, item.ExpirationTime);
                     }
-                    this.OnItemChanged(item.Key, item.Size);
+                    this.OnItemChanged(item.Id, item.Size);
 
                     return CacheState.ItemChanged;
                 }
@@ -515,7 +689,7 @@ namespace Nistec.Caching
         /// </summary>
         /// <param name="cacheKey"></param>
         /// <returns></returns>
-        public virtual CacheEntry ViewItem(string cacheKey)
+        public virtual CacheEntry ViewCopyItem(string cacheKey)
         {
             if (string.IsNullOrEmpty(cacheKey))
                 return null;
@@ -528,6 +702,25 @@ namespace Nistec.Caching
                 return item.Clone();
             }
             this.LogAction(CacheAction.ViewItem, CacheActionState.Failed, cacheKey);
+            return item;
+        }
+        /// <summary>
+        /// Get <see cref="CacheEntry"/> item from cache.
+        /// </summary>
+        /// <param name="cacheKey"></param>
+        /// <returns></returns>
+        public virtual CacheEntry ViewItem(string cacheKey)
+        {
+            if (string.IsNullOrEmpty(cacheKey))
+                return null;
+
+            CacheEntry item = null;
+            if (this.m_cacheList.TryGetValue(cacheKey, out item))
+            {
+            }
+
+            CacheActionState ack = item == null ? CacheActionState.Failed : CacheActionState.Ok;
+            this.LogAction(CacheAction.GetItem, ack, cacheKey);
             return item;
         }
         /// <summary>
@@ -555,7 +748,7 @@ namespace Nistec.Caching
                 item.SetStatistic();
                 if (item.AllowExpires)
                 {
-                    m_Timer.Add(item);
+                    OnUsed(item.Id);//, item.ExpirationTime);
                 }
             }
 
@@ -619,9 +812,9 @@ namespace Nistec.Caching
         /// <typeparam name="T"></typeparam>
         /// <param name="cacheKey"></param>
         /// <returns></returns>
-        public virtual T GetValue<T>(string cacheKey)
+        public virtual T Get<T>(string cacheKey)
         {
-            return GenericTypes.Cast<T> (GetValue(cacheKey));
+            return GenericTypes.Cast<T> (Get(cacheKey), true);
         }
 
         /// <summary>
@@ -629,7 +822,7 @@ namespace Nistec.Caching
         /// </summary>
         /// <param name="cacheKey"></param>
         /// <returns></returns>
-        public virtual object GetValue(string cacheKey)
+        public virtual object Get(string cacheKey)
         {
             CacheEntry item = GetItem(cacheKey);
             if (item == null || item.IsEmpty)
@@ -658,7 +851,7 @@ namespace Nistec.Caching
         /// </summary>
         /// <param name="cacheKey"></param>
         /// <returns></returns>
-        public virtual object FetchValue(string cacheKey)
+        public virtual object Fetch(string cacheKey)
         {
             CacheEntry item = FetchItem(cacheKey);
             if (item == null || item.IsEmpty)
@@ -673,9 +866,9 @@ namespace Nistec.Caching
         /// <typeparam name="T"></typeparam>
         /// <param name="cacheKey"></param>
         /// <returns></returns>
-        public virtual T FetchValue<T>(string cacheKey)
+        public virtual T Fetch<T>(string cacheKey)
         {
-            return GenericTypes.Cast<T>(cacheKey);
+            return GenericTypes.Cast<T>(cacheKey, true);
         }
         #endregion
 
@@ -685,40 +878,51 @@ namespace Nistec.Caching
         /// </summary>
         /// <param name="cacheKey"></param>
         /// <returns></returns>
-        public virtual bool RemoveItemAsync(string cacheKey)
+        public virtual bool RemoveAsync(string cacheKey)
         {
-            return ExecuteTask<bool>(() => RemoveItem(cacheKey));
+            return ExecuteTask<bool>(() => Remove(cacheKey));
         }
         /// <summary>
         /// Remove item from cache.
         /// </summary>
         /// <param name="cacheKey"></param>
         /// <returns></returns>
-        public bool RemoveItem(string cacheKey)
+        public bool Remove(string cacheKey)
         {
-            if (this._disposed)
-            {
-                return false;
-            }
-            if (string.IsNullOrEmpty(cacheKey))
-                return false;
-
             bool flag = false;
-            int size = 0;
 
-            CacheEntry item = null;
-            if (this.m_cacheList.TryRemove(cacheKey, out item))
+            try
             {
-                //size = item.GetSize();
-                SizeExchage(item.Size, 0, 1,0, false);
-                if (item.AllowExpires)
+                if (this._disposed)
+                {
+                    return false;
+                }
+                if (string.IsNullOrEmpty(cacheKey))
+                    return false;
+
+                int size = 0;
+
+                CacheEntry item = null;
+                if (this.m_cacheList.TryRemove(cacheKey, out item))
+                {
+                    //size = item.GetSize();
+                    SizeExchage(item.Size, 0, 1, 0, false);
+                    if (item.AllowExpires)
+                    {
+                        m_Timer.Remove(cacheKey);
+                    }
+                    flag = true;
+                    this.OnItemRemoved(cacheKey, size, false);
+                }
+                else
                 {
                     m_Timer.Remove(cacheKey);
                 }
-                flag = true;
-                this.OnItemRemoved(cacheKey, size, false);
             }
-
+            catch(Exception ex)
+            {
+                OnCacheException("Remove error: " + ex.Message, CacheErrors.ErrorUnexpected);
+            }
 
             return flag;
         }
@@ -743,7 +947,7 @@ namespace Nistec.Caching
 
             try
             {
-                string cacheKey = item.Key;
+                string cacheKey = item.Id;
                 if (string.IsNullOrEmpty(cacheKey))
                     return false;
 
@@ -755,7 +959,7 @@ namespace Nistec.Caching
                     curitem = item;
                     if (item.AllowExpires)
                     {
-                        m_Timer.Update(cacheKey);
+                        m_Timer.AddOrUpdate(TimerSource.Cache, cacheKey, item.ExpirationTime);
                     }
                     flag = true;
                     this.OnItemChanged(cacheKey, size);
@@ -781,7 +985,7 @@ namespace Nistec.Caching
             {
                 foreach (string str in items)
                 {
-                    RemoveItemAsync(str);
+                    RemoveAsync(str);
                 }
             }
             catch (Exception ex)
@@ -794,6 +998,12 @@ namespace Nistec.Caching
         #endregion
 
         #region Keep alive Item
+
+        internal void OnUsed(string cacheKey)
+        {
+            Task.Factory.StartNew(() => m_Timer.UpdateTimer(cacheKey));
+        }
+
         /// <summary>
         /// Keep alive item in cache, using for long expiration.
         /// </summary>
@@ -822,7 +1032,7 @@ namespace Nistec.Caching
             if (m_cacheList.TryGetValue(cacheKey, out item))
             {
                 item.SetStatistic();
-                m_Timer.Add(item);
+                OnUsed(item.Id);//, item.ExpirationTime);
                 flag = true;
             }
             
@@ -846,6 +1056,7 @@ namespace Nistec.Caching
             set2.WriteXml(fileName);
             this.LogAction(CacheAction.General, CacheActionState.None, "CacheToXml");
         }
+ 
         /// <summary>
         /// Save all cache item to <see cref="DataSet"/>.
         /// </summary>
@@ -894,7 +1105,7 @@ namespace Nistec.Caching
                         foreach (DataRow row in table.Rows)
                         {
                             CacheEntry item = CacheEntry.ItemFromDataRow(row, IsRemote);
-                            this.AddItem(item);
+                            this.Set(item);
                         }
                     }
                 }
@@ -919,7 +1130,7 @@ namespace Nistec.Caching
                 foreach (DataRow row in table.Rows)
                 {
                     CacheEntry item = CacheEntry.ItemFromDataRow(row, IsRemote);
-                    this.AddItem(item);
+                    this.Set(item);
                 }
             }
             catch (Exception exception)
@@ -948,12 +1159,31 @@ namespace Nistec.Caching
             if (!m_Timer.Initialized)
             {
                 m_Timer.SyncStarted += new EventHandler(m_cacheTimeout_SyncStarted);
-                m_Timer.SyncCompleted += new SyncTimeCompletedEventHandler(m_cacheTimeout_SyncCompleted);
+                //m_Timer.SyncCompleted += new SyncTimeCompletedEventHandler(m_cacheTimeout_SyncCompleted);
+                m_Timer.StateChanged += M_Timer_StateChanged;
                 m_Timer.Start();
 
                 this.OnCacheStateChanged(EventArgs.Empty);
             }
+            CacheLogger.Logger.LogAction(CacheAction.General, CacheActionState.Debug, "MCache Started!");
         }
+
+        private void M_Timer_StateChanged(object sender, SyncTimerItemEventArgs e)
+        {
+            if (e.Items == null)
+                return;
+            foreach(var entry in e.Items)
+            {
+                if (entry.Value.Source== TimerSource.Cache && entry.Value.State==2)
+                {
+                    RemoveAsync(entry.Key);
+                }
+            }
+
+            //RemoveItems(e.Items, true);
+        }
+
+
 
         /// <summary>
         /// Stop Timer
@@ -963,17 +1193,18 @@ namespace Nistec.Caching
             if (m_Timer.Initialized)
             {
                 m_Timer.SyncStarted -= new EventHandler(m_cacheTimeout_SyncStarted);
-                m_Timer.SyncCompleted -= new SyncTimeCompletedEventHandler(m_cacheTimeout_SyncCompleted);
-
+                //m_Timer.SyncCompleted -= new SyncTimeCompletedEventHandler(m_cacheTimeout_SyncCompleted);
+                m_Timer.StateChanged -= M_Timer_StateChanged;
                 m_Timer.Stop();
                 this.OnCacheStateChanged(EventArgs.Empty);
             }
+            CacheLogger.Logger.LogAction(CacheAction.General, CacheActionState.Debug, "MCache Stoped!");
         }
 
-        void m_cacheTimeout_SyncCompleted(object sender, SyncTimeCompletedEventArgs e)
-        {
-            RemoveItems(e.Items, true);
-        }
+        //void m_cacheTimeout_SyncCompleted(object sender, SyncTimeCompletedEventArgs e)
+        //{
+        //    RemoveItems(e.Items, true);
+        //}
 
         void m_cacheTimeout_SyncStarted(object sender, EventArgs e)
         {
@@ -1013,7 +1244,7 @@ namespace Nistec.Caching
             {
                 return this.LoadNewItem(key, source, type, expiration);
             }
-            return this.GetValue(key);
+            return this.Get(key);
         }
 
 
@@ -1036,7 +1267,7 @@ namespace Nistec.Caching
                     item = new CacheEntry();
                     item.LoadItem(cacheObjType, null, source, m_IsRemoteCache);
                     val = item.GetValue();
-                    this.AddItem(item);
+                    this.Set(item);
                     return val;
 
                 case CacheObjType.ImageFile:
@@ -1047,7 +1278,7 @@ namespace Nistec.Caching
                     {
                         val = CacheUtil.DeserializeImage(val.ToString());
                     }
-                    this.AddItem(item);
+                    this.Set(item);
                     return val;
             }
             return val;
@@ -1071,12 +1302,12 @@ namespace Nistec.Caching
             CommandContext command = new CommandContext(connectionKey, commandText, cmdType,commandTimeout, typeof(T));
             command.CreateParameters(keyValueParameters);
             string key = command.CreateKey();
-            result = this.GetValue<T>(key);
+            result = this.Get<T>(key);
 
             if (result == null)
             {
                 result = command.ExecCommand<T>();
-                AddItem(key, result, CacheObjType.RemotingData, sessionId, expiration);
+                Set(key, result, sessionId, expiration);
             }
 
             return result;
@@ -1101,12 +1332,12 @@ namespace Nistec.Caching
             CommandContext command = new CommandContext(connectionKey, commandText, cmdType, commandTimeout, typeof(TResult));
             command.CreateParameters(keyValueParameters);
             string key = command.CreateKey();
-            result = this.GetValue<TResult>(key);
+            result = this.Get<TResult>(key);
 
             if (result == null)
             {
                 result = command.ExecCommand<TItem, TResult>();
-                AddItem(key, result, CacheObjType.RemotingData, sessionId, expiration);
+                Set(key, result, sessionId, expiration);
             }
 
             return result;
@@ -1212,9 +1443,9 @@ namespace Nistec.Caching
 
         private void OnItemAdded(CacheEntry item)
         {
-            this.LogAction(CacheAction.AddItem, CacheActionState.None, "cacheKey:" + item.Key + " size:{0}", item.Size.ToString());
+            this.LogAction(CacheAction.AddItem, CacheActionState.None, "cacheKey:" + item.Id + " size:{0}", item.Size.ToString());
             this.m_numItems++;
-            this.OnItemAdded(new CacheEntryChangedEventArgs(CacheAction.AddItem, item.Key, item.Size));
+            this.OnItemAdded(new CacheEntryChangedEventArgs(CacheAction.AddItem, item.Id, item.Size));
         }
         /// <summary>
         /// On Item Added
@@ -1295,7 +1526,7 @@ namespace Nistec.Caching
         /// <returns></returns>
         public bool Contains(CacheEntry item)
         {
-            return ((!this._disposed && (item != null)) && this.m_cacheList.ContainsKey(item.Key));
+            return ((!this._disposed && (item != null)) && this.m_cacheList.ContainsKey(item.Id));
         }
         /// <summary>
         /// Determines whether the cache contains the specified cacheKey.
@@ -1325,7 +1556,7 @@ namespace Nistec.Caching
 
             switch (findType)
             {
-                case "Key":
+                case "Id":
                     {
                         if (key == null)
                             goto Label_exit;
@@ -1345,7 +1576,7 @@ namespace Nistec.Caching
                         foreach (object o in Items)
                         {
                             CacheEntry item = (CacheEntry)o;
-                            if (item.Key.Contains(key.ToString()))
+                            if (item.Id.Contains(key.ToString()))
                             {
                                 items.Add(item);
                             }
@@ -1363,7 +1594,7 @@ namespace Nistec.Caching
                         {
                             CacheEntry item = (CacheEntry)o;
 
-                            if (item.Id == sessionId)
+                            if (item.GroupId == sessionId)
                             {
                                 items.Add(item);
                             }
@@ -1465,35 +1696,57 @@ namespace Nistec.Caching
         /// <returns></returns>
         public CacheEntry[] CloneItems(CloneType type)
         {
-            List<CacheEntry> is2 = new List<CacheEntry>();
-            if (this.m_cacheList != null)
-            {
-                int count = this.m_cacheList.Count;
-                foreach (CacheEntry item in this.m_cacheList.Values)
-                {
-                    switch (type)
-                    {
-                        case CloneType.Session:
-                            if (!string.IsNullOrEmpty(item.Id))
-                            {
-                                is2.Add(item.Clone());
-                            }
-                            break;
-                        case CloneType.Timeout:
-                            if (item.IsTimeOut)
-                            {
-                                is2.Add(item.Clone());
-                            }
-                            break;
-                        default:
-                            is2.Add(item.Clone());
-                            break;
+            //List<CacheEntry> is2 = new List<CacheEntry>();
+            if (this.m_cacheList == null)
+                return null;
 
-                    }
-                }
+            IEnumerable<CacheEntry> list = null;
+            switch (type)
+            {
+                case CloneType.Session:
+                    list = m_cacheList.Values.Where(i => !string.IsNullOrEmpty(i.GroupId)).Select(i => i.Clone());
+                    break;
+                case CloneType.Timeout:
+                    list = m_cacheList.Values.Where(i => i.IsTimeOut).Select(i => i.Clone());
+                    break;
+                default:
+                    list = m_cacheList.Values.Select(i => i.Clone());
+                    break;
             }
-            this.LogAction(CacheAction.General, CacheActionState.None, "Clone Items");
-            return is2.ToArray();
+            int count = (list == null) ? 0 : list.Count();
+            this.LogAction(CacheAction.General, CacheActionState.None, "Clone Items: " + count.ToString());
+
+            if (list == null)
+            {
+                return null;
+            }
+            return list.ToArray();
+
+            //foreach (CacheEntry item in this.m_cacheList.Values)
+            //{
+            //    switch (type)
+            //    {
+            //        case CloneType.Session:
+            //            if (!string.IsNullOrEmpty(item.Id))
+            //            {
+            //                is2.Add(item.Clone());
+            //            }
+            //            break;
+            //        case CloneType.Timeout:
+            //            if (item.IsTimeOut)
+            //            {
+            //                is2.Add(item.Clone());
+            //            }
+            //            break;
+            //        default:
+            //            is2.Add(item.Clone());
+            //            break;
+
+            //    }
+            //}
+            //}
+            //this.LogAction(CacheAction.General, CacheActionState.None, "Clone Items");
+            //return is2.ToArray();
         }
 
         /// <summary>
@@ -1555,7 +1808,7 @@ namespace Nistec.Caching
             var args = CacheEntry.ArgsToDictionary(keyValuesArgs);
 
             IList<CacheEntry> values = (from CacheEntry dict in Items
-                                        let key = dict.Key.ToString()
+                                        let key = dict.Id.ToString()
                                         let value = dict
                                         where dict.IsMatchArgs(args)
                                         select value).ToList();
@@ -1581,7 +1834,7 @@ namespace Nistec.Caching
             var item = m_cacheList.Where(k => System.Text.RegularExpressions.Regex.IsMatch(k.Key, regexPattern)).FirstOrDefault();
             if (item.Value == null)
                 return default(T);
-            return item.Value.GetValue<T>(); ;
+            return item.Value.GetValue<T>();
         }
         public IEnumerable<object> FindValues(string regexPattern)
         {
@@ -1591,7 +1844,7 @@ namespace Nistec.Caching
 
             
             //IList<object> values = (from CacheEntry dict in m_cacheList
-            //                            let key = dict.Key.ToString()
+            //                            let key = dict.Id.ToString()
             //                            let value = dict.GetValue()
             //                            where System.Text.RegularExpressions.Regex.IsMatch(key,regexPattern)
             //                            select value).ToList();
@@ -1605,7 +1858,7 @@ namespace Nistec.Caching
         public IList<CacheEntry> FindItems(string searchValue, bool searchStartsWith)
         {
             IList<CacheEntry> values = (from CacheEntry dict in Items
-                                        let key = dict.Key.ToString()
+                                        let key = dict.Id.ToString()
                                         let value = dict
                                         where searchStartsWith ? key.StartsWith(searchValue) : key.Contains(searchValue)
                                         select value).ToList();
@@ -1619,7 +1872,7 @@ namespace Nistec.Caching
         public IList<string> FindKeys(string searchValue, bool searchStartsWith)
         {
             IList<string> keys = (from CacheEntry dict in Items
-                                  let key = dict.Key.ToString()
+                                  let key = dict.Id.ToString()
                                   where searchStartsWith ? key.StartsWith(searchValue) : key.Contains(searchValue)
                                   select key).ToList();
 
@@ -1631,7 +1884,7 @@ namespace Nistec.Caching
             IList<string> keys = FindKeysAsync(searchValue, searchStartsWith);
             foreach (var key in keys)
             {
-                RemoveItem(key);
+                Remove(key);
             }
         }
  
@@ -1667,7 +1920,9 @@ namespace Nistec.Caching
         {
             get
             {
-                return m_Timer.Initialized;
+                if (m_Timer == null)
+                    return false;
+                return  m_Timer.Initialized;
             }
         }
         /// <summary>
@@ -1771,7 +2026,10 @@ namespace Nistec.Caching
         /// <returns></returns>
         internal protected virtual CacheState SizeValidate(int newSize)
         {
-            return CacheState.Ok;
+            if (!CacheSettings.EnableSizeHandler)
+                return CacheState.Ok;
+            return PerformanceCounter.SizeValidate(newSize);
+            //return CacheState.Ok;
         }
 
         /// <summary>
@@ -1784,16 +2042,23 @@ namespace Nistec.Caching
         /// <param name="exchange"></param>
         /// <returns></returns>
         /// <exception cref="CacheException"></exception>
-        internal protected virtual CacheState SizeExchage(long currentSize, long newSize, int currentCount, int newCount, bool exchange)
+        internal protected virtual void SizeExchage(long currentSize, long newSize, int currentCount, int newCount, bool exchange)
         {
-            return CacheState.Ok;
+            if (!CacheSettings.EnablePerformanceCounter)
+                return;// CacheState.Ok;
+            PerformanceCounter.ExchangeSizeAndCountAsync(currentSize, newSize, currentCount, newCount, exchange, CacheSettings.EnableSizeHandler);
+
+            //return CacheState.Ok;
         }
         /// <summary>
         /// Calculate the size of cache.
         /// </summary>
         internal protected virtual void SizeRefresh()
         {
-            
+            if (CacheSettings.EnablePerformanceCounter)
+            {
+                PerformanceCounter.RefreshSize();
+            }
         }
         /// <summary>
         /// Get memory usage.
@@ -1845,7 +2110,7 @@ namespace Nistec.Caching
         /// <returns></returns>
         public T ExecuteTask<T>(Func<T> action)
         {
-            using (Task<T> task = Task.Factory.StartNew<T>(action))
+            Task<T> task = Task.Factory.StartNew<T>(action);
             {
                 task.Wait();
                 if (task.IsCompleted)
@@ -1853,6 +2118,7 @@ namespace Nistec.Caching
                     return task.Result;
                 }
             }
+            task.TryDispose();
             return default(T);
         }
         /// <summary>
@@ -1861,13 +2127,14 @@ namespace Nistec.Caching
         /// <param name="action"></param>
         public void ExecuteTask(Action action)
         {
-            using (Task task = Task.Factory.StartNew(action))
+            Task task = Task.Factory.StartNew(action);
             {
                 task.Wait();
                 if (task.IsCompleted)
                 {
                 }
             }
+            task.TryDispose();
         }
         #endregion
 
@@ -1889,7 +2156,7 @@ namespace Nistec.Caching
             T instance = default(T);
             if (EnableDynamicCache)
             {
-                instance = GetValue<T>(key);
+                instance = Get<T>(key);
                 if (instance == null)
                 {
                     instance = function();
@@ -1897,7 +2164,7 @@ namespace Nistec.Caching
                     if (instance != null)
                     {
                         //Insert(key, instance, expirationMinutes);
-                        AddItem(new CacheEntry(key, instance, null, expirationMinutes <= 0 ? Timeout : expirationMinutes, false));
+                        Set(new CacheEntry(key, instance, null, expirationMinutes <= 0 ? Timeout : expirationMinutes, IsRemote));//false));
                     }
                 }
                 else
@@ -1917,7 +2184,7 @@ namespace Nistec.Caching
             T instance = default(T);
             if (EnableDynamicCache)
             {
-                instance = GetValue<T>(key);
+                instance = Get<T>(key);
                 if (instance == null)
                 {
                     instance = function();
@@ -1925,9 +2192,9 @@ namespace Nistec.Caching
                     if (instance != null)
                     {
                         //Insert(key, instance, expirationMinutes);
-                        var item = new CacheEntry(key, instance, null, expirationMinutes <= 0 ? Timeout : expirationMinutes, false);
+                        var item = new CacheEntry(key, instance, null, expirationMinutes <= 0 ? Timeout : expirationMinutes, IsRemote);//false);
                         item.Args = args;
-                        AddItem(item);
+                        Set(item);
                     }
                 }
                 else
@@ -1946,16 +2213,16 @@ namespace Nistec.Caching
             T instance = default(T);
             if (EnableDynamicCache)
             {
-                instance = GetValue<T>(key);
+                instance = Get<T>(key);
                 if (instance == null)
                 {
                     instance = function();
                     if (instance != null)
                     {
                         //Insert(key, instance, expirationMinutes);
-                        var item = new CacheEntry(key, instance, null, expirationMinutes <= 0 ? Timeout : expirationMinutes, false);
+                        var item = new CacheEntry(key, instance, null, expirationMinutes <= 0 ? Timeout : expirationMinutes, IsRemote);// false);
                         item.Args = CacheEntry.ArgsToDictionary(args);
-                        AddItem(item);
+                        Set(item);
                     }
                 }
                 else

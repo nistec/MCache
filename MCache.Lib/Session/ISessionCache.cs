@@ -40,15 +40,15 @@ namespace Nistec.Caching.Session
         /// <param name="exchange"></param>
         /// <returns></returns>
         /// <exception cref="CacheException"></exception>
-        CacheState SizeExchage(long currentSize, long newSize, int currentCount, int newCount, bool exchange);
-        
+        void SizeExchage(long currentSize, long newSize, int currentCount, int newCount, bool exchange);
+
         /// <summary>
         /// Dispatch size exchange when add , change , remove erc.. items in cache, is the size exchange meet the max size then <see cref="CacheException"/> will thrown.
         /// </summary>
         /// <param name="oldItem"></param>
         /// <param name="newItem"></param>
         /// <returns></returns>
-        CacheState SizeExchage(ISessionBag oldItem, ISessionBag newItem);
+        void SizeExchage(ISessionBag oldItem, ISessionBag newItem);
        
         /// <summary>
         /// Calculate the size of cache.
@@ -91,7 +91,10 @@ namespace Nistec.Caching.Session
         /// Get the size in bytes of current session.
         /// </summary>
         long Size { get; }
-   
+        /// <summary>
+        /// Get the items count of current session.
+        /// </summary>
+        int Count { get; }
         /// <summary>
         /// Determines whether the session bag contains the specified key.
         /// </summary>
@@ -105,19 +108,25 @@ namespace Nistec.Caching.Session
         /// <param name="key"></param>
         /// <returns></returns>
         SessionEntry Get(string key);
-        
+
         /// <summary>
         /// Add new <see cref="SessionEntry"/> to the session bag.
         /// </summary>
         /// <param name="value"></param>
-        void AddItem(SessionEntry value);
-        
+        CacheState AddItem(SessionEntry value);
+
         /// <summary>
         /// Add new <see cref="SessionEntry"/> to the session bag.
         /// </summary>
-        /// <param name="key"></param>
         /// <param name="value"></param>
-        void AddItem(string key, SessionEntry value);
+        CacheState SetItem(SessionEntry value);
+
+        ///// <summary>
+        ///// Add new <see cref="SessionEntry"/> to the session bag.
+        ///// </summary>
+        ///// <param name="key"></param>
+        ///// <param name="value"></param>
+        //void AddItem(string key, SessionEntry value);
         
   
         /// <summary>

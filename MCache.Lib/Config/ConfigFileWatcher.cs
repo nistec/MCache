@@ -36,13 +36,19 @@ namespace Nistec.Caching.Config
 
         SysFileWatcher _configFileWatcher;
         bool initilaized = false;
+        
+        string GetFileName()
+        {
+            string filename = Path.Combine(Environment.CurrentDirectory, "Nistec.Cache.Agent.exe.config");
+            return filename;
+        }
         void Init()
         {
             if (initilaized)
                 return;
-            string filnenmae = Path.Combine(Environment.CurrentDirectory, "Nistec.Cache.Agent.exe.config");
+            string filename = GetFileName();
 
-            _configFileWatcher = new SysFileWatcher(filnenmae, true);
+            _configFileWatcher = new SysFileWatcher(filename, true);
             _configFileWatcher.FileChanged += new FileSystemEventHandler(_ConfigFileWatcher_FileChanged);
             initilaized = true;
         }
@@ -50,8 +56,32 @@ namespace Nistec.Caching.Config
         {
             ConfigurationManager.RefreshSection("appSettings");
             ConfigurationManager.RefreshSection("connectionStrings");
+            RefreshSettings();
             Netlog.Info("ConfigFileWatcher FileChanged");
         }
+
+        void RefreshSettings()
+        {
+            try
+            {
+                ConfigurationManager.RefreshSection("MCache");
+
+                string filename = GetFileName();
+                ExeConfigurationFileMap map = new ExeConfigurationFileMap();
+                map.ExeConfigFilename = filename;
+                Configuration config
+                  = ConfigurationManager.OpenMappedExeConfiguration(map, ConfigurationUserLevel.None);
+                var section = (CacheConfigServer)config.GetSection("MCache");
+
+                CacheSettings.LoadCacheSettings(section.CacheSettings, true);
+            }
+            catch (Exception ex)
+            {
+                Netlog.Exception("ConfigFileWatcher.RefreshSettings Error: ", ex);
+            }
+
+        }
+
 
         bool _IsListen;
         void Listen()

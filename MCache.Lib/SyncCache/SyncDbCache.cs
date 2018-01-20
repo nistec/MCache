@@ -135,26 +135,21 @@ namespace Nistec.Caching.Sync
 
         internal void Reload(SyncDbCache copy)
         {
+            //~Console.WriteLine("Debuger-SyncDbCache.Reload start");
 
+         
             foreach (var entry in copy.m_data)
             {
-                m_data[entry.Key] = entry.Value;
+                m_data[entry.Key] = (SyncDb)entry.Value.Copy();
                 CacheLogger.Debug("SyncDbCache Reload item Completed : " + entry.Key);
                 Thread.Sleep(10);
             }
-
+            copy.DisposCopy();
             //CacheLogger.Debug("SyncDbCache Reload Completed : " + copy.CacheName);
         }
 
         bool m_copy = false;
-
-        //Dictionary<string, SyncDb> m_data;
         ConcurrentDictionary<string, SyncDb> m_data;
-
-        //public object SyncRoot
-        //{
-        //    get { return ((ICollection)m_data).SyncRoot; }
-        //}
 
         public SyncDb[] GetItems()
         {
@@ -191,7 +186,7 @@ namespace Nistec.Caching.Sync
             }
             catch (Exception ex)
             {
-                CacheLogger.Logger.LogAction(CacheAction.SyncItem, CacheActionState.Error, "SyncAndStore error " + ex.Message);
+                CacheLogger.Logger.LogAction(CacheAction.SyncCache, CacheActionState.Error, "SyncAndStore error " + ex.Message);
             }
             finally
             {
@@ -226,18 +221,22 @@ namespace Nistec.Caching.Sync
 
         #region ctor
 
+        //SyncCacheBase Owner;
+
         /// <summary>
         /// Initilaize new instance of <see cref="SyncDbCache"/>
         /// </summary>
         /// <param name="cacheName"></param>
         public SyncDbCache(string cacheName)
         {
+            //Owner = cache;SyncCacheBase cache
             m_data = new ConcurrentDictionary<string, SyncDb>();
-            CacheName = cacheName;
+            CacheName = CacheName;
         }
 
         internal SyncDbCache(string cacheName, bool copy)
         {
+            //Owner = cache;SyncCacheBase cache,
             m_copy = copy;
             m_data = new ConcurrentDictionary<string, SyncDb>();
             CacheName = cacheName;
@@ -252,6 +251,7 @@ namespace Nistec.Caching.Sync
         {
             if (m_copy)
                 return;
+            //~Console.WriteLine("Debuger-SyncDbCache.Start start");
             int counter = 0;
             foreach (SyncDb dc in this.GetItems())
             {
@@ -300,6 +300,19 @@ namespace Nistec.Caching.Sync
             }
 
         }
+        internal void DisposCopy()
+        {
+            //foreach (SyncDb dc in this.GetItems())
+            //{
+            //    dc.DisposeCopy();
+            //}
+            if (m_data != null)
+            {
+                m_data.Clear();
+                m_data = null;
+            }
+
+        }
         #endregion
 
         #region events
@@ -313,7 +326,6 @@ namespace Nistec.Caching.Sync
         protected virtual void OnSyncChanged(GenericEventArgs<string> e)
         {
             //CacheLogger.Debug("SyncDbCache OnSyncChanged : " + e.Args);
-
 
             if (FunctionSyncChanged != null)
             {
@@ -332,10 +344,11 @@ namespace Nistec.Caching.Sync
         /// Add sync source to db list.
         /// </summary>
         /// <param name="connectionKey"></param>
-        /// <param name="sc"></param>
+        /// <param name="dse"></param>
         /// <param name="intervalSeconds"></param>
+        /// <param name="owner"></param>
         /// <param name="replaceExists"></param>
-        public void AddSyncSource(string connectionKey, DataSyncEntity sc, int intervalSeconds, bool replaceExists = true)
+        public void AddSyncSource(string connectionKey, DataSyncEntity dse, ISyncronizer owner, int intervalSeconds, bool replaceExists = true)
         {
             intervalSeconds = CacheDefaults.GetValidIntervalSeconds(intervalSeconds);
             SyncDb rdc = null;
@@ -349,7 +362,7 @@ namespace Nistec.Caching.Sync
                 //rdc = new SyncDb(connectionKey, cn.ConnectionString, DBProvider.SqlServer);
                 rdc = new SyncDb(connectionKey);
                 rdc.SyncOption = SyncOption.Auto;
-
+                rdc.Parent = owner;
                 //evt-
                 rdc.SyncDataSourceChanged += new SyncDataSourceChangedEventHandler(_SyncData_SyncDataSourceChanged);
                 m_data[connectionKey] = rdc;
@@ -357,14 +370,25 @@ namespace Nistec.Caching.Sync
 
             if (rdc != null)
             {
+                rdc.RegisterTable(dse);
+
                 //sc.FunctionSyncChanged = FunctionSyncChanged;
-                rdc.SyncTables.AddSafe(sc, replaceExists);
-                if (!m_copy)
-                {
-                    rdc.Start(intervalSeconds);
-                }
+                //rdc.SyncTables.AddSafe(sc, replaceExists);
+                //rdc.RegisterTable(sc);
+                //if (!m_copy)
+                //{
+                //    rdc.Start(intervalSeconds);
+                //}
             }
         }
+
+        //public void StartSyncSources(int intervalSeconds)
+        //{
+        //    foreach(var entry in m_data)
+        //    {
+        //        entry.Value.Start(intervalSeconds);
+        //    }
+        //}
 
         /// <summary>
         /// Remove sync source from db list.
@@ -396,14 +420,14 @@ namespace Nistec.Caching.Sync
         /// is sync source exists in db list.
         /// </summary>
         /// <param name="sc"></param>
-        public bool SyncSourceExists(SyncEntity sc)
+        public bool IsSyncSourceExists(SyncEntity sc)
         {
             SyncDb rdc = null;
 
 
             if (m_data.TryGetValue(sc.ConnectionKey, out rdc))
             {
-                return rdc.SyncTables.IsExists(sc);
+                return rdc.IsExists(sc);// SyncTables.IsExists(sc);
             }
 
             return false;
@@ -440,7 +464,7 @@ namespace Nistec.Caching.Sync
         /// </summary>
         /// <param name="connectionKey"></param>
         /// <param name="intervalSeconds"></param>
-        public void AddDb(string connectionKey, int intervalSeconds)
+        public void AddDb(string connectionKey, ISyncronizer owner, int intervalSeconds)
         {
             if (string.IsNullOrEmpty(connectionKey))
             {
@@ -452,6 +476,7 @@ namespace Nistec.Caching.Sync
             //ConnectionStringSettings cn = NetConfig.ConnectionSettings(connectionKey);
             //SyncDb rdc = new SyncDb(connectionKey, cn.ConnectionString, DBProvider.SqlServer);
             SyncDb rdc = new SyncDb(connectionKey);
+            rdc.Parent = owner;
             //evt-
             rdc.SyncDataSourceChanged += new SyncDataSourceChangedEventHandler(_SyncData_SyncDataSourceChanged);
             m_data[connectionKey] = rdc;
@@ -515,6 +540,15 @@ namespace Nistec.Caching.Sync
         #endregion
 
         /// <summary>
+        /// Get <see cref="IDataCache"/> from Db.
+        /// </summary>
+        /// <param name="connectionKey"></param>
+        public IDataCache GetIDb(string connectionKey)
+        {
+            return GetDb(connectionKey);
+        }
+
+        /// <summary>
         /// Get <see cref="SyncDb"/> from Db.
         /// </summary>
         /// <param name="connectionKey"></param>
@@ -541,9 +575,7 @@ namespace Nistec.Caching.Sync
         /// <returns></returns>
         public bool ContainsSyncDb(string connectionKey)
         {
-
             return m_data.ContainsKey(connectionKey);
-
         }
 
         /// <summary>
@@ -554,7 +586,6 @@ namespace Nistec.Caching.Sync
         /// <returns></returns>
         public bool ContainsSyncSource(string connectionKey, DataSyncEntity sc)
         {
-
 
             SyncDb rdc = null;
 
@@ -574,15 +605,12 @@ namespace Nistec.Caching.Sync
         /// <returns></returns>
         public bool ContainsSyncSource(string connectionKey, string tableName)
         {
-
-
             SyncDb rdc = null;
 
             if (m_data.TryGetValue(connectionKey, out rdc))
             {
                 return rdc.SyncTables.Contains(tableName);
             }
-
 
             return false;
         }

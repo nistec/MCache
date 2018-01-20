@@ -31,6 +31,7 @@ namespace Nistec.Caching
     [Serializable]
     public enum CacheState
     {
+        UnKnown=-1,
         /// <summary>Ok.</summary>
         Ok = 0,
         /// <summary>ItemAdded.</summary>
@@ -53,8 +54,8 @@ namespace Nistec.Caching
         AddItemFailed = 505,
         /// <summary>MergeItemFailed.</summary>
         MergeItemFailed = 506,
-        /// <summary>CopyItemFailed.</summary>
-        CopyItemFailed = 507,
+        /// <summary>SetItemFailed.</summary>
+        SetItemFailed = 507,
         /// <summary>RemoveItemFailed.</summary>
         RemoveItemFailed = 508,
         /// <summary>ArgumentsError.</summary>
@@ -178,6 +179,8 @@ namespace Nistec.Caching
         Ok,
         /// <summary>Debug.</summary>
         Debug,
+        /// <summary>Info.</summary>
+        Info,
         /// <summary>Failed.</summary>
         Failed,
         /// <summary>Error.</summary>
@@ -190,6 +193,15 @@ namespace Nistec.Caching
     {
         /// <summary>General.</summary>
         General,
+        /// <summary>SyncCache.</summary>
+        SyncCache,
+        /// <summary>SessionCache.</summary>
+        SessionCache,
+        /// <summary>DataCache.</summary>
+        DataCache,
+        /// <summary>Cache.</summary>
+        Cache,
+
         /// <summary>GetItem.</summary>
         GetItem,
         /// <summary>FetchItem.</summary>
@@ -202,8 +214,6 @@ namespace Nistec.Caching
         AddItem,
         /// <summary>RemoveItem.</summary>
         RemoveItem,
-        /// <summary>SyncItem.</summary>
-        SyncItem,
         /// <summary>TimeoutExpired.</summary>
         TimeoutExpired,
         /// <summary>RecallItem.</summary>

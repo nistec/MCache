@@ -12,6 +12,7 @@ using Nistec.Generic;
 using Nistec.Channels.RemoteCache;
 using System.Collections;
 using Nistec.Logging;
+using Nistec.Caching.Remote;
 
 namespace Nistec.Caching.Demo.Mass
 {

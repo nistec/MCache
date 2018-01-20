@@ -28,7 +28,7 @@ using Nistec.Channels;
 using Nistec.Caching.Data;
 using Nistec.Caching.Remote;
 using Nistec.IO;
-using Nistec.Caching.Channels;
+//using Nistec.Caching.Channels;
 using Nistec.Channels.Tcp;
 using Nistec.Caching.Config;
 using System.Net.Sockets;
@@ -38,7 +38,7 @@ namespace Nistec.Caching.Server.Tcp
     /// <summary>
     /// Represent a cache managment tcp server listner.
     /// </summary>
-    public class TcpManagerServer : TcpServer<CacheMessage>
+    public class TcpManagerServer : TcpServer<MessageStream>
     {
 
         #region override
@@ -48,7 +48,7 @@ namespace Nistec.Caching.Server.Tcp
         protected override void OnStart()
         {
             base.OnStart();
-            AgentManager.Cache.Start();
+            //AgentManager.Cache.Start();
         }
         /// <summary>
         /// OnStop
@@ -56,8 +56,7 @@ namespace Nistec.Caching.Server.Tcp
         protected override void OnStop()
         {
             base.OnStop();
-
-            AgentManager.Cache.Stop();
+            //AgentManager.Cache.Stop();
         }
         /// <summary>
         /// OnLoad
@@ -110,7 +109,7 @@ namespace Nistec.Caching.Server.Tcp
         /// </summary>
         /// <param name="message"></param>
         /// <returns></returns>
-        protected override NetStream ExecRequset(CacheMessage message)
+        protected override TransStream ExecRequset(MessageStream message)
         {
             return AgentManager.ExecManager(message);
         }
@@ -119,9 +118,9 @@ namespace Nistec.Caching.Server.Tcp
         /// </summary>
         /// <param name="stream"></param>
         /// <returns></returns>
-        protected override CacheMessage ReadRequest(NetworkStream stream)
+        protected override MessageStream ReadRequest(NetworkStream stream)
         {
-            return CacheMessage.ReadRequest(stream, Settings.ReceiveBufferSize);
+            return MessageStream.ReadRequest(stream, Settings.ReceiveBufferSize);
         }
 
         #endregion

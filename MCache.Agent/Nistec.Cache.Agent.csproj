@@ -128,7 +128,9 @@
     <None Include="App.config">
       <SubType>Designer</SubType>
     </None>
-    <None Include="Config\mcSyncCache.xsync" />
+    <None Include="Config\mcSyncCache-ooo.x1" />
+    <None Include="Config\ConnectionSettings.config" />
+    <None Include="Config\mcSyncCache.config" />
     <None Include="MControl.pfx" />
     <None Include="Properties\app.manifest" />
     <None Include="Resources\InstallService_64.bat" />

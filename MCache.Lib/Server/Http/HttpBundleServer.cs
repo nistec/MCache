@@ -28,7 +28,7 @@ using Nistec.Channels;
 using Nistec.Caching.Remote;
 using Nistec.IO;
 using System.Threading.Tasks;
-using Nistec.Caching.Channels;
+//using Nistec.Caching.Channels;
 using Nistec.Caching.Config;
 using Nistec.Channels.Http;
 using System.Net.Sockets;
@@ -36,10 +36,21 @@ using System.Net.Sockets;
 
 namespace Nistec.Caching.Server.Http
 {
+
+    /*
+    samples
+    http://localhost:13010/?Command=cach_GetRecord&Key=auto item key 10
+    http://localhost:13010/{"Command":"cach_GetRecord","Key":"auto item key 10"}
+    http://localhost:13010/{"command":"sync_getrecord","key":"contactEntity","detail":"1","transformtype":"json"}
+    http://localhost:13010/{"command":"sync_get","key":"contactEntity","detail":"1","transformtype":"json","args":{"column":"FirstName"}}
+    http://localhost:13010/?command=sync_get&key=contactEntity&detail=1&transformtype=json&args=column;FirstName
+
+    */
+
     /// <summary>
     /// Represent a cache Http server listner.
     /// </summary>
-    public class HttpBundleServer : HttpServer<CacheMessage>
+    public class HttpBundleServer : HttpServer<MessageStream>
     {
         bool isCache=false;
         bool isDataCache=false;
@@ -47,21 +58,21 @@ namespace Nistec.Caching.Server.Http
         bool isSession=false;
 
         #region override
+
         /// <summary>
         /// OnStart
         /// </summary>
         protected override void OnStart()
         {
             base.OnStart();
-
             if (isCache)
-                AgentManager.Cache.Start();
+                if (!AgentManager.Cache.Initialized) AgentManager.Cache.Start();
             if (isDataCache)
-                AgentManager.DbCache.Start();
+                if (!AgentManager.DbCache.Initialized) AgentManager.DbCache.Start();
             if (isSyncCache)
-                AgentManager.SyncCache.Start();
+                if (!AgentManager.SyncCache.Initialized) AgentManager.SyncCache.Start();// CacheSettings.EnableSyncFileWatcher, CacheSettings.ReloadSyncOnChange);
             if (isSession)
-                AgentManager.Session.Start();
+                if (!AgentManager.Session.Initialized) AgentManager.Session.Start();
 
             CacheLogger.Logger.LogAction(CacheAction.General, CacheActionState.Debug, "HttpBundleServer.OnStart : " + Settings.HostName);
         }
@@ -73,16 +84,18 @@ namespace Nistec.Caching.Server.Http
             base.OnStop();
 
             if (isCache)
-                AgentManager.Cache.Stop();
+                if (AgentManager.Cache.Initialized) AgentManager.Cache.Stop();
             if (isDataCache)
-                AgentManager.DbCache.Stop();
+                if (AgentManager.DbCache.Initialized) AgentManager.DbCache.Stop();
             if (isSyncCache)
-                AgentManager.SyncCache.Stop();
+                if (AgentManager.SyncCache.Initialized) AgentManager.SyncCache.Stop();
             if (isSession)
-                AgentManager.Session.Stop();
+                if (AgentManager.Session.Initialized) AgentManager.Session.Stop();
 
             CacheLogger.Logger.LogAction(CacheAction.General, CacheActionState.Debug, "HttpBundleServer.OnStop : " + Settings.HostName);
         }
+
+   
         /// <summary>
         /// OnLoad
         /// </summary>
@@ -94,7 +107,7 @@ namespace Nistec.Caching.Server.Http
             if (isDataCache)
                 AgentManager.DbCache.Start();
             if (isSyncCache)
-                AgentManager.SyncCache.Start(CacheSettings.EnableSyncFileWatcher, CacheSettings.ReloadSyncOnChange);
+                AgentManager.SyncCache.Start();// CacheSettings.EnableSyncFileWatcher, CacheSettings.ReloadSyncOnChange);
             if (isSession)
                 AgentManager.Session.Start();
         }
@@ -146,18 +159,36 @@ namespace Nistec.Caching.Server.Http
         /// </summary>
         /// <param name="message"></param>
         /// <returns></returns>
-        protected override NetStream ExecRequset(CacheMessage message)
+        protected override TransStream ExecTransStream(MessageStream message)
         {
             return AgentManager.ExecCommand(message);
         }
+
+        /// <summary>
+        /// Exec client requset.
+        /// </summary>
+        /// <param name="message"></param>
+        /// <returns></returns>
+        protected override string ExecString(MessageStream message)
+        {
+            var ts= AgentManager.ExecCommand(message);
+            if(ts == null)
+            {
+                return null;
+            }
+
+            string res=ts.ReadString();
+            return res;
+        }
+
         /// <summary>
         /// Read Request
         /// </summary>
         /// <param name="request"></param>
         /// <returns></returns>
-        protected override CacheMessage ReadRequest(HttpRequestInfo request)
+        protected override MessageStream ReadRequest(HttpRequestInfo request)
         {
-            return CacheMessage.ReadRequest(request);
+            return MessageStream.ReadRequest(request);
         }
        
         #endregion

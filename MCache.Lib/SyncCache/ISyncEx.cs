@@ -27,7 +27,10 @@ using Nistec.Caching.Data;
 
 namespace Nistec.Caching.Sync
 {
+    public interface ISyncBag
+    {
 
+    }
     internal interface ISyncEx<T>
     {
         IDictionary<string, T> Items { get; }

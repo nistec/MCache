@@ -28,6 +28,9 @@ using System.Xml;
 using Nistec.Generic;
 using Nistec.Runtime;
 using Nistec.Channels;
+using Nistec.Channels.Tcp;
+using System.IO.Pipes;
+using Nistec.Channels.Http;
 
 namespace Nistec.Caching.Config
 {
@@ -37,30 +40,11 @@ namespace Nistec.Caching.Config
     public class CacheApiSettings
     {
 
-        static string _RemoteCacheHostName = CacheDefaults.DefaultCacheHostName;
-        static string _RemoteSyncCacheHostName = CacheDefaults.DefaultSyncCacheHostName;
-        static string _RemoteSessionHostName = CacheDefaults.DefaultSessionHostName;
-        static string _RemoteDataCacheHostName = CacheDefaults.DefaultDataCacheHostName;
-        static string _RemoteCacheManagerHostName = CacheDefaults.DefaultCacheManagerHostName;
-        static string _RemoteBundleHostName = CacheDefaults.DefaultBundleHostName;
-
-
-        /// <summary>RemoteCacheHostName.</summary>
-        public static string RemoteCacheHostName { get { return _RemoteCacheHostName; } }
-        /// <summary>RemoteSyncCacheHostName.</summary>
-        public static string RemoteSyncCacheHostName { get { return _RemoteSyncCacheHostName; } }
-        /// <summary>RemoteSessionHostName.</summary>
-        public static string RemoteSessionHostName { get { return _RemoteSessionHostName; } }
-        /// <summary>RemoteDataCacheHostName.</summary>
-        public static string RemoteDataCacheHostName { get { return _RemoteDataCacheHostName; } }
-        /// <summary>RemoteCacheManagerHostName.</summary>
-        public static string RemoteCacheManagerHostName { get { return _RemoteCacheManagerHostName; } }
-
-        /// <summary>RemoteCacheBundleHostName.</summary>
-        public static string RemoteBundleHostName { get { return _RemoteBundleHostName; } }
+        public static string RemoteManagerHostName = CacheDefaults.DefaultManagerHostName;
+        public static string RemoteBundleHostName = CacheDefaults.DefaultBundleHostName;
+        //public static string RemoteJsonHostName = CacheDefaults.DefaultJsonHostName;
 
         const bool DefaultIsAsync = false;
-
         const bool DefaultEnableException = true;
 
         static bool _IsRemoteAsync = DefaultIsAsync;
@@ -97,6 +81,63 @@ namespace Nistec.Caching.Config
             set { _Protocol = value; }
         }
 
+        static int _CacheExpiration = CacheDefaults.DefaultCacheExpiration;
+
+        public static int CacheExpiration
+        {
+            get
+            {
+                return _CacheExpiration;
+            }
+            set { _CacheExpiration = value; }
+        }
+
+        static int _SessionTimeout = CacheDefaults.DefaultSessionTimeout;
+
+        public static int SessionTimeout
+        {
+            get
+            {
+                return _SessionTimeout;
+            }
+            set { _SessionTimeout = value; }
+        }
+
+        static int _TcpPort = CacheDefaults.DefaultTcpBundlePort;
+        static int _HttpPort = CacheDefaults.DefaultHttpBundlePort;
+
+        public static int TcpPort
+        {
+            get
+            {
+                return _TcpPort;
+            }
+        }
+        public static int HttpPort
+        {
+            get
+            {
+                return _HttpPort;
+            }
+        }
+
+        /// <summary>Port.</summary>
+        public static int Port
+        {
+            get
+            {
+                switch(Protocol)
+                {
+                    case NetProtocol.Http:
+                        return _HttpPort;
+                    case NetProtocol.Tcp:
+                        return _TcpPort;
+                    default:
+                        return 0;
+                }
+            }
+        }
+
         static CacheApiSettings()
         {
 
@@ -111,18 +152,196 @@ namespace Nistec.Caching.Config
             _IsRemoteAsync = table.Get<bool>("IsRemoteAsync", DefaultIsAsync);
             _EnableRemoteException = table.Get<bool>("EnableRemoteException", DefaultEnableException);
 
-            _RemoteCacheHostName = table.Get<string>("RemoteCacheHostName", CacheDefaults.DefaultCacheHostName);
-            _RemoteSyncCacheHostName = table.Get<string>("RemoteSyncCacheHostName", CacheDefaults.DefaultSyncCacheHostName);
-            _RemoteSessionHostName = table.Get<string>("RemoteSessionHostName", CacheDefaults.DefaultSessionHostName);
-            _RemoteDataCacheHostName = table.Get<string>("RemoteDataCacheHostName", CacheDefaults.DefaultDataCacheHostName);
-            _RemoteCacheManagerHostName = table.Get<string>("RemoteCacheManagerHostName", CacheDefaults.DefaultCacheManagerHostName);
-
-            _RemoteBundleHostName = table.Get<string>("RemoteBundleHostName", CacheDefaults.DefaultBundleHostName);
-
             _Protocol = GenericTypes.ConvertEnum<NetProtocol>(table.Get<string>("Protocol", CacheDefaults.DefaultProtocol.ToString()), CacheDefaults.DefaultProtocol);
+            _CacheExpiration = table.Get<int>("CacheExpiration", CacheDefaults.DefaultCacheExpiration);
+            _SessionTimeout = table.Get<int>("SessionTimeout", CacheDefaults.DefaultSessionTimeout);
+        }
+
+    }
+
+    /// <summary>
+    /// Represent a tcp client settings.
+    /// </summary>
+    public class TcpClientCacheSettings
+    {
+        static readonly Dictionary<string, TcpSettings> ClientSettingsCache = new Dictionary<string, TcpSettings>();
+
+        /// <summary>
+        /// Get Tcp Client Settings
+        /// </summary>
+        /// <param name="hostName"></param>
+        /// <returns></returns>
+        public static TcpSettings GetClientSettings(string hostName)
+        {
+            TcpSettings settings = null;
+            if (ClientSettingsCache.TryGetValue(hostName, out settings))
+            {
+                return settings;
+            }
+            settings = LoadConfigClient(hostName);
+            if (settings == null)
+            {
+                throw new Exception("Invalid configuration for tcp cache client settings with host name:" + hostName);
+            }
+            ClientSettingsCache[hostName] = settings;
+            return settings;
+        }
+        /// <summary>
+        /// LoadTcpConfigClient
+        /// </summary>
+        /// <param name="configHost"></param>
+        /// <returns></returns>
+        public static TcpSettings LoadConfigClient(string configHost)
+        {
+            if (string.IsNullOrEmpty(configHost))
+            {
+                throw new ArgumentNullException("TcpCacheSettings.LoadTcpConfigClient name");
+            }
+
+            var config = CacheConfigClient.GetConfig();
+
+            var settings = config.FindTcpClient(configHost);
+            if (settings == null)
+            {
+                throw new ArgumentException("Invalid TcpCacheSettings with TcpName:" + configHost);
+            }
+
+            return new TcpSettings()
+            {
+                HostName = settings.HostName,
+                Address = TcpSettings.EnsureHostAddress(settings.Address),
+                Port = settings.Port,
+                IsAsync = settings.IsAsync,
+                ReceiveBufferSize = settings.ReceiveBufferSize,
+                SendBufferSize = settings.SendBufferSize,
+                ConnectTimeout = settings.ConnectTimeout,
+                ProcessTimeout = settings.ProcessTimeout,
+            };
+        }
+    }
+    /// <summary>
+    /// Represent a pipe client settings.
+    /// </summary>
+    public class PipeClientCacheSettings
+    {
+        static readonly Dictionary<string, PipeSettings> ClientSettingsCache = new Dictionary<string, PipeSettings>();
+        /// <summary>
+        /// Get pipe client settings
+        /// </summary>
+        /// <param name="hostName"></param>
+        /// <returns></returns>
+        public static PipeSettings GetClientSettings(string hostName)
+        {
+            PipeSettings settings = null;
+            if (ClientSettingsCache.TryGetValue(hostName, out settings))
+            {
+                return settings;
+            }
+            settings = LoadConfigClient(hostName);
+            if (settings == null)
+            {
+                throw new Exception("Invalid configuration for pipe cache client settings with host name:" + hostName);
+            }
+            ClientSettingsCache[hostName] = settings;
+            return settings;
+        }
+
+        /// <summary>
+        /// LoadPipeConfigClient
+        /// </summary>
+        /// <param name="hostName"></param>
+        /// <returns></returns>
+        public static PipeSettings LoadConfigClient(string hostName)
+        {
+            if (string.IsNullOrEmpty(hostName))
+            {
+                throw new ArgumentNullException("PipeCacheSettings.LoadPipeConfigClient name");
+            }
+
+            var config = CacheConfigClient.GetConfig();
+
+            var settings = config.FindPipeClient(hostName);
+            if (settings == null)
+            {
+                throw new ArgumentException("Invalid PipeCacheSettings with PipeName:" + hostName);
+            }
+            return new PipeSettings()
+            {
+                HostName = settings.HostName,
+                PipeName = settings.PipeName,
+                PipeDirection = EnumExtension.Parse<PipeDirection>(settings.PipeDirection, PipeDirection.InOut),
+                PipeOptions = EnumExtension.Parse<PipeOptions>(settings.PipeOptions, PipeOptions.None),
+                VerifyPipe = settings.VerifyPipe,
+                ConnectTimeout = (uint)settings.ConnectTimeout,
+                ProcessTimeout = settings.ProcessTimeout,
+                ReceiveBufferSize = settings.ReceiveBufferSize,
+                SendBufferSize=settings.SendBufferSize
+            };
 
         }
 
     }
-   
+
+    /// <summary>
+    /// Represent a http client settings.
+    /// </summary>
+    public class HttpClientCacheSettings
+    {
+        static readonly Dictionary<string, HttpSettings> ClientSettingsCache = new Dictionary<string, HttpSettings>();
+
+        /// <summary>
+        /// Get Tcp Client Settings
+        /// </summary>
+        /// <param name="hostName"></param>
+        /// <returns></returns>
+        public static HttpSettings GetClientSettings(string hostName)
+        {
+            HttpSettings settings = null;
+            if (ClientSettingsCache.TryGetValue(hostName, out settings))
+            {
+                return settings;
+            }
+            settings = LoadConfigClient(hostName);
+            if (settings == null)
+            {
+                throw new Exception("Invalid configuration for tcp cache client settings with host name:" + hostName);
+            }
+            ClientSettingsCache[hostName] = settings;
+            return settings;
+        }
+        /// <summary>
+        /// LoadTcpConfigClient
+        /// </summary>
+        /// <param name="configHost"></param>
+        /// <returns></returns>
+        public static HttpSettings LoadConfigClient(string configHost)
+        {
+            if (string.IsNullOrEmpty(configHost))
+            {
+                throw new ArgumentNullException("TcpCacheSettings.LoadTcpConfigClient name");
+            }
+
+            var config = CacheConfigClient.GetConfig();
+
+            var settings = config.FindHttpClient(configHost);
+            if (settings == null)
+            {
+                throw new ArgumentException("Invalid TcpCacheSettings with HostName:" + configHost);
+            }
+
+            return new HttpSettings()
+            {
+                HostName = settings.HostName,
+                Address = HttpSettings.EnsureHostAddress(settings.Address),
+                Port = settings.Port,
+                Method=settings.Method,
+                //IsAsync = settings.IsAsync,
+                //ReceiveBufferSize = settings.ReceiveBufferSize,
+                //SendBufferSize = settings.SendBufferSize,
+                ConnectTimeout = settings.ConnectTimeout,
+                ProcessTimeout = settings.ProcessTimeout,
+            };
+        }
+    }
+
 }

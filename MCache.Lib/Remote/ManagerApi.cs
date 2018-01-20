@@ -26,7 +26,7 @@ using Nistec.Data.Entities;
 using System.Collections;
 using Nistec.Channels;
 using Nistec.Caching.Session;
-using Nistec.Caching.Channels;
+//using Nistec.Caching.Channels;
 using Nistec.Caching.Config;
 using Nistec.Caching.Data;
 using System.Data;
@@ -43,6 +43,54 @@ namespace Nistec.Caching.Remote
     public static class ManagerApi
     {
 
+        #region Send
+        static internal T SendDuplexStream<T>(CacheMessage message, Action<string> onFault)
+        {
+            TransStream ts = PipeClient.SendDuplexStream(message, CacheDefaults.DefaultBundleHostName, CacheApiSettings.EnableRemoteException, System.IO.Pipes.PipeOptions.None);
+            if (ts == null)
+            {
+                onFault(message.Command + " return null!");
+                return default(T);
+            }
+            return ts.ReadValue<T>(onFault);
+        }
+
+        static internal object SendDuplexStreamValue(CacheMessage message, Action<string> onFault)
+        {
+            TransStream ts = PipeClient.SendDuplexStream(message, CacheDefaults.DefaultBundleHostName, CacheApiSettings.EnableRemoteException, System.IO.Pipes.PipeOptions.None);
+            if (ts == null)
+            {
+                onFault(message.Command + " return null!");
+                return null;
+            }
+            return ts.ReadValue(onFault);
+        }
+        static internal CacheState SendDuplexState(CacheMessage message)
+        {
+            TransStream ts = PipeClient.SendDuplexStream(message, CacheDefaults.DefaultBundleHostName, CacheApiSettings.EnableRemoteException, System.IO.Pipes.PipeOptions.None);
+            if (ts == null)
+            {
+                return CacheState.InvalidItem;
+            }
+            return (CacheState)ts.ReadState();
+        }
+
+        static internal bool SendDuplexStateBool(CacheMessage message)
+        {
+            TransStream ts = PipeClient.SendDuplexStream(message, CacheDefaults.DefaultBundleHostName, CacheApiSettings.EnableRemoteException, System.IO.Pipes.PipeOptions.None);
+            if (ts == null)
+            {
+                return false;
+            }
+            return ts.ReadState()< 100;
+        }
+
+        static internal void OnFault(string message)
+        {
+            Console.WriteLine("CacheApi Fault: " + message);
+        }
+        #endregion
+
         #region static client methods
         /// <summary>
         /// Get cache properties as dictionary
@@ -50,10 +98,10 @@ namespace Nistec.Caching.Remote
         /// <returns></returns>
         public static IDictionary CacheProperties()
         {
-            return PipeClientCache.SendDuplex<Hashtable>(new CacheMessage()
+            return ManagerApi.SendDuplexStream<Hashtable>(new CacheMessage()
             {
                 Command = CacheManagerCmd.CacheProperties
-            }, CacheApiSettings.RemoteCacheManagerHostName);
+            }, OnFault);
         }
         /// <summary>
         /// Get items copy with specified condition.
@@ -62,11 +110,11 @@ namespace Nistec.Caching.Remote
         /// <returns></returns>
         public static CacheEntry[] CloneItems(CloneType ct)
         {
-            return PipeClientCache.SendDuplex<CacheEntry[]>(new CacheMessage()
+            return ManagerApi.SendDuplexStream<CacheEntry[]>(new CacheMessage()
             {
                 Command = CacheManagerCmd.CloneItems,
                 Args = MessageStream.CreateArgs(KnowsArgs.CloneType, ((int)ct).ToString())
-            }, CacheApiSettings.RemoteCacheManagerHostName);
+            }, OnFault);
         }
         /// <summary>
         /// Get all items keys in cache.
@@ -74,10 +122,10 @@ namespace Nistec.Caching.Remote
         /// <returns></returns>
         public static string[] GetAllKeys()
         {
-            return PipeClientCache.SendDuplex<string[]>(new CacheMessage()
+            return ManagerApi.SendDuplexStream<string[]>(new CacheMessage()
             {
                 Command = CacheManagerCmd.GetAllKeys
-            }, CacheApiSettings.RemoteCacheManagerHostName);
+            }, OnFault);
         }
         /// <summary>
         /// Get all items keys in cache.
@@ -85,10 +133,10 @@ namespace Nistec.Caching.Remote
         /// <returns></returns>
         public static string[] GetAllKeysIcons()
         {
-            return PipeClientCache.SendDuplex<string[]>(new CacheMessage()
+            return ManagerApi.SendDuplexStream<string[]>(new CacheMessage()
             {
                 Command = CacheManagerCmd.GetAllKeysIcons
-            }, CacheApiSettings.RemoteCacheManagerHostName);
+            }, OnFault);
         }
        
 
@@ -98,10 +146,10 @@ namespace Nistec.Caching.Remote
         /// <returns></returns>
         public static DataTable GetStateCounterReport()
         {
-            return PipeClientCache.SendDuplex<DataTable>(new CacheMessage()
+            return ManagerApi.SendDuplexStream<DataTable>(new CacheMessage()
             {
                 Command = CacheManagerCmd.GetStateCounterReport
-            }, CacheApiSettings.RemoteCacheManagerHostName);
+            }, OnFault);
         }
 
         /// <summary>
@@ -121,10 +169,10 @@ namespace Nistec.Caching.Remote
                 case CacheAgentType.DataCache:
                     cmd = CacheManagerCmd.StateCounterDataCache; break;
             }
-            return PipeClientCache.SendDuplex<DataTable>(new CacheMessage()
+            return ManagerApi.SendDuplexStream<DataTable>(new CacheMessage()
             {
                 Command = cmd
-            }, CacheApiSettings.RemoteCacheManagerHostName);
+            }, OnFault);
         }
 
         /// <summary>
@@ -133,10 +181,10 @@ namespace Nistec.Caching.Remote
         /// <returns></returns>
         public static void ResetPerformanceCounter()
         {
-            PipeClientCache.SendOut(new CacheMessage()
+            PipeClient.SendOut(new CacheMessage()
             {
                 Command = CacheManagerCmd.ResetPerformanceCounter
-            }, CacheApiSettings.RemoteCacheManagerHostName);
+            }, CacheDefaults.DefaultManagerHostName);
         }
 
         /// <summary>
@@ -145,10 +193,10 @@ namespace Nistec.Caching.Remote
         /// <returns></returns>
         public static ICachePerformanceReport GetPerformanceReport()
         {
-            return PipeClientCache.SendDuplex<ICachePerformanceReport>(new CacheMessage()
+            return ManagerApi.SendDuplexStream<ICachePerformanceReport>(new CacheMessage()
             {
                 Command = CacheManagerCmd.GetPerformanceReport
-            }, CacheApiSettings.RemoteCacheManagerHostName);
+            }, OnFault);
         }
 
         /// <summary>
@@ -157,11 +205,11 @@ namespace Nistec.Caching.Remote
         /// <returns></returns>
         public static ICachePerformanceReport GetAgentPerformanceReport(CacheAgentType agentType)
         {
-            return PipeClientCache.SendDuplex<ICachePerformanceReport>(new CacheMessage()
+            return ManagerApi.SendDuplexStream<ICachePerformanceReport>(new CacheMessage()
             {
                 Command = CacheManagerCmd.GetAgentPerformanceReport,
-                Key = agentType.ToString()
-            }, CacheApiSettings.RemoteCacheManagerHostName);
+                Id = agentType.ToString()
+            }, OnFault);
         }
 
         /// <summary>
@@ -170,10 +218,10 @@ namespace Nistec.Caching.Remote
         /// <returns></returns>
         public static string[] GetAllDataKeys()
         {
-            return PipeClientCache.SendDuplex<string[]>(new CacheMessage()
+            return ManagerApi.SendDuplexStream<string[]>(new CacheMessage()
             {
                 Command = CacheManagerCmd.GetAllDataKeys
-            }, CacheApiSettings.RemoteCacheManagerHostName);
+            }, OnFault);
         }
 
         /// <summary>
@@ -182,10 +230,10 @@ namespace Nistec.Caching.Remote
         /// <returns></returns>
         public static string[] GetAllSyncCacheKeys()
         {
-            return PipeClientCache.SendDuplex<string[]>(new CacheMessage()
+            return ManagerApi.SendDuplexStream<string[]>(new CacheMessage()
             {
                 Command = CacheManagerCmd.GetAllSyncCacheKeys
-            }, CacheApiSettings.RemoteCacheManagerHostName);
+            }, OnFault);
         }
 
         ///// <summary>
@@ -197,8 +245,8 @@ namespace Nistec.Caching.Remote
         //    return PipeClientCache.SendDuplex<CacheView>(new CacheMessage()
         //    {
         //        Command = CacheManagerCmd.GetDataStatistic,
-        //        Key =db
-        //    }, CacheApiSettings.RemoteCacheManagerHostName);
+        //        Id =db
+        //    }, CacheDefaults.DefaultManagerHostName);
         //}
         /// <summary>
         /// Get cache logger log.
@@ -206,10 +254,10 @@ namespace Nistec.Caching.Remote
         /// <returns></returns>
         public static string CacheLog()
         {
-            return PipeClientCache.SendDuplex<string>(new CacheMessage()
+            return ManagerApi.SendDuplexStream<string>(new CacheMessage()
             {
                 Command = CacheManagerCmd.CacheLog
-            }, CacheApiSettings.RemoteCacheManagerHostName);
+            }, OnFault);
         }
 
         /// <summary>
@@ -218,23 +266,23 @@ namespace Nistec.Caching.Remote
         /// <returns></returns>
         public static ICollection<string> GetAllSessionsKeys()
         {
-            return PipeClientCache.SendDuplex<ICollection<string>>(new CacheMessage()
+            return ManagerApi.SendDuplexStream<ICollection<string>>(new CacheMessage()
             {
-                Command = CacheManagerCmd.GetAllSessionsKeys
-            }, CacheApiSettings.RemoteCacheManagerHostName);
+                Command = SessionCmd.ViewAllSessionsKeys
+            }, OnFault);
         }
 
         /// <summary>
         /// Get all sessions keys in session cache using <see cref="SessionState"/> state.
         /// </summary>
         /// <returns></returns>
-        public static ICollection<string> GetAllSessionsStateKeys(SessionState state)
+        public static ICollection<string> GetAllSessionsKeysByState(SessionState state)
         {
-            return PipeClientCache.SendDuplex<ICollection<string>>(new CacheMessage()
+            return ManagerApi.SendDuplexStream<ICollection<string>>(new CacheMessage()
             {
-                Command = CacheManagerCmd.GetAllSessionsStateKeys,
+                Command = SessionCmd.ViewAllSessionsKeysByState,
                 Args = CacheMessage.CreateArgs("state", ((int)state).ToString())
-            }, CacheApiSettings.RemoteCacheManagerHostName);
+            }, OnFault);
         }
 
         /// <summary>
@@ -244,12 +292,75 @@ namespace Nistec.Caching.Remote
         /// <returns></returns>
         public static ICollection<string> GetSessionsItemsKeys(string sessionId)
         {
-            return PipeClientCache.SendDuplex<ICollection<string>>(new CacheMessage()
+            return ManagerApi.SendDuplexStream<ICollection<string>>(new CacheMessage()
             {
-                Command = CacheManagerCmd.GetSessionItemsKeys,
-                Id = sessionId,
-            }, CacheApiSettings.RemoteCacheManagerHostName);
+                Command = SessionCmd.ViewSessionKeys,
+                GroupId = sessionId,
+            }, OnFault);
         }
+
+        ///// <summary>
+        ///// Get entity items report from cache.
+        ///// </summary>
+        ///// <returns></returns>
+        //public static CacheItemReport ReportCacheItems()
+        //{
+        //    using (CacheMessage message = new CacheMessage()
+        //    {
+        //        Command = CacheManagerCmd.ReportCacheItems,
+        //        Id = "*",
+        //       IsDuplex=true
+        //    })
+        //    {
+        //        return PipeClientCache.SendDuplex<CacheItemReport>(message, CacheDefaults.DefaultManagerHostName, CacheApiSettings.EnableRemoteException);
+        //    }
+        //}
+
+        ///// <summary>
+        ///// Get entity items report from session cache.
+        ///// </summary>
+        ///// <returns></returns>
+        //public static CacheItemReport ReportSessionItems()
+        //{
+        //    using (CacheMessage message = new CacheMessage()
+        //    {
+        //        Command = CacheManagerCmd.ReportSessionItems,
+        //        Id = "*",
+        //        IsDuplex = true
+        //    })
+        //    {
+        //        return PipeClientCache.SendDuplex<CacheItemReport>(message, CacheDefaults.DefaultManagerHostName, CacheApiSettings.EnableRemoteException);
+        //    }
+        //}
+
+        /// <summary>
+        /// Get report.
+        /// </summary>
+        /// <returns></returns>
+        public static CacheItemReport Report(string command)
+        {
+            //case CacheManagerCmd.ReportCacheItems:
+            //case CacheManagerCmd.ReportSessionItems:
+            //case CacheManagerCmd.ReportCacheTimer:
+            //case CacheManagerCmd.ReportSessionTimer:
+            //case CacheManagerCmd.ReportSyncBoxItems:
+            //case CacheManagerCmd.ReportSyncBoxQueue:
+            //case CacheManagerCmd.ReportTimerSyncDispatcher:
+
+            using (CacheMessage message = new CacheMessage()
+            {
+                Command = command,
+                Id = "*",
+                IsDuplex = true
+            })
+            {
+                return ManagerApi.SendDuplexStream<CacheItemReport>(message, OnFault);
+            }
+        }
+
+
+
+
 
         #endregion
 
@@ -259,25 +370,34 @@ namespace Nistec.Caching.Remote
         /// </summary>
         public static class CacheApi
         {
+            ///// <summary>
+            ///// Get item value from cache
+            ///// </summary>
+            ///// <param name="cacheKey"></param>
+            ///// <returns>return <see cref="CacheEntry"/></returns>
+            //public static CacheEntry GetEntry(string cacheKey)
+            //{
+            //    return PipeClientCache.SendDuplex<CacheEntry>(new CacheMessage() { Command = CacheCmd.GetEntry, Id = cacheKey },
+            //        CacheDefaults.DefaultManagerHostName);
+            //}
             /// <summary>
             /// Get item copy from cache
             /// </summary>
             /// <param name="cacheKey"></param>
             /// <returns>return <see cref="CacheEntry"/></returns>
-            public static CacheEntry ViewItem(string cacheKey)
+            public static CacheEntry ViewEntry(string cacheKey)
             {
-                return PipeClientCache.SendDuplex<CacheEntry>(new CacheMessage() { Command = CacheCmd.ViewItem, Key = cacheKey },
-                    CacheApiSettings.RemoteCacheManagerHostName);
+                return SendDuplexStream<CacheEntry>(new CacheMessage() { Command = CacheCmd.ViewEntry, Id = cacheKey },
+                    OnFault);
             }
             /// <summary>
             /// RemoveItem
             /// </summary>
             /// <param name="cacheKey"></param>
             /// <returns></returns>
-            public static CacheState RemoveItem(string cacheKey)
+            public static CacheState Remove(string cacheKey)
             {
-                return (CacheState)PipeClientCache.SendDuplex<int>(new CacheMessage() { Command = CacheCmd.RemoveItem, Key = cacheKey },
-                    CacheApiSettings.RemoteCacheManagerHostName);
+                return (CacheState)SendDuplexState(new CacheMessage() { Command = CacheCmd.Remove, Id = cacheKey });
             }
             /// <summary>
             /// Add Item to cache.
@@ -286,13 +406,26 @@ namespace Nistec.Caching.Remote
             /// <param name="value"></param>
             /// <param name="expiration"></param>
             /// <returns></returns>
-            public static CacheState AddItem(string cacheKey, object value, int expiration)
+            public static CacheState Add(string cacheKey, object value, int expiration)
             {
                 if (value == null)
                     return CacheState.ArgumentsError;
-                return (CacheState)PipeClientCache.SendDuplex<int>(new CacheMessage(CacheCmd.AddItem, cacheKey, value, expiration),
-                    CacheApiSettings.RemoteCacheHostName, CacheApiSettings.EnableRemoteException);
+                return SendDuplexState(new CacheMessage(CacheCmd.Add, cacheKey, value, expiration));
             }
+            /// <summary>
+            /// Add Item to cache.
+            /// </summary>
+            /// <param name="cacheKey"></param>
+            /// <param name="value"></param>
+            /// <param name="expiration"></param>
+            /// <returns></returns>
+            public static CacheState Set(string cacheKey, object value, int expiration)
+            {
+                if (value == null)
+                    return CacheState.ArgumentsError;
+                return SendDuplexState(new CacheMessage(CacheCmd.Set, cacheKey, value, expiration));
+            }
+
         }
         /// <summary>
         /// DataCacheApi
@@ -305,14 +438,15 @@ namespace Nistec.Caching.Remote
             /// <param name="db"></param>
             /// <param name="tableName"></param>
             /// <returns></returns>
-            public static DataCacheItem GetItemProperties(string db, string tableName)
+            public static CacheItemProperties GetItemProperties(string db, string tableName)
             {
-                return (DataCacheItem)PipeClientCache.SendDuplex<DataCacheItem>(new CacheMessage()
+                return (CacheItemProperties)ManagerApi.SendDuplexStream<CacheItemProperties>(new CacheMessage()
                 {
                     Command = DataCacheCmd.GetItemProperties,
-                    Key = db,
-                    Args = MessageStream.CreateArgs(KnowsArgs.TableName, tableName)
-                }, CacheApiSettings.RemoteCacheManagerHostName);
+                    GroupId = db,
+                    Label=tableName
+                    //Args = MessageStream.CreateArgs(KnowsArgs.TableName, tableName)
+                }, OnFault);
 
             }
 
@@ -323,12 +457,13 @@ namespace Nistec.Caching.Remote
             /// <param name="tableName">table name</param>
             public static void RemoveTable(string db, string tableName)
             {
-                PipeClientCache.SendOut(new CacheMessage()
+                PipeClient.SendOut(new CacheMessage()
                 {
                     Command = DataCacheCmd.RemoveTable,
-                    Key = db,
-                    Args = MessageStream.CreateArgs(KnowsArgs.TableName, tableName)
-                }, CacheApiSettings.RemoteCacheManagerHostName);
+                    GroupId = db,
+                    Label=tableName
+                    //Args = MessageStream.CreateArgs(KnowsArgs.TableName, tableName)
+                }, CacheDefaults.DefaultManagerHostName);
             }
             
             /// <summary>
@@ -337,31 +472,34 @@ namespace Nistec.Caching.Remote
             /// <param name="db">db name</param>
             /// <param name="tableName">table name</param>
             /// <returns>DataTable</returns>
-            public static DataTable GetDataTable(string db, string tableName)
+            public static DbTable GetTable(string db, string tableName)
             {
-                return (DataTable)PipeClientCache.SendDuplex<DataTable>(new CacheMessage()
+                return (DbTable)ManagerApi.SendDuplexStream<DbTable>(new CacheMessage()
                 {
-                    Command = DataCacheCmd.GetDataTable,
-                    Key = db,
-                    Args = MessageStream.CreateArgs(KnowsArgs.TableName, tableName)
-                }, CacheApiSettings.RemoteCacheManagerHostName);
+                    Command = DataCacheCmd.GetTable,
+                    GroupId = db,
+                    Label= tableName
+                    //Args = MessageStream.CreateArgs(KnowsArgs.TableName, tableName)
+                },OnFault);
             }
-            /// <summary>
-            /// Add Remoting Data Item to cache
-            /// </summary>
-            /// <param name="db"></param>
-            /// <param name="dt"></param>
-            /// <param name="tableName"></param>
-            public static bool AddDataItem(string db, DataTable dt, string tableName)
-            {
-                return PipeClientCache.SendDuplex<bool>(new CacheMessage()
-                {
-                    Command = DataCacheCmd.AddDataItem,
-                    Key = db,
-                    BodyStream = BinarySerializer.ConvertToStream(dt),// CacheMessageStream.EncodeBody(dt),
-                    Args = MessageStream.CreateArgs(KnowsArgs.TableName, tableName)
-                }, CacheApiSettings.RemoteDataCacheHostName, CacheApiSettings.EnableRemoteException);
-            }
+
+            ///// <summary>
+            ///// Add Remoting Data Item to cache
+            ///// </summary>
+            ///// <param name="db"></param>
+            ///// <param name="dt"></param>
+            ///// <param name="tableName"></param>
+            //public static bool AddDataItem(string db, DataTable dt, string tableName)
+            //{
+            //    return ManagerApi.SendDuplexStateBool(new CacheMessage()
+            //    {
+            //        Command = DataCacheCmd.AddTable,
+            //        GroupId = db,
+            //        Label=tableName,
+            //        BodyStream = BinarySerializer.ConvertToStream(dt),// CacheMessageStream.EncodeBody(dt),
+            //        Args = MessageStream.CreateArgs(KnowsArgs.MappingName, tableName, KnowsArgs.SourceType, EntitySourceType.Table.ToString())
+            //    });
+            //}
 
             /// <summary>
             /// Add Remoting Data Item to cache include SyncTables.
@@ -373,15 +511,16 @@ namespace Nistec.Caching.Remote
             /// <param name="sourceName"></param>
             /// <param name="syncType"></param>
             /// <param name="ts"></param>
-            public static void AddDataItemSync(string db, DataTable dt, string tableName, string mappingName, string[] sourceName, SyncType syncType, TimeSpan ts)
+            public static void AddTableWithSync(string db, DataTable dt, string tableName, string mappingName, string[] sourceName, SyncType syncType, TimeSpan ts)
             {
-                PipeClientCache.SendOut(new CacheMessage()
+                PipeClient.SendOut(new CacheMessage()
                 {
-                    Command = DataCacheCmd.AddDataItemSync,
-                    Key = db,
+                    Command = DataCacheCmd.AddTableWithSync,
+                    GroupId = db,
+                    Label=tableName,
                     BodyStream = BinarySerializer.ConvertToStream(dt),//CacheMessageStream.EncodeBody(dt),
-                    Args = MessageStream.CreateArgs(KnowsArgs.ConnectionKey, db, KnowsArgs.TableName, tableName, KnowsArgs.MappingName, mappingName, KnowsArgs.SourceName, GenericNameValue.JoinArg(sourceName), KnowsArgs.SyncType, ((int)syncType).ToString(), KnowsArgs.SyncTime, ts.ToString())
-                }, CacheApiSettings.RemoteDataCacheHostName, CacheApiSettings.EnableRemoteException);
+                    Args = MessageStream.CreateArgs(KnowsArgs.MappingName, mappingName, KnowsArgs.SourceName, NameValueArgs.JoinArg(sourceName), KnowsArgs.SyncType, ((int)syncType).ToString(), KnowsArgs.SyncTime, ts.ToString())
+                }, CacheDefaults.DefaultBundleHostName, CacheApiSettings.EnableRemoteException);
             }
 
             /// <summary>
@@ -407,17 +546,62 @@ namespace Nistec.Caching.Remote
             ///    TcpDataCacheApi.AddSyncItem(db, tableName, "Person.Contact", SyncType.Interval, TimeSpan.FromMinutes(60));
             ///}
             /// </code></example>
-            public static void AddDataItemSync(string db, DataTable dt, string tableName, string mappingName, Nistec.Caching.SyncType syncType, TimeSpan ts)
+            public static void AddTableWithSync(string db, DataTable dt, string tableName, string mappingName, Nistec.Caching.SyncType syncType, TimeSpan ts)
             {
-                PipeClientCache.SendOut(new CacheMessage()
+                PipeClient.SendOut(new CacheMessage()
                 {
-                    Command = DataCacheCmd.AddDataItemSync,
-                    Key = db,
+                    Command = DataCacheCmd.AddTableWithSync,
+                    GroupId = db,
+                    Label=tableName,
                     BodyStream = BinarySerializer.ConvertToStream(dt),//CacheMessageStream.EncodeBody(dt),
-                    Args = MessageStream.CreateArgs(KnowsArgs.ConnectionKey, db, KnowsArgs.TableName, tableName, KnowsArgs.MappingName, mappingName, KnowsArgs.SourceName, mappingName, KnowsArgs.SyncType, ((int)syncType).ToString(), KnowsArgs.SyncTime, ts.ToString())
-                }, CacheApiSettings.RemoteDataCacheHostName, CacheApiSettings.EnableRemoteException);
+                    Args = MessageStream.CreateArgs(KnowsArgs.MappingName, mappingName, KnowsArgs.SourceName, mappingName, KnowsArgs.SyncType, ((int)syncType).ToString(), KnowsArgs.SyncTime, ts.ToString())
+                }, CacheDefaults.DefaultBundleHostName, CacheApiSettings.EnableRemoteException);
 
             }
+            /// <summary>
+            /// Get entity items report from sync cache using entityName.
+            /// </summary>
+            /// <param name="db"></param>
+            /// <param name="tableName"></param>
+            /// <returns></returns>
+            public static CacheItemReport GetItemsReport(string db, string tableName)
+            {
+                using (CacheMessage message = new CacheMessage()
+                {
+                    Command = DataCacheCmd.GetItemsReport,
+                    GroupId = db,
+                    Label=tableName
+                    //TypeName = typeof(ICollection<string>).FullName
+                })
+                {
+                    return ManagerApi.SendDuplexStream<CacheItemReport>(message, OnFault);
+                }
+            }
+
+            public static IDictionary GetRecord(string db, string tableName, string primaryKey)
+            {
+                if (string.IsNullOrWhiteSpace(db))
+                {
+                    throw new ArgumentNullException("db is required");
+                }
+                if (string.IsNullOrWhiteSpace(tableName))
+                {
+                    throw new ArgumentNullException("tableName is required");
+                }
+
+                using (var message = new CacheMessage()
+                {
+                    Command = DataCacheCmd.GetRecord,
+                    GroupId = db,
+                    Label=tableName,
+                    Id=primaryKey,
+                    Args = MessageStream.CreateArgs(KnowsArgs.TableName, tableName, KnowsArgs.Pk, primaryKey)
+                })
+                {
+                    return ManagerApi.SendDuplexStream<IDictionary>(message, OnFault);
+                }
+            }
+
         }
         /// <summary>
         /// SyncCacheApi
@@ -435,37 +619,58 @@ namespace Nistec.Caching.Remote
             ///    SyncCacheApi.RemoveItem("contactGeneric");
             ///}
             /// </code></example>
-            public static void RemoveItem(string syncName)
+            public static void Remove(string syncName)
             {
                 using (CacheMessage message = new CacheMessage()
                 {
-                    Command = SyncCacheCmd.RemoveSyncItem,
-                    Key = syncName
+                    Command = SyncCacheCmd.Remove,
+                    Label = syncName
                 })
                 {
-                    PipeClientCache.SendOut(message, CacheApiSettings.RemoteCacheManagerHostName, CacheApiSettings.EnableRemoteException);
+                    PipeClient.SendOut(message, CacheDefaults.DefaultManagerHostName, CacheApiSettings.EnableRemoteException);
                 }
             }
 
             /// <summary>
-            /// Get item from sync cache using <see cref="CacheKeyInfo"/> an <see cref="Type"/>.
+            /// Get item from sync cache using <see cref="ComplexKey"/> an <see cref="Type"/>.
             /// </summary>
-            /// <param name="info"></param>
-            /// <param name="type"></param>
+            /// <param name="entityName"></param>
+            /// <param name="primaryKey"></param>
             /// <returns></returns>
-            public static object GetItem(CacheKeyInfo info, Type type)
+            public static GenericRecord GetAs(string entityName, string primaryKey)
             {
                 using (CacheMessage message = new CacheMessage()
                 {
-                    Command = SyncCacheCmd.GetSyncItem,
-                    Key = info.ToString(),
-                    TypeName = type.FullName
+                    Command = SyncCacheCmd.GetAs,
+                    Label = entityName,
+                    Id= primaryKey
+                    //TypeName = type.FullName,
+                    //Args = MessageStream.CreateArgs(KnowsArgs.Column, field)
                 })
                 {
-                    return PipeClientCache.SendDuplex(message, CacheApiSettings.RemoteCacheManagerHostName, CacheApiSettings.EnableRemoteException);
+                    return ManagerApi.SendDuplexStream<GenericRecord>(message, OnFault);
                 }
             }
 
+            /// <summary>
+            /// Get item from sync cache using <see cref="ComplexKey"/> an <see cref="Type"/>.
+            /// </summary>
+            /// <param name="entityName"></param>
+            /// <param name="primaryKey"></param>
+            /// <returns></returns>
+            public static object GetRecord(string entityName, string primaryKey)
+            {
+                using (CacheMessage message = new CacheMessage()
+                {
+                    Command = SyncCacheCmd.GetRecord,
+                    Label = entityName,
+                    Id = primaryKey
+                })
+                {
+                    return ManagerApi.SendDuplexStreamValue(message, OnFault);
+                }
+
+            }
             /// <summary>
             /// Get entity items report from sync cache using entityName.
             /// </summary>
@@ -476,12 +681,27 @@ namespace Nistec.Caching.Remote
                 using (CacheMessage message = new CacheMessage()
                 {
                     Command = SyncCacheCmd.GetItemsReport,
-                    Key = entityName,
+                    Label = entityName,
                     TypeName = typeof(ICollection<string>).FullName
                 })
                 {
-                    return PipeClientCache.SendDuplex<CacheItemReport>(message, CacheApiSettings.RemoteCacheManagerHostName, CacheApiSettings.EnableRemoteException);
+                    return ManagerApi.SendDuplexStream<CacheItemReport>(message, OnFault);
                 }
+            }
+
+            /// <summary>
+            /// GetItemProperties
+            /// </summary>
+            /// <param name="entityName"></param>
+            /// <returns></returns>
+            public static CacheItemProperties GetItemProperties(string entityName)
+            {
+                return (CacheItemProperties)ManagerApi.SendDuplexStream<CacheItemProperties>(new CacheMessage()
+                {
+                    Command = SyncCacheCmd.GetItemProperties,
+                    Label = entityName
+                }, OnFault);
+
             }
         }
         /// <summary>
@@ -489,12 +709,19 @@ namespace Nistec.Caching.Remote
         /// </summary>
         public static class SessionApi
         {
+            public static SessionEntry ViewSessionItem(string sessionId, string key)
+            {
+                SessionEntry entry= ManagerApi.SendDuplexStream<SessionEntry>(new CacheMessage() { Command = SessionCmd.ViewEntry, GroupId = sessionId, Id = key },
+                    OnFault);
+                //if (entry != null)
+                //    entry.Body= entry.DecodeBody();
+                return entry;
+            }
 
             /// <summary>
             /// Remove session from session cache.
             /// </summary>
             /// <param name="sessionId"></param>
-            /// <param name="isAsync"></param>
             /// <example><code>
             ///  //remove session with items.
             ///public void RemoveSession()
@@ -502,14 +729,14 @@ namespace Nistec.Caching.Remote
             ///    SessionApi.RemoveSession(sessionId, false);
             ///}
             /// </code></example>
-            public static void RemoveSession(string sessionId, bool isAsync = false)
+            public static void RemoveSession(string sessionId)
             {
-                PipeClientCache.SendOut(new CacheMessage()
+                PipeClient.SendOut(new CacheMessage()
                 {
                     Command = SessionCmd.RemoveSession,
-                    Id = sessionId,
-                    Args = MessageStream.CreateArgs(KnowsArgs.IsAsync, isAsync.ToString())
-                }, CacheApiSettings.RemoteCacheManagerHostName);
+                    GroupId = sessionId
+                    //Args = MessageStream.CreateArgs(KnowsArgs.IsAsync, isAsync.ToString())
+                }, CacheDefaults.DefaultManagerHostName);
 
             }
 
@@ -518,14 +745,14 @@ namespace Nistec.Caching.Remote
             /// </summary>
             /// <param name="sessionId"></param>
             /// <returns></returns>
-            public static SessionBagStream GetExistingSession(string sessionId)
+            public static SessionBagStream ViewExistingSession(string sessionId)
             {
-                return PipeClientCache.SendDuplex<SessionBagStream>(new CacheMessage()
+                return ManagerApi.SendDuplexStream<SessionBagStream>(new CacheMessage()
                 {
-                    Command = SessionCmd.GetExistingSession,
-                    Id = sessionId,
+                    Command = SessionCmd.ViewSessionStream,
+                    GroupId = sessionId,
                     Args = MessageStream.CreateArgs(KnowsArgs.ShouldSerialized, "true")
-                }, CacheApiSettings.RemoteCacheManagerHostName);
+                }, OnFault);
             }
         }
 

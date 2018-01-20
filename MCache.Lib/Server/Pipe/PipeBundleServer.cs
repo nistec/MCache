@@ -28,7 +28,7 @@ using Nistec.Channels;
 using Nistec.Caching.Remote;
 using Nistec.IO;
 using System.Threading.Tasks;
-using Nistec.Caching.Channels;
+//using Nistec.Caching.Channels;
 using Nistec.Caching.Config;
 using System.Net.Sockets;
 
@@ -38,7 +38,7 @@ namespace Nistec.Caching.Server.Pipe
     /// <summary>
     /// Represent a cache Pipe server listner.
     /// </summary>
-    public class PipeBundleServer : PipeServer<CacheMessage>
+    public class PipeBundleServer : PipeServer<MessageStream>
     {
         bool isCache=false;
         bool isDataCache=false;
@@ -46,6 +46,7 @@ namespace Nistec.Caching.Server.Pipe
         bool isSession=false;
 
         #region override
+
         /// <summary>
         /// OnStart
         /// </summary>
@@ -53,13 +54,13 @@ namespace Nistec.Caching.Server.Pipe
         {
             base.OnStart();
             if (isCache)
-                AgentManager.Cache.Start();
+                if (!AgentManager.Cache.Initialized) AgentManager.Cache.Start();
             if (isDataCache)
-                AgentManager.DbCache.Start();
+                if (!AgentManager.DbCache.Initialized) AgentManager.DbCache.Start();
             if (isSyncCache)
-                AgentManager.SyncCache.Start(CacheSettings.EnableSyncFileWatcher, CacheSettings.ReloadSyncOnChange);
+                if (!AgentManager.SyncCache.Initialized) AgentManager.SyncCache.Start();// CacheSettings.EnableSyncFileWatcher, CacheSettings.ReloadSyncOnChange);
             if (isSession)
-                AgentManager.Session.Start();
+                if (!AgentManager.Session.Initialized) AgentManager.Session.Start();
 
             CacheLogger.Logger.LogAction(CacheAction.General, CacheActionState.Debug, "PipeBundleServer.OnStart : " + this.FullPipeName);
         }
@@ -71,16 +72,18 @@ namespace Nistec.Caching.Server.Pipe
             base.OnStop();
 
             if (isCache)
-                AgentManager.Cache.Stop();
+                if (AgentManager.Cache.Initialized) AgentManager.Cache.Stop();
             if (isDataCache)
-                AgentManager.DbCache.Stop();
+                if (AgentManager.DbCache.Initialized) AgentManager.DbCache.Stop();
             if (isSyncCache)
-                AgentManager.SyncCache.Stop();
+                if (AgentManager.SyncCache.Initialized) AgentManager.SyncCache.Stop();
             if (isSession)
-                AgentManager.Session.Stop();
+                if (AgentManager.Session.Initialized) AgentManager.Session.Stop();
 
             CacheLogger.Logger.LogAction(CacheAction.General, CacheActionState.Debug, "PipeBundleServer.OnStop : " + this.FullPipeName);
+
         }
+
         /// <summary>
         /// OnLoad
         /// </summary>
@@ -137,7 +140,7 @@ namespace Nistec.Caching.Server.Pipe
         /// </summary>
         /// <param name="message"></param>
         /// <returns></returns>
-        protected override NetStream ExecRequset(CacheMessage message)
+        protected override TransStream ExecRequset(MessageStream message)
         {
             return AgentManager.ExecCommand(message);
         }
@@ -146,10 +149,12 @@ namespace Nistec.Caching.Server.Pipe
         /// </summary>
         /// <param name="pipeServer"></param>
         /// <returns></returns>
-        protected override CacheMessage ReadRequest(NamedPipeServerStream pipeServer)
+        protected override MessageStream ReadRequest(NamedPipeServerStream pipeServer)
         {
-            return CacheMessage.ReadRequest(pipeServer, InBufferSize);
+            return MessageStream.ReadRequest(pipeServer, ReceiveBufferSize);
         }
+
+
         ///// <summary>
         ///// Write Response
         ///// </summary>

@@ -68,6 +68,10 @@ namespace Nistec.Caching.Sync
         /// </summary>
         public string[] SourceName { get; internal set; }
         /// <summary>
+        /// Get Columns
+        /// </summary>
+        public string Columns { get; internal set; }
+        /// <summary>
         /// Get PreserveChanges
         /// </summary>
         public bool PreserveChanges { get; internal set; }
@@ -124,6 +128,7 @@ namespace Nistec.Caching.Sync
             SourceType = EntitySourceType.Table;
             EnableNoLock = false;
             CommandTimeout = 0;
+            Columns = "*";
         }
 
         internal SyncEntity(XmlTable xml)
@@ -140,15 +145,14 @@ namespace Nistec.Caching.Sync
             EntityType = xml.Get<string>("EntityType", DefaultEntityType);
             EnableNoLock = xml.Get<bool>("EnableNoLock", false);
             CommandTimeout = xml.Get<int>("CommandTimeout", 0);
-            
             MissingSchemaAction = System.Data.MissingSchemaAction.Add;
             PreserveChanges = false;
-
+            Columns = xml.Get<string>("Columns", "*");
         }
 
         internal SyncEntity(string json)
         {
-            var nameValue = (IDictionary)JsonSerializer.Deserialize(json);
+            var nameValue = (IDictionary<string, object>)JsonSerializer.Deserialize(json,typeof(Dictionary<string,object>));
 
             //var nameValue= json.Deserialize();
             ConnectionKey = nameValue.Get<string>("ConnectionKey");
@@ -165,11 +169,12 @@ namespace Nistec.Caching.Sync
 
             MissingSchemaAction = System.Data.MissingSchemaAction.Add;
             PreserveChanges = false;
+            Columns = nameValue.Get<string>("Columns", "*");
 
         }
 
-       
-         /// <summary>
+
+        /// <summary>
         /// Initialize a new instance of data cache entity.
         /// </summary>
         /// <param name="node"></param>
@@ -200,6 +205,8 @@ namespace Nistec.Caching.Sync
 
             MissingSchemaAction = System.Data.MissingSchemaAction.Add;
             PreserveChanges = false;
+            Columns = parser.GetAttributeValue(node, "Columns", "*");
+
         }
 
         /// <summary>
@@ -212,7 +219,7 @@ namespace Nistec.Caching.Sync
         /// <param name="interval"></param>
         /// <param name="enableNoLock"></param>
         /// <param name="commandTimeout"></param>
-        public SyncEntity(string entityName, string mappingName, string[] sourceName, SyncType syncType, TimeSpan interval, bool enableNoLock, int commandTimeout)
+        public SyncEntity(string entityName, string mappingName, string[] sourceName, SyncType syncType, TimeSpan interval, bool enableNoLock, int commandTimeout, string columns="*")
         {
             EntityName = entityName;
             ViewName = mappingName;
@@ -223,6 +230,7 @@ namespace Nistec.Caching.Sync
             Interval = interval;
             EnableNoLock = enableNoLock;
             CommandTimeout = commandTimeout;
+            Columns = columns;
         }
         #endregion
 
@@ -298,7 +306,8 @@ namespace Nistec.Caching.Sync
                 syncSourceName == thisSourceName &&
                 syncEntity.SourceType == this.SourceType &&
                 syncEntity.SyncType == this.SyncType &&
-                syncEntity.ViewName == this.ViewName);
+                syncEntity.ViewName == this.ViewName &&
+                syncEntity.Columns == this.Columns);
 
             return isequal;
         }
@@ -323,6 +332,13 @@ namespace Nistec.Caching.Sync
         #endregion
 
         #region Methods
+
+        public string[] GetCleanKeys()
+        {
+            if (EntityKeys == null)
+                return null;
+            return KeySet.CleanKeys(EntityKeys);
+        }
 
         //-GenericRecord
         Type GetDefaultEntityType() { return typeof(GenericRecord); }
@@ -355,17 +371,17 @@ namespace Nistec.Caching.Sync
         /// Create new instance of <see cref="ISyncItem"/>
         /// </summary>
         /// <returns></returns>
-        internal ISyncItem CreateInstance()
+        internal ISyncTable CreateInstance()//SyncCacheBase owner
         {
             Type type = GetEntityType();
-            Type d1 = typeof(SyncItem<>);
+            Type d1 = typeof(SyncTable<>);
             Type[] typeArgs = { type };
             Type constructed = d1.MakeGenericType(typeArgs);
-            object o = Activator.CreateInstance(constructed);
+            object o = ActivatorUtil.CreateInstance(constructed);
 
-            ((ISyncCacheItem)o).Set(this,false);
+            ((ISyncCacheItem)o).Set(this, false);
 
-            return (ISyncItem)o;
+            return (ISyncTable)o;
         }
 
      
@@ -458,7 +474,7 @@ namespace Nistec.Caching.Sync
                 SyncEntity sync = new SyncEntity(new XmlTable(n));
                 if (items.Exists(s => s.EntityName == sync.EntityName && s.ConnectionKey==sync.ConnectionKey))
                 {
-                    CacheLogger.Logger.LogAction(CacheAction.SyncItem, CacheActionState.Debug, "Duplicate in SyncFile, entity: " + sync.EntityName);
+                    CacheLogger.Logger.LogAction(CacheAction.SyncCache, CacheActionState.Debug, "Duplicate in SyncFile, entity: " + sync.EntityName);
                     continue;
                 }
                 items.Add(sync);
@@ -477,6 +493,7 @@ namespace Nistec.Caching.Sync
                           sync.SourceType != cur.SourceType ||
                           sync.SyncType != cur.SyncType ||
                           sync.ViewName != cur.ViewName ||
+                          sync.Columns != cur.Columns ||
                           string.Join(",", sync.EntityKeys)!= string.Join(",", cur.EntityKeys) ||
                           string.Join(",", sync.SourceName) != string.Join(",", cur.SourceName)
                           )

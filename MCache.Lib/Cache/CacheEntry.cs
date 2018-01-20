@@ -34,7 +34,8 @@ using Nistec.IO;
 using Nistec.Caching.Session;
 using Nistec.Caching.Config;
 using Nistec.Data;
- 
+using Nistec.Runtime;
+
 namespace Nistec.Caching
 {
 
@@ -44,53 +45,7 @@ namespace Nistec.Caching
     [Serializable]
     public sealed class CacheEntry : EntityStream,IDisposable
     {
-        internal static MessageState CacheStateToMessageState(CacheState state)
-        {
-            switch(state)
-            {
-                case CacheState.Ok:
-                    return MessageState.Ok;
-                case CacheState.NotFound:
-                    return MessageState.ItemNotFound;
-                case CacheState.UnexpectedError:
-                    return MessageState.UnexpectedError;
-                case CacheState.SerializationError:
-                    return MessageState.SerializeError;
-                case CacheState.CommandNotSupported:
-                    return MessageState.NotSupportedError;
-                case CacheState.ArgumentsError:
-                    return MessageState.ArgumentsError;
-                default:
-                    return MessageState.Failed;
-            }
-        }
-
-        internal AckStream GetAckStream()
-        {
-            return new AckStream(BodyStream,TypeName);
-        }
-        internal static AckStream GetAckStream(CacheState state, string action)
-        {
-            return new AckStream(CacheStateToMessageState(state),
-                action + " " + state.ToString());
-        }
-        internal static AckStream GetAckStream(CacheState state, string action, string key)
-        {
-            return new AckStream(CacheStateToMessageState(state),
-                action + ": " + key + " " + state.ToString());
-        }
-        internal static AckStream GetAckNotFound(string action, string key)
-        {
-            return new AckStream(MessageState.ItemNotFound, action + ": " + key + " , item not found.");
-        }
-
-        internal static AckStream GetAckStream(bool state, string action)
-        {
-            return new AckStream(state ? MessageState.Ok : MessageState.Failed,
-                state ? action + " succseed" : action = " failed, not found.");
-        }
-
-        int size;
+       
 
         #region ctor
         /// <summary>
@@ -110,9 +65,9 @@ namespace Nistec.Caching
         internal CacheEntry(string cacheKey, object value, string sessionId, int expiration, bool isRemote)
             : base()
         {
-            Key = cacheKey;
+            Id = cacheKey;
             Expiration = expiration;
-            Id = sessionId;
+            GroupId = sessionId;
             IsRemote = isRemote;
             if (value != null)
             {
@@ -136,14 +91,15 @@ namespace Nistec.Caching
         internal CacheEntry(SessionEntry entity, bool isRemote)
             : base()
         {
-            Key = entity.Key;
+            Id = entity.Id;
+            GroupId = entity.GroupId;
             Expiration = entity.Expiration;
             TypeName = entity.TypeName;
-            Id = entity.Id;
+            Label = entity.Label;
             IsRemote = isRemote;
             if (isRemote)
             {
-                SetBody(entity.BodyStream, entity.TypeName);
+                SetBody(entity.GetStream(), entity.TypeName);
             }
             else
             {
@@ -159,11 +115,12 @@ namespace Nistec.Caching
         public CacheEntry(MessageStream m)
             : this()
         {
-            Key = m.Key;
-            Expiration = m.Expiration;
             Id = m.Id;
+            Expiration = m.Expiration;
+            Label = m.Label;
+            GroupId = m.GroupId;
             IsRemote = true;
-            SetBody(m.BodyStream, m.TypeName);
+            SetBody(m.GetStream(), m.TypeName);
         }
 
         /// <summary>
@@ -182,6 +139,8 @@ namespace Nistec.Caching
 
         #region Properties
 
+        int size;
+
         object Value { get; set; }
         /// <summary>
         /// Get indicate whether the item is Remote object.
@@ -195,21 +154,17 @@ namespace Nistec.Caching
         {
             get
             {
-                if (IsRemote)
-                    return base.IsEmpty;
-                object o= Value;
-
-                return o == null;
+                return Value == null && base.IsEmpty;
             }
         }
         /// <summary>
-        /// Get Key Icon
+        /// Get Id Icon
         /// </summary>
         /// <returns></returns>
         public string GetKeyIcon()
         {
             int icon = 0;
-            return icon.ToString() + "_" + Key;
+            return icon.ToString() + "_" + Id;
         }
         #endregion
                
@@ -306,37 +261,7 @@ namespace Nistec.Caching
             return matches == count;
         }
 
-        //internal bool IsMatchArgs(params string[] keyValueArgs)
-        //{
-        //    if (keyValueArgs == null || Args == null)
-        //        return false;
-
-        //    int count = keyValueArgs.Length;
-        //    if (count % 2 != 0)
-        //    {
-        //        throw new ArgumentException("values parameter is not correct, Not match key value arguments");
-        //    }
-        //    int itemsToMatch = count / 2;
-        //    int matches = 0;
-        //    for (int i = 0; i < count; i++)
-        //    {
-        //        string val;
-        //        if (Args.TryGetValue(keyValueArgs[i], out val))
-        //        {
-        //            if (keyValueArgs[++i] == val)
-        //            {
-        //                matches++;
-        //                continue;
-        //            }
-        //            else
-        //                return false;
-        //        }
-        //        else
-        //            return false;
-        //    }
-        //    return matches == itemsToMatch;
-        //}
-
+ 
         internal static Dictionary<string, string> ArgsToDictionary(params string[] keyValueArgs)
         {
             if (keyValueArgs == null)
@@ -366,7 +291,7 @@ namespace Nistec.Caching
         /// <returns></returns>
         public T GetValue<T>()
         {
-            return GenericTypes.Cast<T>(GetValue());
+            return GenericTypes.Cast<T>(GetValue(), true);
         }
 
         /// <summary>
@@ -375,20 +300,16 @@ namespace Nistec.Caching
         /// <returns></returns>
         public object GetValue()
         {
-            if (IsRemote)
-            {
-                return this.DecodeBody();
-            }
-             return Value;
+            return this.DecodeBody();
         }
         /// <summary>
         /// Get value as json.
         /// </summary>
         /// <returns></returns>
-        public string GetValueJson()
+        public string GetValueJson(bool pretty=false)
         {
             object o = GetValue();
-            return JsonSerializer.Serialize(o);
+            return JsonSerializer.Serialize(o, pretty);
         }
 
         /// <summary>
@@ -397,12 +318,13 @@ namespace Nistec.Caching
         /// <returns></returns>
         public NetStream GetValueSream()
         {
-            if (IsRemote)
+            var copy=GetCopy();
+            if (copy != null)
             {
-                return BodyStream;
+                return copy;
             }
 
-            byte[] b = GetValueBinary();
+            byte[] b = ValueToBytes();
             if (b == null)
                 return null;
             return new NetStream(b);
@@ -414,14 +336,10 @@ namespace Nistec.Caching
         /// <returns></returns>
         public byte[] GetValueBinary()
         {
-            if (IsRemote)
-            {
-                return BodyStream == null ? null : BodyStream.ToArray();
-            }
-            byte[] b = ValueToBytes();
+            byte[] b = GetBinary();
             if (b == null)
             {
-                return null;
+                return ValueToBytes();
             }
             return b;
         }
@@ -467,21 +385,25 @@ namespace Nistec.Caching
         /// Convert item to <see cref="DataRow"/>.
         /// </summary>
         /// <returns></returns>
-        public object[] ToDataRow()
+        public object[] ToDataRow(bool noBody=false)
         {
             string val = null;
 
-            if (IsRemote)
+            if(noBody)
             {
-                if (BodyStream != null)
-                    val = this.BodyToBase64();
+                val = this.ToJson(true);
+                val = "<Body>";
+            }
+            else if (BodyStream != null)//(IsRemote)
+            {
+                 val = this.BodyToBase64();
             }
             else
             {
                 val = BinarySerializer.SerializeToBase64(Value);
             }
 
-            return new object[] { Key, val, Expiration, Size, TypeName, Id, Modified };
+            return new object[] { Id, val, Expiration, Size, TypeName, GroupId, Modified };
         }
 
         /// <summary>
@@ -494,7 +416,7 @@ namespace Nistec.Caching
         {
             CacheEntry item = new CacheEntry();
 
-            item.Key = dr.Get<string>("Key");//.ToString();
+            item.Id = dr.Get<string>("Id");//.ToString();
             item.TypeName = Types.NZ(dr["TypeName"], "System.String");
 
             object val = dr["Value"];
@@ -514,8 +436,8 @@ namespace Nistec.Caching
             {
                 item.Value = val;
             }
-            item.Expiration = Types.NZ(dr["Expiration"], CacheDefaults.DefaultExpiration);
-            item.Id = Types.NZ(dr["SessionId"], null);
+            item.Expiration = Types.NZ(dr["Expiration"], CacheDefaults.DefaultCacheExpiration);
+            item.GroupId = Types.NZ(dr["SessionId"], null);
             item.Modified = Types.ToDateTime(dr["Modified"], DateTime.Now);
             return item;
         }
@@ -527,7 +449,7 @@ namespace Nistec.Caching
         public static DataTable CacheItemSchema()
         {
             DataTable dt = new DataTable("CacheEntry");
-            dt.Columns.Add("Key", typeof(string));
+            dt.Columns.Add("Id", typeof(string));
             dt.Columns.Add("Body", typeof(string));
             dt.Columns.Add("Expiration", typeof(int));
             dt.Columns.Add("Size", typeof(int));
@@ -543,8 +465,8 @@ namespace Nistec.Caching
        /// <returns></returns>
         public string PrintHeader()
         {
-            return string.Format("<CacheEntry Key='{0}' Type='{1}' Size='{2}' IsTimeOut={3} />",
-                Key, TypeName, Size, IsTimeOut);
+            return string.Format("<CacheEntry Id='{0}' Type='{1}' Size='{2}' IsTimeOut={3} />",
+                Id, TypeName, Size, IsTimeOut);
 
         }
         /// <summary>
@@ -553,8 +475,8 @@ namespace Nistec.Caching
         /// <returns></returns>
         public string PrintDetails()
         {
-            return string.Format("<CacheEntry Key='{0}' Size='{1}' TimeOut='{2}' AllowExpires='{3}' ItemType='{4}' Modified='{5}' />",
-                Key, Size, TimeOut, AllowExpires, TypeName, Modified);
+            return string.Format("<CacheEntry Id='{0}' Size='{1}' TimeOut='{2}' AllowExpires='{3}' ItemType='{4}' Modified='{5}' />",
+                Id, Size, TimeOut, AllowExpires, TypeName, Modified);
         }
         /// <summary>
         /// Print Tool Tip
@@ -562,7 +484,7 @@ namespace Nistec.Caching
         /// <returns></returns>
         public string PrintToolTip()
         {
-            return string.Format("<CacheEntry Key='{0}' TypeName='{1}' Size='{2}' />", Key, TypeName, Size);
+            return string.Format("<CacheEntry Id='{0}' TypeName='{1}' Size='{2}' />", Id, TypeName, Size);
         }
         
         #endregion
@@ -585,12 +507,12 @@ namespace Nistec.Caching
         public new CacheEntry Copy(bool valueAswell)
         {
             CacheEntry item = new CacheEntry();
-            item.Id = Id;
+            item.GroupId = GroupId;
             item.Modified = Modified;
             
-            item.Key = Key;
+            item.Id = Id;
             item.Value = valueAswell ? Value : "<Copy>";
-            item.BodyStream = valueAswell ? BodyStream : null;
+            item.BodyStream = valueAswell ? GetCopy(): null;
             item.TypeName = TypeName;
             item.IsRemote = item.IsRemote;
             return item;
@@ -680,19 +602,20 @@ namespace Nistec.Caching
             }
         }
 
-        internal CacheEntry Copy(string cacheKey, int expiration)
+        internal CacheEntry CopyTo(string cacheKey, int expiration)
         {
             CacheEntry item = new CacheEntry();
-            item.Id = Id;
-
+            item.Label = Label;
+            item.GroupId = GroupId;
             item.Modified = DateTime.Now;
-            item.Key = cacheKey;
+            item.Id = cacheKey;
             item.Value = Value;
-            if (BodyStream != null)
-            {
-                var stream = BodyStream.Copy();
-                item.BodyStream = stream;
-            }
+            //if (BodyStream != null)
+            //{
+            //    var stream = GetCopy();
+            //    item.BodyStream = stream;
+            //}
+            item.BodyStream = GetCopy();
             item.TypeName = TypeName;
             item.IsRemote = IsRemote;
             return item;
@@ -711,7 +634,7 @@ namespace Nistec.Caching
             if (typeof(IDictionary).IsAssignableFrom(type))
             {
                 IDictionary src = (IDictionary)GetValue();
-                IDictionary dest = (IDictionary)Activator.CreateInstance(type);
+                IDictionary dest = (IDictionary)ActivatorUtil.CreateInstance(type);
                 if (dest == null || src == null)
                     return this;
 
@@ -727,7 +650,7 @@ namespace Nistec.Caching
             else if (typeof(IList).IsAssignableFrom(type))
             {
                 IList src = (IList)GetValue();
-                IList dest = (IList)Activator.CreateInstance(type);
+                IList dest = (IList)ActivatorUtil.CreateInstance(type);
                 if (dest == null || src == null)
                     return this;
 
@@ -775,7 +698,7 @@ namespace Nistec.Caching
             if (typeof(IDictionary).IsAssignableFrom(type))
             {
                 IDictionary src = (IDictionary)GetValue();
-                IDictionary dest = (IDictionary)Activator.CreateInstance(type);
+                IDictionary dest = (IDictionary)ActivatorUtil.CreateInstance(type);
                 if (dest == null || src == null)
                     return this;
 
@@ -790,7 +713,7 @@ namespace Nistec.Caching
             else if (typeof(IList).IsAssignableFrom(type))
             {
                 IList src = (IList)GetValue();
-                IList dest = (IList)Activator.CreateInstance(type);
+                IList dest = (IList)ActivatorUtil.CreateInstance(type);
                 if (dest == null || src == null)
                     return this;
 

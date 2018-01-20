@@ -43,12 +43,41 @@ namespace Nistec.Caching.Data
 
     /// <summary>
     ///  Represent an synchronized Data set of tables as a data cache for specific database.
-    ///The <see cref="CacheSynchronizer"/> "Synchronizer" manages the synchronization for each item
+    ///The <see cref="DataSynchronizer"/> "Synchronizer" manages the synchronization for each item
     ///in  <see cref="DataSyncList"/> items.
     ///Thru <see cref="IDbContext"/> connector.
     /// </summary>
-    public class DataCache : System.ComponentModel.Component, IDataCache
+    public class DataCache : System.ComponentModel.Component, IDataCache, ISyncronizer
     {
+        public ISyncronizer Parent { get { return this; } }
+
+        public IDataCache Copy()
+        {
+            return new DataCache()
+            {
+                _CacheName = this._CacheName,
+                ConnectionKey = this.ConnectionKey,
+                _EnableNoLock = this._EnableNoLock,
+                initilized = this.initilized,
+                m_TableList = this.m_TableList,
+                Owner = this.Owner,
+                Site = this.Site,
+                suspend = this.suspend,
+                _SyncOption = this._SyncOption,
+                SyncState = this.SyncState,
+                _TableWatcherName = this._TableWatcherName,
+                //_CacheSynchronize = this._CacheSynchronize,
+                _ClientId = this._ClientId,
+                _EnableDataSource = this._EnableDataSource,
+                _size = this._size,
+                _state = this._state,
+                _SyncTables = this._SyncTables.Copy(),
+                _tableCounts = this._tableCounts,
+                m_ds = this.m_ds.Copy()
+
+            };
+        }
+
         #region memebers
         /// <summary>
         /// Default Cache name
@@ -68,8 +97,8 @@ namespace Nistec.Caching.Data
 
         private string _ClientId;
         private string _TableWatcherName;
-        private CacheSynchronizer _CacheSynchronize;
-        DbCache Owner;
+        //private CacheSynchronizer _CacheSynchronize;
+        DataCacheDb Owner;
 
         //IDbContext _DbContext;
         ///// <summary>
@@ -116,6 +145,14 @@ namespace Nistec.Caching.Data
         /// Get indicate if Store trigger for each table in DataSource 
         /// </summary>
         public bool EnableTrigger
+        {
+            get { return true; }
+        }
+
+        /// <summary>
+        /// Get indicate if allow sync by event. 
+        /// </summary>
+        public bool EnableSyncEvent
         {
             get { return true; }
         }
@@ -194,6 +231,11 @@ namespace Nistec.Caching.Data
 
         #region Ctor
 
+        private DataCache()
+        {
+
+        }
+
         /// <summary>
         /// Initialize a new instance of data cache.
         /// </summary>
@@ -207,7 +249,7 @@ namespace Nistec.Caching.Data
             initilized = false;
             m_ds = new DataSet();
             _SyncTables = new DataSyncList(this);
-            _CacheSynchronize = new CacheSynchronizer(this);
+            //_CacheSynchronize = new CacheSynchronizer(this);
             _size = 0;
             _disposed = false;
             _tableCounts = 0;
@@ -240,7 +282,7 @@ namespace Nistec.Caching.Data
         /// <param name="owner"></param>
         /// <param name="cacheName"></param>
         /// <param name="connectionKey"></param>
-        public DataCache(DbCache owner, string cacheName, string connectionKey)
+        public DataCache(DataCacheDb owner, string cacheName, string connectionKey)
             : this(cacheName)
         {
             Owner = owner;
@@ -280,7 +322,7 @@ namespace Nistec.Caching.Data
 
             this._ClientId = cache._ClientId;
             this._TableWatcherName = cache._TableWatcherName;
-            this._CacheSynchronize = cache._CacheSynchronize;
+            //this._CacheSynchronize = cache._CacheSynchronize;
         }
 
 
@@ -351,7 +393,7 @@ namespace Nistec.Caching.Data
                 settings = parser.SelectSingleNode(root, "//Settings", true);
                 string connection = parser.GetAttributeValue(settings, "ConnectionString", "value", "");
                 DBProvider provider = DbFactory.GetProvider(parser.GetAttributeValue(settings, "Provider", "value", "SqlServer"));
-                this.CacheName = parser.GetAttributeValue(settings, "DataCacheName", "value", DataCache.DefaultCachename);
+                this.Name = parser.GetAttributeValue(settings, "DataCacheName", "value", DataCache.DefaultCachename);
                 if (string.IsNullOrEmpty(connection))
                     return;
                 bool useWatcher = Types.ToBool(parser.GetAttributeValue(settings, "UseTableWatcher", "value", "false"), false);
@@ -388,7 +430,7 @@ namespace Nistec.Caching.Data
         public void LoadXmlConfig(DataCacheSettings prop)
         {
             //dbCmd = DbFactory.Create(prop.ConnectionString, prop.Provider);
-            this.CacheName = prop.DataCacheName;
+            this.Name = prop.DataCacheName;
             if (prop.UseTableWatcher)
             {
                 CreateTableWatcher(TableWatcherName);
@@ -408,10 +450,18 @@ namespace Nistec.Caching.Data
             {
 
                 DataTable dt = null;
-                using (IDbCmd dbCmd = DbFactory.Create(ConnectionKey))// Db.NewCmd())
+
+                using (var dbCmd = DbContext.Create(ConnectionKey, CacheSettings.EnableConnectionProvider))//Owner.Db.NewCmd())
                 {
-                    dt = dbCmd.ExecuteDataTable(item.EntityName, "SELECT * FROM " + item.ViewName, false);
+                    dt = dbCmd.NewCmd().ExecuteDataTable(item.EntityName, "SELECT * FROM " + item.ViewName, false);
                 }
+
+
+                //using (IDbCmd dbCmd = DbFactory.Create(ConnectionKey))// Db.NewCmd())
+                //{
+                //    dt = dbCmd.ExecuteDataTable(item.EntityName, "SELECT * FROM " + item.ViewName, false);
+                //}
+
                 if (dt == null)
                 {
                     throw new Exception("db cmd error for table: " + item.EntityName);
@@ -474,11 +524,11 @@ namespace Nistec.Caching.Data
                 m_ds.Dispose();
                 Stop();
 
-                if (_CacheSynchronize != null)
-                {
-                    _CacheSynchronize.Dispose();
-                    _CacheSynchronize=null;
-                }
+                //if (_CacheSynchronize != null)
+                //{
+                //    _CacheSynchronize.Dispose();
+                //    _CacheSynchronize=null;
+                //}
                  if (_SyncTables != null)
                 {
                     _SyncTables.Dispose();
@@ -490,7 +540,7 @@ namespace Nistec.Caching.Data
             //this._DbContext = null;
             this._CacheName = null;
             this._TableWatcherName = null;
-            this.CacheName = null;
+            this.Name = null;
             
 
             base.Dispose(disposing);
@@ -580,7 +630,7 @@ namespace Nistec.Caching.Data
                     }
                 }
 
-                _CacheSynchronize.Start(intervalSeconds);
+                //_CacheSynchronize.Start(intervalSeconds);
 
             }
             OnCacheStateChanged(EventArgs.Empty);
@@ -607,7 +657,7 @@ namespace Nistec.Caching.Data
                 {
                     source.SyncSourceChanged -= new SyncDataSourceChangedEventHandler(source_SyncSourceChanged);
                 }
-                _CacheSynchronize.Stop();
+               // _CacheSynchronize.Stop();
             }
 
             OnCacheStateChanged(EventArgs.Empty);
@@ -637,6 +687,45 @@ namespace Nistec.Caching.Data
             return CacheSettingState.Stoped;
         }
 
+        /// <summary>
+        /// Synchronize Table in Data Source
+        /// </summary>
+        public void Refresh(string tableName)
+        {
+            try
+            {
+                using (var dbCmd = DbContext.Create(ConnectionKey, CacheSettings.EnableConnectionProvider))
+                {
+                    DataTable dtSource = dbCmd.NewCmd().ExecuteDataTable(tableName);
+                    if (dtSource != null)
+                    {
+                        if (EnableDataSource)
+                        {
+                            this.Store(dtSource, tableName, tableName);
+                        }
+                    }
+                }
+
+
+                //using (IDbCmd dbCmd = DbFactory.Create(ConnectionKey))//this.Db.NewCmd())
+                //{
+
+                //    DataTable dtSource = dbCmd.ExecuteDataTable(tableName);
+                //    if (dtSource != null)
+                //    {
+                //        if (EnableDataSource)
+                //        {
+                //            this.Store(dtSource, tableName,tableName);
+                //        }
+                //    }
+                //}
+            }
+            catch (Exception ex)
+            {
+                RaiseException(ex.Message, DataCacheError.ErrorSyncCache);
+            }
+        }
+
 
         /// <summary>
         /// Synchronize All Table in Data Source
@@ -645,20 +734,36 @@ namespace Nistec.Caching.Data
         {
             try
             {
-                using (IDbCmd dbCmd = DbFactory.Create(ConnectionKey))//this.Db.NewCmd())
+                using (var dbCmd = DbContext.Create(ConnectionKey, CacheSettings.EnableConnectionProvider))
                 {
                     foreach (DataTable dt in DS.Tables)
                     {
-                        DataTable dtSource = dbCmd.ExecuteDataTable(dt.TableName);
+                        DataTable dtSource = dbCmd.NewCmd().ExecuteDataTable(dt.TableName);
                         if (dtSource != null)
                         {
                             if (EnableDataSource)
                             {
-                                this.Store(dtSource, dt.TableName);
+                                this.Store(dtSource, dt.TableName, dt.TableName);
                             }
                         }
                     }
                 }
+
+
+                //using (IDbCmd dbCmd = DbFactory.Create(ConnectionKey))//this.Db.NewCmd())
+                //{
+                //    foreach (DataTable dt in DS.Tables)
+                //    {
+                //        DataTable dtSource = dbCmd.ExecuteDataTable(dt.TableName);
+                //        if (dtSource != null)
+                //        {
+                //            if (EnableDataSource)
+                //            {
+                //                this.Store(dtSource, dt.TableName,dt.TableName);
+                //            }
+                //        }
+                //    }
+                //}
             }
             catch (Exception ex)
             {
@@ -667,7 +772,6 @@ namespace Nistec.Caching.Data
         }
 
         #endregion
-
        
         #region Keys
 
@@ -714,12 +818,27 @@ namespace Nistec.Caching.Data
 
         #region override
 
+        public bool IsEqual(IDataCache dc)
+        {
+            return (this.Name == dc.Name &&
+                this.ClientId == dc.ClientId &&
+                this.ConnectionKey == dc.ConnectionKey &&
+                this.EnableDataSource == dc.EnableDataSource &&
+                this.EnableSyncEvent == dc.EnableSyncEvent &&
+                this.EnableTrigger == dc.EnableTrigger &&
+                this.Parent == dc.Parent &&
+                //this.SyncOption==dc.SyncOption&&
+                this.SyncTables == dc.SyncTables &&
+                this.TableWatcherName == dc.TableWatcherName);
+
+        }
+
         //bool dataChanged;
 
-         /// <summary>
+        /// <summary>
         /// Get the items (Tables) count of data cache.
         /// </summary>
-         public int Count
+        public int Count
          {
              get
              {
@@ -742,7 +861,7 @@ namespace Nistec.Caching.Data
         private void OnSizeChanged()
         {
             int currentCount = Count;
-            using (Task<long> task = new Task<long>(() => DataCacheUtil.DataSetSize(m_ds)))
+            Task<long> task = new Task<long>(() => DataCacheUtil.DataSetSize(m_ds));
             {
                 task.Start();
                 task.Wait(120000);
@@ -754,6 +873,7 @@ namespace Nistec.Caching.Data
                    
                 }
             }
+            task.TryDispose();
         }
 
         /// <summary>
@@ -900,15 +1020,26 @@ namespace Nistec.Caching.Data
         {
      
             int res = 0;
-            using (IDbCmd dbCmd = DbFactory.Create(ConnectionKey))//this.Db.NewCmd())
+            using (var dbCmd = DbContext.Create(ConnectionKey, CacheSettings.EnableConnectionProvider))
             {
                 foreach (DataTable dt in DS.Tables)
                 {
                     DataTable dtChanges = dt.GetChanges();
-                    res += dbCmd.Adapter.UpdateChanges(dt);
+                    res += dbCmd.NewCmd().Adapter.UpdateChanges(dt);
                     dt.AcceptChanges();
                 }
             }
+
+
+            //using (IDbCmd dbCmd = DbFactory.Create(ConnectionKey))//this.Db.NewCmd())
+            //{
+            //    foreach (DataTable dt in DS.Tables)
+            //    {
+            //        DataTable dtChanges = dt.GetChanges();
+            //        res += dbCmd.Adapter.UpdateChanges(dt);
+            //        dt.AcceptChanges();
+            //    }
+            //}
             return res;
         }
 
@@ -929,10 +1060,15 @@ namespace Nistec.Caching.Data
                 return 0;
 
             int res = 0;
-            using (IDbCmd dbCmd = DbFactory.Create(ConnectionKey))//this.Db.NewCmd())
+            using (var dbCmd = DbContext.Create(ConnectionKey, CacheSettings.EnableConnectionProvider))
             {
-                res = dbCmd.Adapter.UpdateChanges(dt);
+                res = dbCmd.NewCmd().Adapter.UpdateChanges(dt);
             }
+
+            //using (IDbCmd dbCmd = DbFactory.Create(ConnectionKey))//this.Db.NewCmd())
+            //{
+            //    res = dbCmd.Adapter.UpdateChanges(dt);
+            //}
             dt.AcceptChanges();
             return res;
         }
@@ -1017,7 +1153,7 @@ namespace Nistec.Caching.Data
         /// <summary>
         /// Get or set Cache Name  
         /// </summary>
-        public string CacheName
+        public string Name
         {
             get { return _CacheName; }
             set
@@ -1144,40 +1280,42 @@ namespace Nistec.Caching.Data
         /// </summary>
         /// <param name="tableName"></param>
         /// <returns></returns>
-        public DataCacheItem GetItemProperties(string tableName)
+        public CacheItemProperties GetItemProperties(string tableName)
         {
             DataTable dt = DataSource.Tables[tableName];
             if (dt == null)
                 return null;
+            var dtprop=new TableProperties() { RecordCount = Count, Size = Size, ColumnCount = dt.Columns.Count };
             if (this._SyncTables.Contains(tableName))
             {
-                return new DataCacheItem(dt.Copy(), this._SyncTables.Get(tableName));
+                return new CacheItemProperties(dtprop, this._SyncTables.Get(tableName));
             }
             else
             {
-                return new DataCacheItem(dt.Copy(), tableName);
+                return new CacheItemProperties(dtprop, tableName);
             }
         }
         /// <summary>
         /// Get cache properties.
         /// </summary>
         /// <returns></returns>
-        public DataCacheItem[] GetCacheProperties()
+        public CacheItemProperties[] GetCacheProperties()
         {
-            List<DataCacheItem> items = new List<DataCacheItem>();
+            List<CacheItemProperties> items = new List<CacheItemProperties>();
             for (int i = 0; i < DataSource.Tables.Count; i++)
             {
                 DataTable dt = DataSource.Tables[i];
                 if (dt == null)
                     continue;
                 string tableName = dt.TableName;
+                var dtprop = new TableProperties() { RecordCount = Count, Size = Size, ColumnCount = dt.Columns.Count };
                 if (this._SyncTables.Contains(tableName))
                 {
-                    items.Add(new DataCacheItem(dt.Copy(), this._SyncTables.Get(tableName)));
+                    items.Add(new CacheItemProperties(dtprop, this._SyncTables.Get(tableName)));
                 }
                 else
                 {
-                    items.Add(new DataCacheItem(dt.Copy(), tableName));
+                    items.Add(new CacheItemProperties(dtprop, tableName));
                 }
             }
             return items.ToArray();
@@ -1269,7 +1407,7 @@ namespace Nistec.Caching.Data
             try
             {
                 if (tables == null)
-                    return false; ;
+                    return false;
                 
                 if (tables.Length != tablesName.Length)
                 {
@@ -1463,8 +1601,9 @@ namespace Nistec.Caching.Data
         /// Store data table to storage
         /// </summary>
         /// <param name="dt">data table to add into the storage</param>
+        /// <param name="mappingName">maooing name in database</param>
         /// <param name="tableName">table name</param>
-        public void Store(DataTable dt, string tableName)
+        public void Store(DataTable dt,string mappingName, string tableName)
         {
             try
             {
@@ -1821,6 +1960,7 @@ namespace Nistec.Caching.Data
         /// </summary>
         /// <param name="tableName">table name</param>
         /// <returns>DataView</returns>
+        [Serialization.NoSerialize]
         public DataView this[string tableName]
         {
             get
@@ -1837,6 +1977,7 @@ namespace Nistec.Caching.Data
         /// </summary>
         /// <param name="index">table index</param>
         /// <returns>DataView</returns>
+        [Serialization.NoSerialize]
         public DataView this[int index]
         {
             get

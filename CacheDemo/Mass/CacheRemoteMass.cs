@@ -72,15 +72,15 @@ namespace Nistec.Caching.Demo.Mass
         static void CacheRemoteAddTest()
         {
             
-            CacheApi.Get(Protocol).AddItem("ABEntity", new CacheEntityDemo() { ID = 1234, Name = "nissim" }, 30);
+            CacheApi.Get(Protocol).Add("ABEntity", new CacheEntityDemo() { ID = 1234, Name = "nissim" }, 30);
             PrintCache();
-            CacheApi.Get(Protocol).AddItem("CDEntity", new CacheEntityDemo() { ID = 2345, Name = "neomi" }, 30);
+            CacheApi.Get(Protocol).Add("CDEntity", new CacheEntityDemo() { ID = 2345, Name = "neomi" }, 30);
             PrintCache();
-            CacheApi.Get(Protocol).AddItem("EFEntity", new CacheEntityDemo() { ID = 3456, Name = "liron" }, 30);
+            CacheApi.Get(Protocol).Add("EFEntity", new CacheEntityDemo() { ID = 3456, Name = "liron" }, 30);
             PrintCache();
-            CacheApi.Get(Protocol).AddItem("shaniEntity", new CacheEntityDemo() { ID = 4567, Name = "shani" }, 30);
+            CacheApi.Get(Protocol).Add("shaniEntity", new CacheEntityDemo() { ID = 4567, Name = "shani" }, 30);
             PrintCache();
-            CacheApi.Get(Protocol).AddItem("karinEntity", new CacheEntityDemo() { ID = 5678, Name = "karin" }, 30);
+            CacheApi.Get(Protocol).Add("karinEntity", new CacheEntityDemo() { ID = 5678, Name = "karin" }, 30);
             PrintCache();
             
         }
@@ -100,15 +100,15 @@ namespace Nistec.Caching.Demo.Mass
         {
             var watch = Stopwatch.StartNew();
 
-            var entity = CacheApi.Get(Protocol).GetValue<CacheEntityDemo>("ABEntity");
+            var entity = CacheApi.Get(Protocol).Get<CacheEntityDemo>("ABEntity");
             Console.WriteLine(entity == null ? "Not found" : entity.Name);
-            entity = CacheApi.Get(Protocol).GetValue<CacheEntityDemo>("CDEntity");
+            entity = CacheApi.Get(Protocol).Get<CacheEntityDemo>("CDEntity");
             Console.WriteLine(entity == null ? "Not found" : entity.Name);
-            entity = CacheApi.Get(Protocol).GetValue<CacheEntityDemo>("EFEntity");
+            entity = CacheApi.Get(Protocol).Get<CacheEntityDemo>("EFEntity");
             Console.WriteLine(entity == null ? "Not found" : entity.Name);
-            entity = CacheApi.Get(Protocol).GetValue<CacheEntityDemo>("shaniEntity");
+            entity = CacheApi.Get(Protocol).Get<CacheEntityDemo>("shaniEntity");
             Console.WriteLine(entity == null ? "Not found" : entity.Name);
-            entity = CacheApi.Get(Protocol).GetValue<CacheEntityDemo>("karinEntity");
+            entity = CacheApi.Get(Protocol).Get<CacheEntityDemo>("karinEntity");
             Console.WriteLine(entity == null ? "Not found" : entity.Name);
 
             watch.Stop();
@@ -121,15 +121,15 @@ namespace Nistec.Caching.Demo.Mass
         {
             var watch = Stopwatch.StartNew();
 
-            var entity = CacheApi.Get(Protocol).GetValue<CacheEntityDemo>("nissimEntity1");
+            var entity = CacheApi.Get(Protocol).Get<CacheEntityDemo>("nissimEntity1");
             Console.WriteLine(entity == null ? "Not found" : entity.Name);
-            entity = CacheApi.Get(Protocol).GetValue<CacheEntityDemo>("neomiEntity1");
+            entity = CacheApi.Get(Protocol).Get<CacheEntityDemo>("neomiEntity1");
             Console.WriteLine(entity == null ? "Not found" : entity.Name);
-            entity = CacheApi.Get(Protocol).GetValue<CacheEntityDemo>("lironEntity1");
+            entity = CacheApi.Get(Protocol).Get<CacheEntityDemo>("lironEntity1");
             Console.WriteLine(entity == null ? "Not found" : entity.Name);
-            entity = CacheApi.Get(Protocol).GetValue<CacheEntityDemo>("shaniEntity1");
+            entity = CacheApi.Get(Protocol).Get<CacheEntityDemo>("shaniEntity1");
             Console.WriteLine(entity == null ? "Not found" : entity.Name);
-            entity = CacheApi.Get(Protocol).GetValue<CacheEntityDemo>("karinEntity1");
+            entity = CacheApi.Get(Protocol).Get<CacheEntityDemo>("karinEntity1");
             Console.WriteLine(entity == null ? "Not found" : entity.Name);
 
             watch.Stop();
@@ -140,15 +140,15 @@ namespace Nistec.Caching.Demo.Mass
 
         public static void CacheRemoteLocalTest()
         {
-            AgentManager.Cache.ExecRemote(new CacheMessage(CacheCmd.AddItem, "ABEntity", new CacheEntityDemo() { ID = 1234, Name = "nissim" }, 30));
-            AgentManager.Cache.ExecRemote(new CacheMessage(CacheCmd.AddItem, "CDEntity", new CacheEntityDemo() { ID = 2345, Name = "neomi" }, 30));
-            AgentManager.Cache.ExecRemote(new CacheMessage(CacheCmd.AddItem, "EFEntity", new CacheEntityDemo() { ID = 3456, Name = "liron" }, 30));
+            AgentManager.Cache.ExecRemote(new CacheMessage(CacheCmd.Add, "ABEntity", new CacheEntityDemo() { ID = 1234, Name = "nissim" }, 30));
+            AgentManager.Cache.ExecRemote(new CacheMessage(CacheCmd.Add, "CDEntity", new CacheEntityDemo() { ID = 2345, Name = "neomi" }, 30));
+            AgentManager.Cache.ExecRemote(new CacheMessage(CacheCmd.Add, "EFEntity", new CacheEntityDemo() { ID = 3456, Name = "liron" }, 30));
 
-           NetStream b = AgentManager.Cache.ExecRemote(new CacheMessage() { Command = CacheCmd.GetValue, Key = "ABEntity" });
-           var entity = new BinarySerializer().Deserialize<CacheEntityDemo>(b);
+           TransStream b = AgentManager.Cache.ExecRemote(new CacheMessage() { Command = CacheCmd.Get, Id = "ABEntity" });
+           var entity = new BinarySerializer().Deserialize<CacheEntityDemo>(b.GetStream());
 
-            b = AgentManager.Cache.ExecRemote(new CacheMessage() { Command = CacheCmd.GetValue, Key = "nissimEntity1" });
-            entity = new BinarySerializer().Deserialize<CacheEntityDemo>(b);
+            b = AgentManager.Cache.ExecRemote(new CacheMessage() { Command = CacheCmd.Get, Id = "nissimEntity1" });
+            entity = new BinarySerializer().Deserialize<CacheEntityDemo>(b.GetStream());
 
         }
     }

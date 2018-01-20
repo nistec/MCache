@@ -39,62 +39,12 @@ namespace Nistec.Caching.Server
     /// Represent <see cref="MCache"/> as server agent.
     /// </summary>
     [Serializable]
-    public class CacheAgent : MCache, ICachePerformance
+    public class CacheAgent : MCache
     {
 
-        #region ICachePerformance
-
-        CachePerformanceCounter m_Perform;
-        /// <summary>
-        /// Get <see cref="CachePerformanceCounter"/> Performance Counter.
-        /// </summary>
-        public CachePerformanceCounter PerformanceCounter
-        {
-            get { return m_Perform; }
-        }
-
-        /// <summary>
-        ///  Sets the memory size as an atomic operation.
-        /// </summary>
-        /// <param name="memorySize"></param>
-        void ICachePerformance.MemorySizeExchange(ref long memorySize)
-        {
-            this.LogAction(CacheAction.MemorySizeExchange, CacheActionState.None, "Memory Size Exchange:" + CacheName);
-            long size = 0;
-            ICollection<CacheEntry> items = m_cacheList.Values;
-            foreach (var entry in items)
-            {
-                size += entry.Size;
-            }
-
-            Interlocked.Exchange(ref memorySize, size);
-
-        }
-
-        /// <summary>
-        /// Get the max size defined by user for current item.
-        /// </summary>
-        long ICachePerformance.GetMaxSize()
-        {
-            return MaxSize;
-        }
-        bool ICachePerformance.IsRemote
-        {
-            get { return base.IsRemote; }
-        }
-        int ICachePerformance.IntervalSeconds
-        {
-            get { return base.IntervalSeconds; }
-        }
-        bool ICachePerformance.Initialized
-        {
-            get { return base.Initialized; }
-        }
-
-        #endregion
 
         #region size exchange
-
+        /*
         /// <summary>
         /// Validate if the new size is not exceeds the CacheMaxSize property.
         /// </summary>
@@ -136,7 +86,7 @@ namespace Nistec.Caching.Server
             }
 
         }
-
+        */
         #endregion
 
         #region ctor
@@ -148,8 +98,8 @@ namespace Nistec.Caching.Server
         public CacheAgent(CacheProperties prop)
             : base(prop)
         {
-            m_Perform = new CachePerformanceCounter(this, CacheAgentType.Cache, this.CacheName);
-
+            //m_Perform = new CachePerformanceCounter(this, CacheAgentType.Cache, this.CacheName);
+            CacheLogger.Logger.LogAction(CacheAction.General, CacheActionState.Debug, "CacheAgent Initilaized!");
         }
 
         /// <summary>
@@ -178,51 +128,54 @@ namespace Nistec.Caching.Server
         /// </summary>
         /// <param name="message"></param>
         /// <returns></returns>
-        public NetStream ExecRemote(CacheMessage message)
+        public TransStream ExecRemote(MessageStream message)
         {
             CacheState state = CacheState.Ok;
             DateTime requestTime = DateTime.Now;
             try
             {
-                switch (message.Command)
+                switch (message.Command.ToLower())
                 {
                     case CacheCmd.Reply:
-                        return CacheEntry.GetAckStream(CacheState.Ok,CacheCmd.Reply,message.Key);
-                    case CacheCmd.AddItem:
-                        return message.AsyncAckTask(() => AddItemWithAck(message), message.Command);
-                    case CacheCmd.GetValue:
-                        return message.AsyncAckTask(() => GetValueStream(message.Key), message.Command);
-                    case CacheCmd.FetchValue:
-                        return message.AsyncAckTask(() => FetchValueStream(message.Key), message.Command);
-                    case CacheCmd.GetItem:
-                        return message.AsyncAckTask(() => GetItemStream(message.Key), message.Command);
-                    case CacheCmd.FetchItem:
-                        return message.AsyncAckTask(() => FetchItemStream(message.Key), message.Command);
-                    case CacheCmd.ViewItem:
-                        return message.AsyncAckTask(() => ViewItemStream(message.Key), message.Command);
-                    case CacheCmd.RemoveItem:
-                        return message.AsyncAckTask(() => RemoveItem(message), message.Command);
-                    case CacheCmd.RemoveItemAsync:
-                        message.AsyncTask(() => RemoveItemAsync(message.Key));
-                        break;
-                    case CacheCmd.CopyItem:
+                        return TransStream.Write("Reply: " + message.Id, TransType.Object);
+                    case CacheCmd.Add:
+                        return AsyncTransState(() => Add(message),requestTime, CacheState.AddItemFailed);
+                    case CacheCmd.Set:
+                        return AsyncTransState(() => Set(message), requestTime, CacheState.SetItemFailed);
+                    case CacheCmd.GetRecord:
+                        return AsyncTransObject(() => GetRecord(message), message.Command, requestTime, CacheState.Ok, CacheState.NotFound, message.TransformType.ToTransType());
+                    case CacheCmd.Get:
+                        return AsyncTransStream(() => GetValueStream(message), message.Command, requestTime, CacheState.Ok, CacheState.NotFound, message.TransformType.ToTransType());
+                    case CacheCmd.Fetch:
+                        return AsyncTransStream(() => FetchValueStream(message), message.Command, requestTime, CacheState.Ok, CacheState.NotFound, message.TransformType.ToTransType());
+                    case CacheCmd.GetEntry:
+                        return AsyncTransObject(() => GetItem(message.Id), message.Command, requestTime, CacheState.Ok, CacheState.NotFound, message.TransformType.ToTransType());
+                    case CacheCmd.FetchEntry:
+                        return AsyncTransObject(() => FetchItem(message.Id), message.Command, requestTime, CacheState.Ok, CacheState.NotFound, message.TransformType.ToTransType());
+                    case CacheCmd.ViewEntry:
+                        return AsyncTransObject(() => ViewItem(message.Id), message.Command, requestTime, CacheState.Ok, CacheState.NotFound, message.TransformType.ToTransType());
+                    case CacheCmd.Remove:
+                        return AsyncTransState(() => Remove(message.Id), requestTime, CacheState.ItemRemoved, CacheState.RemoveItemFailed);
+                    case CacheCmd.RemoveAsync:
+                        return AsyncTransState(() => RemoveAsync(message.Id), requestTime, CacheState.ItemRemoved, CacheState.RemoveItemFailed);
+                    case CacheCmd.CopyTo:
                         {
                             var args = message.GetArgs();
-                            return message.AsyncAckTask(() => CopyItemInternal(args.Get<string>(KnowsArgs.Source), args.Get<string>(KnowsArgs.Destination), message.Expiration), message.Command);
+                            return AsyncTransState(() => CopyTo(args.Get<string>(KnowsArgs.Source), args.Get<string>(KnowsArgs.Destination), message.Expiration), requestTime, CacheState.SetItemFailed);
                         }
-                    case CacheCmd.CutItem:
+                    case CacheCmd.CutTo:
                         {
                             var args = message.GetArgs();
-                            return message.AsyncAckTask(() => CutItemInternal(args.Get<string>(KnowsArgs.Source), args.Get<string>(KnowsArgs.Destination), message.Expiration), message.Command);
+                            return AsyncTransState(() => CutTo(args.Get<string>(KnowsArgs.Source), args.Get<string>(KnowsArgs.Destination), message.Expiration), requestTime, CacheState.SetItemFailed);
                         }
                     case CacheCmd.KeepAliveItem:
-                        message.AsyncTask(() => KeepAliveItem(message.Key));
-                        break;
-                    case CacheCmd.RemoveCacheSessionItems:
-                        return message.AsyncAckTask(() => RemoveCacheSessionItemsAsync(message), message.Command);
+                        {
+                            return AsyncTransState(() => KeepAliveItem(message.Id),requestTime, CacheState.Ok, CacheState.UnexpectedError);
+                        }
+                    case CacheCmd.RemoveItemsBySession:
+                        return AsyncTransState(() => RemoveCacheSessionItemsAsync(message.Label), requestTime, CacheState.RemoveItemFailed);
                     case CacheCmd.LoadData:
-                        return message.AsyncAckTask(() => LoadData(message), message.Command);
-
+                        return AsyncTransObject(() => LoadData(message), message.Command, requestTime, CacheState.Ok, CacheState.UnexpectedError);
                 }
 
             }
@@ -246,20 +199,125 @@ namespace Nistec.Caching.Server
                 state = CacheState.UnexpectedError;
                 LogAction(CacheAction.CacheException, CacheActionState.Error, "CacheAgent.ExecRemote error: " + ex.Message);
             }
-            finally
-            {
-                if (CacheSettings.EnablePerformanceCounter)
-                {
-                    if (CacheSettings.EnableAsyncTask)
-                        AgentManager.PerformanceTasker.Add(new Nistec.Threading.TaskItem(() => PerformanceCounter.AddResponse(requestTime, state, true), CacheDefaults.DefaultTaskTimeout));
-                    else
-                        Task.Factory.StartNew(() => PerformanceCounter.AddResponse(requestTime, state, true));
-                }
+            //finally
+            //{
+            //    if (CacheSettings.EnablePerformanceCounter)
+            //    {
+            //        PerformanceCounter.AddResponseAsync(requestTime, state, true);
 
-            }
+            //        //if (CacheSettings.EnableAsyncTask)
+            //        //    AgentManager.PerformanceTasker.Add(new Nistec.Threading.TaskItem(() => PerformanceCounter.AddResponse(requestTime, state, true), CacheDefaults.DefaultTaskTimeout));
+            //        //else
+            //        //    Task.Factory.StartNew(() => PerformanceCounter.AddResponse(requestTime, state, true));
+            //    }
 
-            return CacheEntry.GetAckStream(state, message.Command);
+            //}
+
+            //return new TransStream(message.Command + ": " + state.ToString(), CacheUtil.ToTransType(state));
+
+            SendState(requestTime, state);
+            return TransStream.Write(message.Command + ": " + state.ToString(), CacheUtil.ToTransType(state));
+
         }
+
+        #region Async Task
+
+        public void SendState(DateTime requestTime, CacheState state)
+        {
+            if (CacheSettings.EnablePerformanceCounter)
+            {
+                PerformanceCounter.AddResponseAsync(requestTime, state, true);
+            }
+        }
+
+        public TransStream AsyncTransStream(Func<NetStream> action, string command, DateTime requestTime, CacheState successState, CacheState failedState = CacheState.NotFound, TransType transType = TransType.Object)//TransformType transform = TransformType.Message)
+        {
+            Task<NetStream> task = Task.Factory.StartNew<NetStream>(action);
+            {
+                task.Wait();
+                if (task.IsCompleted)
+                {
+                    if (task.Result != null)
+                    {
+                        SendState(requestTime, successState);
+                        return TransStream.Write(task.Result, transType);
+                    }
+                }
+            }
+            task.TryDispose();
+            SendState(requestTime, failedState);
+            return TransStream.Write(command + ": " + failedState.ToString(), TransType.Error);
+        }
+        public TransStream AsyncTransObject(Func<object> action, string command, DateTime requestTime, CacheState successState, CacheState failedState = CacheState.NotFound, TransType transType = TransType.Object)//TransformType transform = TransformType.Message)
+        {
+            Task<object> task = Task.Factory.StartNew<object>(action);
+            {
+                task.Wait();
+                if (task.IsCompleted)
+                {
+                    if (task.Result != null)
+                    {
+                        SendState(requestTime, successState);
+                        return TransStream.Write(task.Result, transType);// TransStream.ToTransType(transform));
+                    }
+                }
+            }
+            task.TryDispose();
+            SendState(requestTime, failedState);
+            return TransStream.Write(command + ": " + failedState.ToString(), TransType.Error);
+        }
+
+        public TransStream AsyncTransState(Func<CacheState> action, DateTime requestTime, CacheState failedState = CacheState.NotFound)
+        {
+            Task<CacheState> task = Task.Factory.StartNew<CacheState>(action);
+            {
+                task.Wait();
+                if (task.IsCompleted)
+                {
+                    SendState(requestTime, task.Result);
+                    return TransStream.Write((int)task.Result, TransType.State);
+                }
+            }
+            task.TryDispose();
+            SendState(requestTime, failedState);
+            return TransStream.Write((int)failedState, TransType.State);
+        }
+
+
+        public TransStream AsyncTransState(Func<bool> action, DateTime requestTime, CacheState successState, CacheState failedState)
+        {
+            Task<bool> task = Task.Factory.StartNew<bool>(action);
+            {
+                task.Wait();
+                if (task.IsCompleted)
+                {
+                    CacheState state = task.Result ? successState : failedState;
+                    SendState(requestTime, state);
+                    return TransStream.Write((int)state, TransType.State);
+                }
+            }
+            task.TryDispose();
+            SendState(requestTime, failedState);
+            return TransStream.Write((int)failedState, TransType.State);
+        }
+
+        public TransStream AsyncTransState(Action action, DateTime requestTime, CacheState successState, CacheState failedState = CacheState.UnKnown)
+        {
+            Task task = Task.Factory.StartNew(action);
+            {
+                task.Wait();
+                if (task.IsCompleted)
+                {
+                    SendState(requestTime, successState);
+                    return TransStream.Write((int)successState, TransType.State);
+                }
+            }
+            task.TryDispose();
+            SendState(requestTime, failedState);
+            return TransStream.Write((int)failedState, TransType.State);
+        }
+
+        #endregion
 
     }
 }

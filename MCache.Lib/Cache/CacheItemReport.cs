@@ -18,6 +18,7 @@
 // 10/01/2006  Nissim   Created the code
 //===============================================================================================================
 //licHeader|
+using Nistec.Caching.Data;
 using Nistec.Caching.Sync;
 using Nistec.Serialization;
 using System;
@@ -42,18 +43,35 @@ namespace Nistec.Caching
 
         }
         /// <summary>
-        /// Intilaize a new instance of <see cref="CacheItemReport"/> for <see cref="ISyncItemStream"/> item.
+        /// Intilaize a new instance of <see cref="CacheItemReport"/> for <see cref="ISyncTableStream"/> item.
         /// </summary>
         /// <param name="item"></param>
-        public CacheItemReport(ISyncItemStream item)
+        public CacheItemReport(ISyncTableStream item)
         {
             if (item == null)
                 return;
-            Name = item.Info.ItemName;
+            Name = item.EntityName;//.Info.Prefix;
             Count = item.Count;
             Size = item.Size;
+            Modified = item.Modified;
             Data = item.GetItemsReport();
         }
+
+        /// <summary>
+        /// Intilaize a new instance of <see cref="CacheItemReport"/> for <see cref="DbTable"/> item.
+        /// </summary>
+        /// <param name="item"></param>
+        public CacheItemReport(DbTable item)
+        {
+            if (item == null)
+                return;
+            Name = item.Name;
+            Count = item.Count;
+            Size = item.Size;
+            Modified = item.Modified;
+            Data = item.GetItemsReport();
+        }
+
         /// <summary>
         /// Get the entity item name.
         /// </summary>
@@ -67,6 +85,10 @@ namespace Nistec.Caching
         /// </summary>
         public long Size { get; internal set; }
         /// <summary>
+        /// Get the Modified time of entity item.
+        /// </summary>
+        public DateTime Modified { get; internal set; }
+        /// <summary>
         /// Get the data report of current entity item.
         /// </summary>
         public DataTable Data { get; internal set; }
@@ -75,7 +97,7 @@ namespace Nistec.Caching
         /// </summary>
         public string Caption
         {
-            get { return string.Format("Name: {0}, Count: {1}, Size: {2} Kb", Name, Count, Size/1024); }
+            get { return string.Format("Name: {0}, Count: {1}, Size: {2} Kb, Modified: {3}", Name, Count, Size/1024, Modified); }
         }
 
         #region  IEntityFormatter
@@ -93,6 +115,7 @@ namespace Nistec.Caching
             streamer.WriteString(Name);
             streamer.WriteValue(Count);
             streamer.WriteValue(Size);
+            streamer.WriteValue(Modified);
             streamer.WriteValue(Data);
             streamer.Flush();
         }
@@ -110,6 +133,7 @@ namespace Nistec.Caching
             Name = streamer.ReadString();
             Count = streamer.ReadValue<int>();
             Size = streamer.ReadValue<long>();
+            Modified = streamer.ReadValue<DateTime>();
             Data = (DataTable)streamer.ReadValue();
         }
         #endregion

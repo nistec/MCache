@@ -197,6 +197,45 @@ namespace Nistec.Caching
 
     #endregion
 
+    #region SyncTimerItemEventHandler
+    /// <summary>
+    /// SyncTimeCompletedEventHandler
+    /// </summary>
+    /// <param name="sender"></param>
+    /// <param name="e"></param>
+    public delegate void SyncTimerItemEventHandler(object sender, SyncTimerItemEventArgs e);
+
+    /// <summary>
+    /// CacheEventArgs
+    /// </summary>
+    public class SyncTimerItemEventArgs : EventArgs
+    {
+        Dictionary<string, TimerItem> items;
+
+        /// <summary>
+        /// SyncTimeCompletedEventArgs
+        /// </summary>
+        /// <param name="items"></param>
+        public SyncTimerItemEventArgs(Dictionary<string, TimerItem> items)
+        {
+            this.items = items;
+        }
+
+        #region Properties Implementation
+        /// <summary>
+        /// Items
+        /// </summary>
+        public Dictionary<string, TimerItem> Items
+        {
+            get { return this.items; }
+        }
+
+        #endregion
+
+    }
+
+    #endregion
+
     #region SyncEntityTimeCompleted
     /// <summary>
     /// SyncTimeCompletedEventHandler

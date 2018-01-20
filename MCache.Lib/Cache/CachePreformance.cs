@@ -32,6 +32,7 @@ using System.IO;
 using Nistec.Caching.Config;
 using Nistec.Caching.Server;
 using Nistec.Runtime;
+using System.Diagnostics;
 
 namespace Nistec.Caching
 {
@@ -223,6 +224,15 @@ namespace Nistec.Caching
                 m_StateCounter.Clear();
             }
         }
+
+        internal void ResetCounter()
+        {
+            ClearStateCounter();
+            InitCounter();
+            RefreshSize();
+            CacheLogger.Logger.LogAction(CacheAction.MemorySizeExchange, CacheActionState.Info, "CachePerformanceCounter was reset all counters.");
+        }
+
         internal IDictionary<CacheState, int> StateCounter()
         {
             return m_StateCounter;
@@ -253,7 +263,15 @@ namespace Nistec.Caching
             LastRequestTime = DateTime.Now;
         }
 
-        internal void AddResponse(DateTime requestTime, CacheState state, bool addRequest)
+        internal void AddResponseAsync(DateTime requestTime, CacheState state, bool addRequest)
+        {
+            if (CacheSettings.EnableAsyncTask)
+                AgentManager.PerformanceTasker.Add(new Nistec.Threading.TaskItem(() => AddResponse(requestTime, state, addRequest), CacheDefaults.DefaultTaskTimeout));
+            else
+                Task.Factory.StartNew(() => AddResponse(requestTime, state, addRequest));
+        }
+
+        void AddResponse(DateTime requestTime, CacheState state, bool addRequest)
         {
             DateTime responseTime = DateTime.Now;
             if (addRequest)
@@ -261,68 +279,77 @@ namespace Nistec.Caching
             AddResponse(responseTime.Subtract(requestTime).TotalSeconds, state);
         }
 
-        internal void AddResponse(double responseTime, CacheState state)
+        void AddResponse(double responseTime, CacheState state)
         {
-            DateTime now = DateTime.Now;
-            long responseCountPerHour = ResponseCountPerHour;
-
-            if (now.Month != m_LastMonthSycle.Month)
+            try
             {
-                m_LastMonthSycle = now;
-                Interlocked.Exchange(ref _ResponseCountPerMonth, 0);
-            }
+                DateTime now = DateTime.Now;
+                long responseCountPerHour = ResponseCountPerHour;
 
-            if (now.Day != m_LastDaySycle.Day)
+                if (now.Month != m_LastMonthSycle.Month)
+                {
+                    m_LastMonthSycle = now;
+                    Interlocked.Exchange(ref _ResponseCountPerMonth, 0);
+                }
+
+                if (now.Day != m_LastDaySycle.Day)
+                {
+                    m_LastDaySycle = now;
+                    Interlocked.Exchange(ref _ResponseCountPerDay, 0);
+                }
+
+                if (now.Hour != m_LastHourSycle.Hour)
+                {
+                    Interlocked.Exchange(ref _ResponseCountPerHour, 0);
+                    Interlocked.Exchange(ref m_ResponseTimeSum, 0);
+                    m_LastHourSycle = now;
+                }
+
+                LastResponseTime = now;
+                m_ResponseTimeSum += responseTime;
+                if (responseCountPerHour > 0)
+                {
+                    _AvgResponseTime = (float)(m_ResponseTimeSum / responseCountPerHour);
+                }
+                Interlocked.Increment(ref _ResponseCountPerHour);
+                Interlocked.Increment(ref _ResponseCountPerDay);
+                Interlocked.Increment(ref _ResponseCountPerMonth);
+                Interlocked.Increment(ref m_HitMinuteCounter);
+                AddStateCounter(state);
+                //int avg = AvgHitPerMinute;
+
+                if (now.Subtract(m_LastResponseSycle).TotalSeconds > 1)
+                {
+
+
+                    int totalMinute = (int)(now - m_LastHourSycle).TotalMinutes;
+                    if (totalMinute <= 0)
+                        totalMinute = 1;
+
+                    AvgHitPerMinute = (int)(ResponseCountPerHour / totalMinute);
+
+
+                    MaxHitPerMinute = Math.Max(Math.Max(m_HitMinuteCounter, AvgHitPerMinute), MaxHitPerMinute);
+                    if (now.Subtract(m_LastMinuteSycle).TotalMinutes > 1)
+                    {
+                        Interlocked.Exchange(ref m_HitMinuteCounter, 0);
+                        m_LastMinuteSycle = now;
+                    }
+
+
+                    m_LastResponseSycle = DateTime.Now;
+                }
+            }
+            catch(OverflowException oex)
             {
-                m_LastDaySycle = now;
-                Interlocked.Exchange(ref _ResponseCountPerDay, 0);
+                ResetCounter();
+                CacheLogger.Logger.LogAction(CacheAction.MemorySizeExchange, CacheActionState.Error, "CachePerformanceCounter.AddResponse OverflowException: " + oex.Message);
             }
-
-            if (now.Hour != m_LastHourSycle.Hour)
+            catch (Exception ex)
             {
-                Interlocked.Exchange(ref _ResponseCountPerHour, 0);
-                Interlocked.Exchange(ref m_ResponseTimeSum, 0);
-                m_LastHourSycle = now;
+                CacheLogger.Logger.LogAction(CacheAction.MemorySizeExchange, CacheActionState.Error, "CachePerformanceCounter.AddResponse error: " + ex.Message);
             }
-
-            LastResponseTime = now;
-            m_ResponseTimeSum += responseTime;
-            if (responseCountPerHour > 0)
-            {
-                _AvgResponseTime =  (float)(m_ResponseTimeSum / responseCountPerHour);
-            }
-            Interlocked.Increment(ref _ResponseCountPerHour);
-            Interlocked.Increment(ref _ResponseCountPerDay);
-            Interlocked.Increment(ref _ResponseCountPerMonth);
-            Interlocked.Increment(ref m_HitMinuteCounter);
-            AddStateCounter(state);
-            //int avg = AvgHitPerMinute;
-
-            if (now.Subtract(m_LastResponseSycle).TotalSeconds > 1)
-            {
-                
-
-                 int totalMinute =(int) (now - m_LastHourSycle).TotalMinutes;
-                 if (totalMinute <= 0)
-                     totalMinute = 1;
-
-                 AvgHitPerMinute = (int)(ResponseCountPerHour / totalMinute);
-
- 
-                 MaxHitPerMinute = Math.Max( Math.Max(m_HitMinuteCounter,AvgHitPerMinute), MaxHitPerMinute);
-                 if (now.Subtract(m_LastMinuteSycle).TotalMinutes > 1)
-                 {
-                     Interlocked.Exchange(ref m_HitMinuteCounter, 0);
-                     m_LastMinuteSycle = now;
-                 }
-                                
-
-                m_LastResponseSycle = DateTime.Now;
-            }
-           
         }
-
-       
 
         internal void AddSync(DateTime startTime)
         {
@@ -359,7 +386,8 @@ namespace Nistec.Caching
             dt.Columns.Add("MaxSize", typeof(long));
             dt.Columns.Add("MemorySize", typeof(long));
             dt.Columns.Add("FreeSize", typeof(long));
-            dt.Columns.Add("MemoryUsage", typeof(long));
+            //dt.Columns.Add("MemoryUsage", typeof(long));
+            dt.Columns.Add("UnitSize", typeof(string));
             dt.Columns.Add("WaitingTaskCount", typeof(int));
             return dt.Clone();
         }
@@ -372,7 +400,11 @@ namespace Nistec.Caching
         {
             Dictionary<string, object> prop = new Dictionary<string, object>();
 
-            
+            string unitSize = "Byte";
+            int factor = 1;
+            CachePerformanceCounter.GetFactorSize(MemoSize, out factor, out unitSize);
+            UnitSize = unitSize;
+
             prop["AgentType"] = AgentType;
             prop["CounterName"] = CounterName;
             prop["ItemsCount"] = ItemsCount;
@@ -389,10 +421,11 @@ namespace Nistec.Caching
             prop["AvgHitPerMinute"] = AvgHitPerMinute;
             prop["AvgResponseTime"] = AvgResponseTime;
             prop["AvgSyncTime"] = AvgSyncTime;
-            prop["MaxSize"] = MaxSize;
-            prop["MemorySize"] = MemoSize;
-            prop["FreeSize"] = FreeSize;
-            prop["MemoryUsage"] = GetMemoryUsage();
+            prop["MaxSize"] = MaxSize/factor;
+            prop["MemorySize"] = MemoSize / factor;
+            prop["FreeSize"] = FreeSize / factor;
+            //prop["MemoryUsage"] = GetMemoryUsage(factor);
+            prop["UnitSize"] = UnitSize;
             prop["WaitingTaskCount"] = WaitingTaskCount();
            
 
@@ -419,6 +452,11 @@ namespace Nistec.Caching
         /// <returns></returns>
         public object[] GetItemArray()
         {
+            string unitSize = "Byte";
+            int factor = 1;
+            CachePerformanceCounter.GetFactorSize(MemoSize, out factor, out unitSize);
+            UnitSize = unitSize;
+
             return new object[]{
             AgentType.ToString(),
             CounterName,
@@ -436,22 +474,30 @@ namespace Nistec.Caching
             AvgHitPerMinute,
             AvgResponseTime,
             AvgSyncTime,
-            MaxSize,
-            MemoSize,
-            FreeSize,
-            GetMemoryUsage(),
+            MaxSize/ factor,
+            MemoSize/ factor,
+            FreeSize/ factor,
+            //GetMemoryUsage(factor),
+            UnitSize,
             WaitingTaskCount()};
 
         }
 
         #region Size properties
 
+        const Int64 MAX_LONG = Int64.MaxValue-1000000;
+        const int MAX_INT = int.MaxValue-100000;
+
         /// <summary>
         /// Get the max size defined by user for current item.
         /// </summary>
         public long MaxSize { get; internal set; }
 
+        //long _ByteSize;
+
         long _MemoSize;
+        
+
         /// <summary>
         /// Get memory size for current item in bytes as an atomic operation.
         /// </summary>
@@ -466,6 +512,11 @@ namespace Nistec.Caching
         {
             get { return MaxSize > 0 ? MaxSize - MemoSize : long.MaxValue; }
         }
+
+        /// <summary>
+        /// Get the unit size (byte|Kb|Mb)
+        /// </summary>
+        public string UnitSize { get; set; }
 
         //Count = cache.Count;
         //   FreeSize = cache.FreeSize;// / 1024;
@@ -483,7 +534,7 @@ namespace Nistec.Caching
         /// <summary>
         /// Refresh memory size.
         /// </summary>
-        internal void RefreshSizeInternal()
+        void RefreshSizeInternal()
         {
             Owner.MemorySizeExchange(ref _MemoSize);
             //Interlocked.Exchange(ref _MemoSize, size);
@@ -495,26 +546,66 @@ namespace Nistec.Caching
             return freeSize > newSize ? CacheState.Ok : CacheState.CacheIsFull;
         }
 
-          internal CacheState ExchangeSizeAndCount(long oldSize, long newSize, int oldCount, int newCount, bool exchange, bool enableSizeHandler)
+        internal void ExchangeSizeAndCountAsync(long oldSize, long newSize, int oldCount, int newCount, bool exchange, bool enableSizeHandler)
         {
-            long originalMemo = 0;
+            Task.Factory.StartNew(() => ExchangeSizeAndCount(oldSize, newSize, oldCount, newCount, exchange, enableSizeHandler));
+        }
 
-            if (enableSizeHandler)
-                ValidateSize((newSize - oldSize) / 1024);
-
-
-            if (exchange)
+        CacheState ExchangeSizeAndCount(long oldSize, long newSize, int oldCount, int newCount, bool exchange, bool enableSizeHandler)
+        {
+            try
             {
-                Interlocked.Exchange(ref _ItemsCount, newCount);
-                originalMemo = Interlocked.Exchange(ref _MemoSize, newSize / 1024);
+                //long originalMemo = 0;
+
+                if (enableSizeHandler)
+                    ValidateSize(newSize - oldSize);// 1024);
+
+                if (((MAX_LONG - _ItemsCount) <= newCount) || ((MAX_LONG - _MemoSize) <= newSize))
+                {
+                    ResetCounter();
+                }
+
+                if (exchange)
+                {
+                    Interlocked.Exchange(ref _ItemsCount, newCount);
+                    Interlocked.Exchange(ref _MemoSize, newSize);
+
+                    //originalMemo = Interlocked.Exchange(ref _ByteSize, newSize);
+                    //Interlocked.Exchange(ref _MemoSize, _ByteSize);/// 1024);
+                }
+                else
+                {
+                    Interlocked.Add(ref _ItemsCount, newCount - oldCount);
+                    Interlocked.Add(ref _MemoSize, (newSize - oldSize));
+
+                    //originalMemo = Interlocked.Add(ref _ByteSize, (newSize - oldSize));
+                    //Interlocked.Exchange(ref _MemoSize, _ByteSize);// / 1024);
+                }
+
+                return CacheState.Ok;
             }
-            else
+            catch (CacheException cex)
             {
-                Interlocked.Add(ref _ItemsCount, newCount - oldCount);
-                originalMemo = Interlocked.Add(ref _MemoSize, (newSize - oldSize) / 1024);
+                CacheLogger.Logger.LogAction(CacheAction.MemorySizeExchange, CacheActionState.Error, "ExchangeSizeAndCount CacheException: " + cex.Message);
+                if (cex.State == CacheState.CacheIsFull)
+                {
+                    //throw cex;
+                }
+                return CacheState.CacheIsFull;
             }
 
-            return CacheState.Ok;
+            catch (OverflowException oex)
+            {
+                ResetCounter();
+                CacheLogger.Logger.LogAction(CacheAction.MemorySizeExchange, CacheActionState.Error, "ExchangeSizeAndCount OverflowException: " + oex.Message);
+                //throw new CacheException(CacheState.CacheIsFull, this.CounterName + " memory is full!!!");
+                return CacheState.CacheIsFull;
+            }
+            catch (Exception ex)
+            {
+                CacheLogger.Logger.LogAction(CacheAction.MemorySizeExchange, CacheActionState.Error, "ExchangeSizeAndCount error: " + ex.Message);
+                return CacheState.UnexpectedError;
+            }
         }
 
         void ValidateSize(long sizeToAdd)
@@ -532,6 +623,7 @@ namespace Nistec.Caching
                 //double check
                 if (sizeToAdd > 0 && (sizeToAdd + memo) > MaxSize && MaxSize > 0)
                 {
+                    //IsFull = true;
                     throw new CacheException(CacheState.CacheIsFull, this.CounterName + " memory is full!!!");
                 }
             }
@@ -553,23 +645,60 @@ namespace Nistec.Caching
            return EnumExtension.Parse<CacheAgentType>(name, CacheAgentType.Cache);
         }
 
+        public static void GetReadableSize(long MemoSize, out long size, out string unitSize)
+        {
+            int factor = 1;
+            unitSize = "Byte";
+
+            if (MemoSize > 1024)
+            {
+                factor = 1024;
+                unitSize = "Kb";
+            }
+            if (MemoSize > 1048576)
+            {
+                factor = 1048576;
+                unitSize = "Mb";
+            }
+            size = MemoSize / factor;
+        }
+
+        public static void GetFactorSize(long MemoSize, out int factor, out string unitSize)
+        {
+            unitSize = "Byte";
+            factor = 1;
+            if (MemoSize > 1024)
+            {
+                factor = 1024;
+                unitSize = "Kb";
+            }
+            if (MemoSize > 1048576)
+            {
+                factor = 1048576;
+                unitSize = "Mb";
+            }
+        }
+
+
         /// <summary>
         /// Get memory usage in bytes.
         /// </summary>
         /// <returns></returns>
-        public static long GetMemoryUsage()
+        public static long GetMemoryUsage(int factor=1)
         {
-            string execName = SysNet.GetExecutingAssemblyName();
-            System.Diagnostics.Process[] process = System.Diagnostics.Process.GetProcessesByName(execName);
-            long usage = 0;
-            if (process == null)
-                return 0;
-            for (int i = 0; i < process.Length; i++)
-            {
-                usage += (int)((int)process[i].WorkingSet64);
-            }
+            //string execName = SysNet.GetExecutingAssemblyName();
+            //System.Diagnostics.Process[] process = System.Diagnostics.Process.GetProcessesByName(execName);
+            //long usage = 0;
+            //if (process == null)
+            //    return 0;
+            //for (int i = 0; i < process.Length; i++)
+            //{
+            //    usage += (int)((int)process[i].WorkingSet64);
+            //}
 
-            return usage;
+            var process= Process.GetCurrentProcess();
+            long usage = process.WorkingSet64;
+            return usage/ factor;
         }
         #endregion
     }
@@ -603,7 +732,7 @@ namespace Nistec.Caching
         /// Get Cache prformance report
         /// </summary>
         /// <returns></returns>
-        [EntitySerialize]
+        [Serialize]
         public DataTable StateReport
         {
             get { return dtReport; }
@@ -615,7 +744,8 @@ namespace Nistec.Caching
             DataTable dt = new DataTable("CacheStateCounter");
             dt.Columns.Add("AgentType", typeof(string));
             dt.Columns.Add("StateName", typeof(string));
-            dt.Columns.Add("ItemsCount", typeof(long));
+            dt.Columns.Add("StateCount", typeof(long));
+            //dt.Columns.Add("LastState", typeof(DateTime));
             return dt.Clone();
         }
 
@@ -688,8 +818,8 @@ namespace Nistec.Caching
             ResponseCountPerHour = 0;
             ResponseCountPerDay = 0;
             ResponseCountPerMonth = 0;
-            FreeSize = 0;
-            MaxSize = 0;
+            MaxSize = CacheSettings.MaxSize;
+            FreeSize = MaxSize;
             MemoSize = 0;
             SyncCount = 0;
             AvgResponseTime = 0;
@@ -713,9 +843,10 @@ namespace Nistec.Caching
             ResponseCountPerHour += agent.ResponseCountPerHour;
             ResponseCountPerDay += agent.ResponseCountPerDay;
             ResponseCountPerMonth += agent.ResponseCountPerMonth;
-            FreeSize += agent.FreeSize;
-            MaxSize += agent.MaxSize;
+            //FreeSize += agent.FreeSize;
+            //MaxSize += agent.MaxSize;
             MemoSize += agent.MemoSize;
+            //FreeSize = MaxSize - MemoSize;
             SyncCount += agent.SyncCount;
 
             if (AvgResponseTime > 0 && agent.AvgResponseTime > 0)
@@ -757,7 +888,13 @@ namespace Nistec.Caching
 
         internal void AddTotalReport()
         {
- 
+
+            string unitSize = "Byte";
+            int factor = 1;
+            CachePerformanceCounter.GetFactorSize(MemoSize, out factor, out unitSize);
+            UnitSize = unitSize;
+
+
             dtReport.Rows.Add(new object[]{
             "Report",
             "Summarize",
@@ -775,10 +912,11 @@ namespace Nistec.Caching
             AvgHitPerMinute,
             AvgResponseTime,
             AvgSyncTime,
-            MaxSize,
-            MemoSize,
-            FreeSize,
-            CachePerformanceCounter.GetMemoryUsage(),
+            MaxSize/factor,
+            MemoSize/factor,
+            FreeSize/factor,
+            //CachePerformanceCounter.GetMemoryUsage(factor),
+            UnitSize,
             WaitingTaskCount});
         }
 
@@ -861,12 +999,17 @@ namespace Nistec.Caching
             internal set; 
         }
         /// <summary>
+        /// Get the unit size (byte|Kb|Mb)
+        /// </summary>
+        public string UnitSize { get; set; }
+
+        /// <summary>
         /// Get the free size memory in bytes for current item as an atomic operation.
         /// </summary>
         public long FreeSize
         {
-            get;
-            internal set; 
+            get { return MaxSize - MemoSize; }
+            internal set { }
         }
 
         /// <summary>
@@ -892,7 +1035,7 @@ namespace Nistec.Caching
         /// Get Cache prformance report
         /// </summary>
         /// <returns></returns>
-        [EntitySerialize]
+        [Serialize]
         public DataTable PerformanceReport
         {
             get { return dtReport; }
@@ -926,7 +1069,8 @@ namespace Nistec.Caching
             streamer.WriteValue(AvgHitPerMinute);
             streamer.WriteValue(MaxSize);
             streamer.WriteValue(MemoSize);
-            streamer.WriteValue(FreeSize);
+            //streamer.WriteValue(FreeSize);
+            streamer.WriteString(UnitSize);
             streamer.WriteValue(AvgResponseTime);
             streamer.WriteValue(AvgSyncTime);
             streamer.WriteValue(dtReport);
@@ -959,7 +1103,8 @@ namespace Nistec.Caching
             AvgHitPerMinute = streamer.ReadValue<int>();
             MaxSize = streamer.ReadValue<long>();
             MemoSize = streamer.ReadValue<long>();
-            FreeSize = streamer.ReadValue<long>();
+            //FreeSize = streamer.ReadValue<long>();
+            UnitSize = streamer.ReadString();
             AvgResponseTime = streamer.ReadValue<long>();
             AvgSyncTime = streamer.ReadValue<long>();
             dtReport = streamer.ReadValue<DataTable>();

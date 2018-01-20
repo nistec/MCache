@@ -31,16 +31,17 @@ using Nistec.Caching.Server;
 using System.Threading.Tasks;
 using System.Collections.Concurrent;
 using System.Threading;
+using Nistec.Channels;
 
 namespace Nistec.Caching.Sync.Remote
 {
     /// <summary>
-    /// Represents a Sync items <see cref="ISyncItemStream"/> resource for enterprise sync cache.
+    /// Represents a Sync items <see cref="ISyncTableStream"/> resource for enterprise sync cache.
     /// It is usefull to ensure that each item will stay synchronized
     /// in run time without any interruption in process.
     /// When problem was occured during the sync process , the item, will stay as the original item.    
     /// </summary>
-    public class SyncBagStream :IDisposable 
+    public class SyncBagStream :IDisposable ,ISyncBag //, ISyncEx, ISyncEx<ISyncTableStream>
     {
         SyncCacheStream Owner;
 
@@ -50,11 +51,13 @@ namespace Nistec.Caching.Sync.Remote
         /// <param name="copy"></param>
         public void Reload(SyncBagStream copy)
         {
+            //~Console.WriteLine("Debuger-SyncBagStream.Reload start");
+
             foreach (var entry in copy.m_data)
             {
                 if (entry.Value == null || entry.Value.Count == 0)
                 {
-                    CacheLogger.Logger.LogAction(CacheAction.SyncItem, CacheActionState.Debug, string.Format("Reload.SyncBagStream copy {0} is null or empty, item not changed", entry.Key));
+                    CacheLogger.Logger.LogAction(CacheAction.SyncCache, CacheActionState.Debug, string.Format("Reload.SyncBagStream copy {0} is null or empty, item not changed", entry.Key));
                 }
                 else
                 {
@@ -63,17 +66,18 @@ namespace Nistec.Caching.Sync.Remote
                     Thread.Sleep(10);
                 }
             }
+            copy.DisposeCopy();
         }
 
-        ConcurrentDictionary<string, ISyncItemStream> m_data;
+        ConcurrentDictionary<string, ISyncTableStream> m_data;
        
         /// <summary>
         /// Get all items from sync bag.
         /// </summary>
         /// <returns></returns>
-        public ISyncItemStream[] GetItems()
+        public ISyncTableStream[] GetTables()
         {
-            ISyncItemStream[] items = null;
+            ISyncTableStream[] items = null;
             items = m_data.Values.ToArray();
             return items;
         }
@@ -95,12 +99,11 @@ namespace Nistec.Caching.Sync.Remote
         /// <summary>
         /// Initilaize new instance of <see cref="SyncBagStream"/>
         /// </summary>
-        /// <param name="cacheName"></param>
         /// <param name="owner"></param>
-        public SyncBagStream(string cacheName, SyncCacheStream owner)
+        public SyncBagStream(SyncCacheStream owner)
         {
             Owner = owner;
-            m_data = new ConcurrentDictionary<string, ISyncItemStream>();
+            m_data = new ConcurrentDictionary<string, ISyncTableStream>();
         }
 
       
@@ -136,27 +139,35 @@ namespace Nistec.Caching.Sync.Remote
                 }
             }
         }
-
+        internal void DisposeCopy()
+        {
+            if (m_data != null)
+            {
+                m_data.Clear();
+                m_data = null;
+            }
+            GC.SuppressFinalize(this);
+        }
         #endregion
 
 
         #region Get/Set Items
 
         ///// <summary>
-        ///// Get spesific value from cache using <see cref="CacheKeyInfo"/>, if item not found return null
+        ///// Get spesific value from cache using <see cref="ComplexKey"/>, if item not found return null
         ///// </summary>
         ///// <typeparam name="T"></typeparam>
         ///// <param name="info"></param>
         ///// <returns></returns>
-        //public SyncItemStream<T> GetItem<T>(CacheKeyInfo info) where T : IEntityItem
+        //public SyncTableStream<T> GetItem<T>(ComplexKey info) where T : IEntityItem
         //{
-        //    ISyncItemStream item = null;
-           
+        //    ISyncTableStream item = null;
+
         //        if (m_data.TryGetValue(info.ItemName, out item))
         //        {
-        //            return (SyncItemStream<T>)item;
+        //            return (SyncTableStream<T>)item;
         //        }
-            
+
         //    return null;
         //}
 
@@ -166,16 +177,37 @@ namespace Nistec.Caching.Sync.Remote
         /// <typeparam name="T"></typeparam>
         /// <param name="name"></param>
         /// <returns></returns>
-        public SyncItemStream<T> GetItem<T>(string name) where T : IEntityItem
+        public SyncTableStream<T> GetTable<T>(string name) where T : IEntityItem
         {
-            ISyncItemStream item = null;
+            ISyncTableStream item = null;
             
                 if (m_data.TryGetValue(name, out item))
                 {
-                    return (SyncItemStream<T>)item;
+                    return (SyncTableStream<T>)item;
                 }
             
             return null;
+        }
+
+        internal bool TryGetTable<T>(string name, out SyncTableStream<T> item) where T : IEntityItem
+        {
+            ISyncTableStream itm;
+            if (m_data.TryGetValue(name, out itm))
+            {
+                item = (SyncTableStream<T>)itm;
+                return true;
+            }
+            item = null;
+            return false;
+        }
+        internal bool TryGetTable(string name, out ISyncTableStream item)
+        {
+            if (m_data.TryGetValue(name, out item))
+            {
+                return true;
+            }
+            item = null;
+            return false;
         }
 
         ///// <summary>
@@ -185,32 +217,32 @@ namespace Nistec.Caching.Sync.Remote
         ///// <param name="name"></param>
         ///// <param name="keys"></param>
         ///// <returns></returns>
-        //public SyncItemStream<T> GetItem<T>(string name, string[] keys) where T : IEntityItem
+        //public SyncTableStream<T> GetItem<T>(string name, string[] keys) where T : IEntityItem
         //{
-        //    return GetItem<T>(CacheKeyInfo.Get(name, keys));
+        //    return GetItem<T>(ComplexKey.Get(name, keys));
         //}
         ///// <summary>
-        ///// Get spesific value from cache using <see cref="CacheKeyInfo"/>, if item not found return null
+        ///// Get spesific value from cache using <see cref="ComplexKey"/>, if item not found return null
         ///// </summary>
         ///// <param name="info"></param>
         ///// <returns></returns>
-        //public ISyncItemStream GetItem(CacheKeyInfo info)
+        //public ISyncTableStream GetItem(ComplexKey info)
         //{
-        //    ISyncItemStream item = null;
-            
+        //    ISyncTableStream item = null;
+
         //        m_data.TryGetValue(info.ItemName, out item);
-           
+
         //    return item;
         //}
 
         /// <summary>
-        /// Get spesific value from cache using <see cref="CacheKeyInfo"/>, if item not found return null
+        /// Get spesific value from cache using <see cref="ComplexKey"/>, if item not found return null
         /// </summary>
         /// <param name="name"></param>
         /// <returns></returns>
-        public ISyncItemStream GetItem(string name)
+        public ISyncTableStream GetTable(string name)
         {
-            ISyncItemStream item = null;
+            ISyncTableStream item = null;
           
                 m_data.TryGetValue(name, out item);
            
@@ -223,22 +255,22 @@ namespace Nistec.Caching.Sync.Remote
         #region Get/Set Values
 
         /// <summary>
-        /// Get spesific value from cache using <see cref="CacheKeyInfo"/>, if item not found return null
+        /// Get copy of spesific value from cache using <see cref="ComplexKey"/>, if item not found return null
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="info"></param>
         /// <returns></returns>
-        public EntityStream Get<T>(CacheKeyInfo info) where T : IEntityItem
+        public EntityStream Get<T>(ComplexKey info) where T : IEntityItem
         {
-            SyncItemStream<T> syncitem = GetItem<T>(info.ItemName);
+            SyncTableStream<T> syncitem = GetTable<T>(info.Prefix);
             if (syncitem != null)
             {
-                return syncitem.GetEntityStream(info.CacheKey);
+                return syncitem.GetEntityStream(info.Suffix);//.CacheKey);
             }
             return null;
         }
         /// <summary>
-        /// Get spesific value from cache using item name and keys, if item not found return null
+        /// Get copy of spesific value from cache using item name and keys, if item not found return null
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="name"></param>
@@ -246,7 +278,7 @@ namespace Nistec.Caching.Sync.Remote
         /// <returns></returns>
         public EntityStream Get<T>(string name, string[] keys) where T : IEntityItem
         {
-            return Get<T>(CacheKeyInfo.Get(name, keys));
+            return Get<T>(ComplexArgs.Get(name, keys));
         }
 
         #endregion
@@ -257,9 +289,9 @@ namespace Nistec.Caching.Sync.Remote
         /// Set item into sync bag stream.
         /// </summary>
         /// <param name="item"></param>
-        public void Set(ISyncItemStream item)
+        public CacheState Set(ISyncTableStream item)
         {
-            Set(item.Info.ItemName, item);
+            return Set(item.EntityName,item);// (item.Info.Prefix, item);
         }
 
         /// <summary>
@@ -268,19 +300,53 @@ namespace Nistec.Caching.Sync.Remote
         /// <typeparam name="T"></typeparam>
         /// <param name="key"></param>
         /// <param name="value"></param>
-        public void Set<T>(string key, SyncItemStream<T> value)
+        public CacheState Set<T>(string key, SyncTableStream<T> value)
         {
             if (key == null || value == null)
             {
-                return;
+                return CacheState.ArgumentsError;
             }
 
-            ISyncItemStream item;
+            long newSize = value.Size;
+            long curSize = 0;
+            int curCount = 0;
+            ISyncTableStream item;
+            if (m_data.TryGetValue(key, out item))
+            {
+                curSize = item.Size;
+                curCount = 1;
+                if (m_data.TryUpdate(key, value, item))
+                {
+                    SetSize(curSize, newSize, curCount, 1, false);
+                    return CacheState.ItemChanged;
+                }
+                else
+                {
+                    return CacheState.SetItemFailed;
+                }
+            }
+            else
+            {
+                if (m_data.TryAdd(key, value))
+                {
+                    SetSize(curSize, newSize, curCount, 1, false);
+                    return CacheState.ItemAdded;
+                }
+                else
+                {
+                    return CacheState.AddItemFailed;
+                }
 
-                m_data.TryGetValue(key, out item);
-                m_data[key] = value;
-          
+            }
 
+            //value.Owner = this.Owner;
+            //ISyncTableStream item;
+            //m_data.TryGetValue(key, out item);
+
+            //value.Owner = this;
+
+
+            //m_data[key] = value;
         }
 
         ///// <summary>
@@ -288,18 +354,18 @@ namespace Nistec.Caching.Sync.Remote
         ///// </summary>
         ///// <param name="info"></param>
         ///// <param name="value"></param>
-        //public void Set(CacheKeyInfo info, ISyncItemStream value)
+        //public void Set(ComplexKey info, ISyncTableStream value)
         //{
         //    if (info == null || value == null)
         //    {
         //        return;
         //    }
 
-        //    ISyncItemStream item;
+        //    ISyncTableStream item;
 
         //        m_data.TryGetValue(info.ItemName, out item);
         //        m_data[info.ItemName] = value;
-          
+
         //}
 
         /// <summary>
@@ -307,20 +373,50 @@ namespace Nistec.Caching.Sync.Remote
         /// </summary>
         /// <param name="key"></param>
         /// <param name="value"></param>
-        public void Set(string key, ISyncItemStream value)
+        public CacheState Set(string key, ISyncTableStream value)
         {
             if (key == null || value == null)
             {
-                return;
+                return CacheState.ArgumentsError;
             }
+            //((ISyncTableOwner)value).Owner = this.Owner;
 
-            ISyncItemStream item;
+            //ISyncTableStream item;
+            //m_data.TryGetValue(key, out item);
+            //value.Owner = this;
 
-            
-            m_data.TryGetValue(key, out item);
+            long newSize = value.Size;
+            long curSize = 0;
+            int curCount = 0;
+            ISyncTableStream item;
+            if (m_data.TryGetValue(key, out item))
+            {
+                curSize = item.Size;
+                curCount = 1;
+                if (m_data.TryUpdate(key, value, item))
+                {
+                    SetSize(curSize, newSize, curCount, 1, false);
+                    return CacheState.ItemChanged;
+                }
+                else
+                {
+                    return CacheState.SetItemFailed;
+                }
+            }
+            else
+            {
+                if (m_data.TryAdd(key, value))
+                {
+                    SetSize(curSize, newSize, curCount, 1, false);
+                    return CacheState.ItemAdded;
+                }
+                else
+                {
+                    return CacheState.AddItemFailed;
+                }
 
-            m_data[key] = value;
-           
+            }
+            //m_data[key] = value;
         }
 
         #endregion
@@ -331,10 +427,7 @@ namespace Nistec.Caching.Sync.Remote
         /// </summary>
         public void Clear()
         {
-           
-                m_data.Clear();
-          
-
+            m_data.Clear();
             Owner.SizeRefresh();
         }
         /// <summary>
@@ -368,7 +461,7 @@ namespace Nistec.Caching.Sync.Remote
             Owner.SizeExchage(currentSize, newSize, oldCount,newCount, exchange);
         }
 
-        void SetSize(ISyncItemStream oldItem, ISyncItemStream newItem)
+        void SetSize(ISyncTableStream oldItem, ISyncTableStream newItem)
         {
             long oldSize = 0; 
             long newSize=0;
@@ -383,15 +476,15 @@ namespace Nistec.Caching.Sync.Remote
         }
 
         /// <summary>
-        /// Get if cache contains spesific item by <see cref="CacheKeyInfo"/>
+        /// Get if cache contains spesific item by <see cref="ComplexKey"/>
         /// </summary>
         /// <param name="info"></param>
         /// <returns></returns>
-        public bool Contains(CacheKeyInfo info)
+        public bool Contains(ComplexKey info)
         {
-            ISyncItemStream item = null;
+            ISyncTableStream item = null;
            
-                if (!m_data.TryGetValue(info.ItemName, out item))
+                if (!m_data.TryGetValue(info.Prefix, out item))
                 {
                     return false;
                 }
@@ -407,7 +500,7 @@ namespace Nistec.Caching.Sync.Remote
         /// <returns></returns>
         public bool Contains(string name, string[] keys)
         {
-            return Contains(CacheKeyInfo.Get(name, keys));
+            return Contains(ComplexArgs.Get(name, keys));
         }
 
         #endregion
@@ -427,7 +520,7 @@ namespace Nistec.Caching.Sync.Remote
         /// Remove item from sync bag.
         /// </summary>
         /// <param name="syncName"></param>
-        public bool RemoveItem(string syncName)
+        public bool RemoveTable(string syncName)
         {
             if (string.IsNullOrEmpty(syncName))
             {
@@ -438,7 +531,7 @@ namespace Nistec.Caching.Sync.Remote
                 return false;
             }
 
-            ISyncItemStream item;
+            ISyncTableStream item;
             int currentCount = Count;
           
             if (m_data.TryRemove(syncName, out item))
@@ -452,9 +545,17 @@ namespace Nistec.Caching.Sync.Remote
             return false;
         }
 
+        public bool Exists(string syncName)
+        {
+            if (string.IsNullOrEmpty(syncName))
+            {
+                return false;
+            }
+            return m_data.ContainsKey(syncName);
+        }
 
         /// <summary>
-        /// Refresh <see cref="ISyncItem"/>
+        /// Refresh <see cref="ISyncTable"/>
         /// </summary>
         /// <param name="syncName"></param>
         public void Refresh(string syncName)
@@ -463,20 +564,20 @@ namespace Nistec.Caching.Sync.Remote
             {
                 return;
             }
-            ISyncItemStream syncitem = null;
-           
-                if (!m_data.TryGetValue(syncName, out syncitem))
-                {
-                    return;
-                }
-           
+            ISyncTableStream syncitem = null;
+
+            if (!m_data.TryGetValue(syncName, out syncitem))
+            {
+                return;
+            }
+
 
             if (syncitem != null)
             {
                 syncitem.RefreshAsync(syncName);
             }
         }
-
+  
         /// <summary>
         /// Refrech cache
         /// </summary>

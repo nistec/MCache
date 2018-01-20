@@ -50,7 +50,7 @@ namespace Nistec.Caching.Sync
     /// that uses <see cref="SysFileWatcher"/> which Listens to the file system change notifications and raises events when a
     /// file is changed.
     /// </summary>
-    public abstract class SyncCacheBase : IDisposable
+    public abstract class SyncCacheBase : ISyncronizer, IDisposable
     {
         #region members
 
@@ -60,12 +60,13 @@ namespace Nistec.Caching.Sync
 
 
         internal SyncDbCache _DataCache;
-        internal SysFileWatcher _SyncFileWatcher;
-        internal SyncBox _SyncBox;
 
         internal bool _initialized = false;
-        internal bool _reloadOnChange = false;
-        internal bool _enableSyncFileWatcher = false;
+
+        //internal SysFileWatcher _SyncFileWatcher;
+        //internal bool _reloadOnChange = false;
+        //internal bool _enableSyncFileWatcher = false;
+
         internal static object ThreadLock = new object();
         internal bool IsWebHosted = false;
         int _IntervalSeconds = CacheDefaults.DefaultIntervalSeconds;
@@ -75,7 +76,7 @@ namespace Nistec.Caching.Sync
 
         internal SyncDbCache DataCacheCopy()
         {
-            var db = new SyncDbCache(m_cacheName, true);
+            var db = new SyncDbCache(this.CacheName, true);
             db.FunctionSyncChanged = OnFunctionSyncChanged;
             return db;
         }
@@ -93,12 +94,12 @@ namespace Nistec.Caching.Sync
         {
             _IntervalSeconds = CacheDefaults.GetValidIntervalSeconds(CacheSettings.SyncInterval);
             IsWebHosted = isWebHosted;
-             m_cacheName = cacheName;
-            _DataCache = new SyncDbCache(cacheName);
+            m_cacheName = cacheName;
+            _DataCache = new SyncDbCache(this.CacheName);
             _DataCache.FunctionSyncChanged = OnFunctionSyncChanged;
 
-            _SyncBox = SyncBox.Instance;
-            _SyncBox.SyncAccepted += _SyncBox_SyncAccepted;
+            //_SyncBox = SyncBox.Instance;
+            //_SyncBox.SyncAccepted += _SyncBox_SyncAccepted;
 
             //_Timer = new TimerSyncDispatcher(CacheSettings.SyncInterval,10,true);
             //_Timer.SyncCompleted += _Timer_SyncCompleted;
@@ -107,7 +108,7 @@ namespace Nistec.Caching.Sync
 
         void _SyncBox_SyncAccepted(object sender, SyncEntityTimeCompletedEventArgs e)
         {
-            e.Item.DoAsync();
+            e.Item.DoAsyncTask();
         }
 
 
@@ -120,61 +121,127 @@ namespace Nistec.Caching.Sync
         }
 
 
-        long _Started=0;
+        long _Started = 0;
+        SyncConfig _SyncConfig;
 
         /// <summary>
         /// Start Cache Synchronization.
         /// </summary>
-        public void Start(bool enableSyncFileWatcher=true, bool reloadOnChange = true)
+        public void Start()
         {
-            if (Interlocked.Read(ref _Started)==1)
+            Start(CacheSettings.EnableSyncFileWatcher);//, CacheSettings.ReloadSyncOnChange);
+        }
+
+        /*
+                /// <summary>
+                /// Start Cache Synchronization.
+                /// </summary>
+                public void Start(bool enableSyncFileWatcher, bool reloadOnChange = true)
+                {
+                    if (Interlocked.Read(ref _Started)==1)
+                        return;
+                    Interlocked.Exchange(ref _Started, 1);
+
+                    if (_initialized)
+                    {
+                        return;
+                    }
+                    _DataCache.Start(IntervalSeconds);
+
+                    _enableSyncFileWatcher = enableSyncFileWatcher;
+                    _reloadOnChange = reloadOnChange;
+                    if (enableSyncFileWatcher)
+                    {
+                        _SyncFileWatcher = new SysFileWatcher(CacheSettings.SyncConfigFile,true);
+                        _SyncFileWatcher.FileChanged += new FileSystemEventHandler(_SyncFileWatcher_FileChanged);
+
+                        OnSyncFileChange(new FileSystemEventArgs(WatcherChangeTypes.Created, _SyncFileWatcher.SyncPath, _SyncFileWatcher.Filename));
+                    }
+
+                    _initialized = true;
+                    CacheLogger.Logger.LogAction(CacheAction.General, CacheActionState.Debug, "SyncCache Started!");
+                }
+
+                void _SyncFileWatcher_FileChanged(object sender, FileSystemEventArgs e)
+                {
+                    Task task = Task.Factory.StartNew(() => OnSyncFileChange(e));
+                }
+
+                void OnSyncFileChange(object args)//GenericEventArgs<string> e)
+                {
+                    FileSystemEventArgs e = (FileSystemEventArgs)args;
+
+                    LoadSyncConfigFile(e.FullPath, 3);
+                }
+*/
+
+        /// <summary>
+        /// Start Cache Synchronization.
+        /// </summary>
+        public void Start(bool enableSyncFileWatcher)//, bool reloadOnChange = true)
+        {
+            if (Interlocked.Read(ref _Started) == 1)
                 return;
             Interlocked.Exchange(ref _Started, 1);
-           
+
             if (_initialized)
             {
-               
                 return;
             }
             _DataCache.Start(IntervalSeconds);
+            _SyncConfig = new SyncConfig();
+            _SyncConfig.LoadCompleted += _SyncConfig_LoadCompleted;
+            _SyncConfig.SyncError += _SyncConfig_SyncError;
+            //_SyncConfig.SyncReload += _SyncConfig_SyncReload;
+            _SyncConfig.Start(enableSyncFileWatcher);//, reloadOnChange);
 
-            _enableSyncFileWatcher = enableSyncFileWatcher;
-            _reloadOnChange = reloadOnChange;
-            if (enableSyncFileWatcher)
-            {
-                _SyncFileWatcher = new SysFileWatcher(CacheSettings.SyncConfigFile,true);
-                _SyncFileWatcher.FileChanged += new FileSystemEventHandler(_SyncFileWatcher_FileChanged);
+            //_enableSyncFileWatcher = enableSyncFileWatcher;
+            //_reloadOnChange = reloadOnChange;
+            //if (enableSyncFileWatcher)
+            //{
+            //    _SyncFileWatcher = new SysFileWatcher(CacheSettings.SyncConfigFile, true);
+            //    _SyncFileWatcher.FileChanged += new FileSystemEventHandler(_SyncFileWatcher_FileChanged);
 
-                OnSyncFileChange(new FileSystemEventArgs(WatcherChangeTypes.Created, _SyncFileWatcher.SyncPath, _SyncFileWatcher.Filename));
-            }
-            
+            //    OnSyncFileChange(new FileSystemEventArgs(WatcherChangeTypes.Created, _SyncFileWatcher.SyncPath, _SyncFileWatcher.Filename));
+            //}
+
             _initialized = true;
+            CacheLogger.Logger.LogAction(CacheAction.General, CacheActionState.Debug, "SyncCache Started!");
         }
 
-        void _SyncFileWatcher_FileChanged(object sender, FileSystemEventArgs e)
+        //private void _SyncConfig_SyncReload(object sender, GenericEventArgs<string> e)
+        //{
+        //    OnSyncReload(e);
+        //}
+
+        private void _SyncConfig_SyncError(object sender, GenericEventArgs<string> e)
         {
-            Task task = Task.Factory.StartNew(() => OnSyncFileChange(e));
+            OnError(e.Args);
         }
 
-        void OnSyncFileChange(object args)//GenericEventArgs<string> e)
+        private void _SyncConfig_LoadCompleted(object sender, GenericEventArgs<SyncEntity[]> e)
         {
-            FileSystemEventArgs e = (FileSystemEventArgs)args;
-
-            LoadSyncConfigFile(e.FullPath, 3);
+            DoSyncLoader(e.Args, CacheSettings.EnableAsyncTask);
         }
 
+        protected abstract void DoSyncLoader(SyncEntity[] newSyncEntityItems, bool EnableAsyncTask);
 
         /// <summary>
         /// Stop Cache Synchronization.
         /// </summary>
         public void Stop()
         {
+            if (_SyncConfig != null)
+            {
+                _SyncConfig.Stop();
+            }
             if (_DataCache != null)
             {
                 _DataCache.Stop();
             }
             _initialized = false;
             Interlocked.Exchange(ref _Started, 0);
+            CacheLogger.Logger.LogAction(CacheAction.General, CacheActionState.Debug, "SyncCache Stoped!");
         }
 
         #endregion
@@ -223,13 +290,14 @@ namespace Nistec.Caching.Sync
         /// <param name="sourceName"></param>
         /// <param name="sourceType"></param>
         /// <param name="entityKeys"></param>
+        /// <param name="columns"></param>
         /// <param name="interval"></param>
         /// <param name="syncType"></param>
         /// <param name="enableNoLock"></param>
         /// <param name="commandTimeout"></param>
-        public abstract void AddItem<T>(string connectionKey, string entityName, string mappingName, string[] sourceName, EntitySourceType sourceType, string[] entityKeys, TimeSpan interval, SyncType syncType, bool enableNoLock, int commandTimeout);
+        public abstract CacheState AddItem<T>(string connectionKey, string entityName, string mappingName, string[] sourceName, EntitySourceType sourceType, string[] entityKeys, string columns, TimeSpan interval, SyncType syncType, bool enableNoLock, int commandTimeout);
 
-        internal abstract void AddItem(SyncEntity entity);
+        internal abstract CacheState AddItem(SyncEntity entity);
         /// <summary>
         /// Remove all items from sync cache.
         /// </summary>
@@ -254,7 +322,7 @@ namespace Nistec.Caching.Sync
 
         /*
         /// <summary>
-        /// Get the count of all items in all cref="ISyncItem"/> items in cache.
+        /// Get the count of all items in all cref="ISyncTable"/> items in cache.
         /// </summary>
         /// <returns></returns>
         protected ICollection GetAllSyncValues<T>(ICollection<T> Col)
@@ -262,7 +330,7 @@ namespace Nistec.Caching.Sync
             if (Col == null)
                 return null;
             List<object> list = new List<object>();
-            foreach (ISyncItemBase syncitem in Col)
+            foreach (ISyncTableBase syncitem in Col)
             {
                 foreach (object o in syncitem.Values)
                 {
@@ -273,7 +341,7 @@ namespace Nistec.Caching.Sync
         }
         */
         /// <summary>
-        /// Get the count of all items in all cref="ISyncItem"/> items in cache.
+        /// Get the count of all items in all cref="ISyncTable"/> items in cache.
         /// </summary>
         /// <returns></returns>
         protected int GetAllSyncCount<T>(ICollection<T> Col)
@@ -281,16 +349,17 @@ namespace Nistec.Caching.Sync
             int count = 0;
             if (Col == null)
                 return 0;
-            foreach (ISyncItemBase syncitem in Col)
+            foreach (ISyncTableBase syncitem in Col)
             {
                 count += syncitem.Count;
             }
             return count;
         }
-         
+
         #endregion
 
         #region Load xml config
+/*
         /// <summary>
         /// Load sync cache from config file.
         /// </summary>
@@ -301,7 +370,7 @@ namespace Nistec.Caching.Sync
             LoadSyncConfigFile(file, 3);
         }
 
-        internal void LoadSyncConfigFile(string file,int retrys)
+        internal void LoadSyncConfigFile(string file, int retrys)
         {
 
             int counter = 0;
@@ -313,6 +382,7 @@ namespace Nistec.Caching.Sync
                 if (!reloaded)
                 {
                     CacheLogger.Logger.LogAction(CacheAction.LoadItem, CacheActionState.Failed, "LoadSyncConfigFile retry: " + counter);
+                    Thread.Sleep(100);
                 }
             }
             if (reloaded)
@@ -328,13 +398,13 @@ namespace Nistec.Caching.Sync
         public bool LoadSyncConfigFile(string file)
         {
             if (string.IsNullOrEmpty(file))
-                return true;
+                return false;
             Thread.Sleep(1000);
             XmlDocument doc = new XmlDocument();
             try
             {
                 doc.Load(file);
-               
+
                 LoadSyncConfig(doc);
                 return true;
             }
@@ -379,11 +449,11 @@ namespace Nistec.Caching.Sync
             XmlNode items = doc.SelectSingleNode("//SyncCache");
             if (items == null)
                 return;
-            LoadSyncItems(items, CacheSettings.EnableAsyncTask);
+            LoadSyncTables(items);//, CacheSettings.EnableAsyncTask,true);
         }
 
-        internal abstract void LoadSyncItems(XmlNode node, bool EnableAsyncTask);
-   
+        internal abstract void LoadSyncTables(XmlNode node);//, bool EnableAsyncTask, bool enableLoader);
+*/
         #endregion load xml config
 
         #region Properties
@@ -456,6 +526,7 @@ namespace Nistec.Caching.Sync
 
             OnSyncChanged(new GenericEventArgs<string>(entity));
         }
+        /*
         /// <summary>
         /// Sync Reload Event Handler.
         /// </summary>
@@ -473,6 +544,8 @@ namespace Nistec.Caching.Sync
             CacheLogger.Logger.LogAction(CacheAction.SyncTime, CacheActionState.None, "OnSyncReload :" + e.Args);
 
         }
+        */
+
         /// <summary>
         /// Sync Error Event Handler.
         /// </summary>
@@ -488,10 +561,10 @@ namespace Nistec.Caching.Sync
                 SyncError(this, new GenericEventArgs<string>(e));
         }
 
-       
+
 
         #endregion
-        
+
         #region Add items
 
         internal void AddItem(XmlTable xml, bool copy)
@@ -503,19 +576,20 @@ namespace Nistec.Caching.Sync
             }
         }
 
-        internal void AddItem(string entityType, string connectionKey, string entityName, string mappingName, string strSourceName, int iSourceType, string strEntityKeys, int intervalMinute, int iSyncType, bool enableNoLock, int commandTimeout)
+        internal CacheState AddItem(string entityType, string connectionKey, string entityName, string mappingName, string strSourceName, int iSourceType, string strEntityKeys, string columns, int intervalMinute, int iSyncType, bool enableNoLock, int commandTimeout)
         {
             EntitySourceType sourceType = (EntitySourceType)iSourceType;
             TimeSpan interval = TimeSpan.FromMinutes(intervalMinute);
             SyncType syncType = (SyncType)iSyncType;
             if (syncType != SyncType.Remove)
             {
-                AddItem(entityType, connectionKey, entityName, mappingName, strSourceName, sourceType, strEntityKeys, interval, syncType, enableNoLock, commandTimeout);
+                return AddItem(entityType, connectionKey, entityName, mappingName, strSourceName, sourceType, strEntityKeys, columns, interval, syncType, enableNoLock, commandTimeout);
             }
+            return CacheState.AddItemFailed;
         }
 
 
-        void AddItem(string entityType, string connectionKey, string entityName, string mappingName, string strSourceName, EntitySourceType sourceType, string strEntityKeys, TimeSpan syncTime, SyncType syncType, bool enableNoLock, int commandTimeout)
+        CacheState AddItem(string entityType, string connectionKey, string entityName, string mappingName, string strSourceName, EntitySourceType sourceType, string strEntityKeys, string columns, TimeSpan syncTime, SyncType syncType, bool enableNoLock, int commandTimeout)
         {
 
             if (strSourceName == null)
@@ -529,15 +603,12 @@ namespace Nistec.Caching.Sync
             switch (entityType)
             {
                 case "GenericRecord":
-                    AddItem<GenericRecord>(connectionKey, entityName, mappingName, sourceName, sourceType, entityKeys, syncTime, syncType, enableNoLock, commandTimeout);
-                    break;
+                    return AddItem<GenericRecord>(connectionKey, entityName, mappingName, sourceName, sourceType, entityKeys, columns, syncTime, syncType, enableNoLock, commandTimeout);
                 case "EntityStream":
-                    AddItem<EntityStream>(connectionKey, entityName, mappingName, sourceName, sourceType, entityKeys, syncTime, syncType, enableNoLock, commandTimeout);
-                    break;
+                    return AddItem<EntityStream>(connectionKey, entityName, mappingName, sourceName, sourceType, entityKeys, columns, syncTime, syncType, enableNoLock, commandTimeout);
                 case "GenericEntity":
                 default:
-                    AddItem<GenericEntity>(connectionKey, entityName, mappingName, sourceName, sourceType, entityKeys, syncTime, syncType, enableNoLock, commandTimeout);
-                    break;
+                    return AddItem<GenericEntity>(connectionKey, entityName, mappingName, sourceName, sourceType, entityKeys, columns, syncTime, syncType, enableNoLock, commandTimeout);
             }
         }
 
@@ -551,10 +622,11 @@ namespace Nistec.Caching.Sync
         {
             Stop();
             Clear(true);
-            Start(_enableSyncFileWatcher, _reloadOnChange);
+            //Start(_enableSyncFileWatcher, _reloadOnChange);
+            Start();// CacheSettings.EnableSyncFileWatcher, CacheSettings.ReloadSyncOnChange);
         }
 
         #endregion
-        
+
     }
 }

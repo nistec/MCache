@@ -46,6 +46,31 @@ namespace Nistec.Caching.Sync
     public class SyncDb : IDataCache
     {
 
+        public IDataCache Copy()
+        {
+                        
+            //var syncCopy = this._SyncTables.Copy();
+            //syncCopy.Owner = this;
+
+            return new SyncDb()
+            {
+                //Owner=this.Owner,
+                Name = this.Name,
+                _EnableNoLock = this._EnableNoLock,
+                initilized = this.initilized,
+                _SyncOption = this._SyncOption,
+                SyncState = this.SyncState,
+                _TableWatcherName = this._TableWatcherName,
+                //.._CacheSynchronize = this._CacheSynchronize,//.Copy(),
+                _ClientId = this.ClientId,
+                _EnableTrigger = this._EnableTrigger,
+                _EnableSyncEvent=this._EnableSyncEvent,
+                _state = this._state,
+                _storageName = this._storageName,
+                _SyncTables = this._SyncTables//.Copy()
+            };
+        }
+
         #region memebers
         /// <summary>
         /// Default sync cache name.
@@ -60,13 +85,15 @@ namespace Nistec.Caching.Sync
 
         private string _ClientId;
         private string _TableWatcherName;
-        private CacheSynchronizer _CacheSynchronize;
-
+        //..private CacheSynchronizer _CacheSynchronize;
         private bool _EnableTrigger;
-
+        bool _EnableSyncEvent;
+       // internal ISyncLoader Owner;
         #endregion
 
         #region IDataCache
+
+        public ISyncronizer Parent { get; internal set; }
 
         /// <summary>
         /// Get <see cref="CacheSyncState"/> the sync state.
@@ -137,6 +164,10 @@ namespace Nistec.Caching.Sync
 
         #region Ctor
 
+        private SyncDb()
+        {
+
+        }
 
         //private SyncDb(string connectionKey)
         //{
@@ -157,14 +188,16 @@ namespace Nistec.Caching.Sync
         /// <param name="connectionKey"></param>
         public SyncDb(string connectionKey)
         {
+            //Owner = owner;SyncCacheBase owner,
             SyncState = CacheSyncState.Idle;
             _EnableTrigger = CacheSettings.EnableSyncTypeEventTrigger;
+            _EnableSyncEvent = CacheSettings.EnableSyncTypeEvent;
             _storageName = connectionKey;
             _ClientId = Environment.MachineName + "$" + _storageName;
             _TableWatcherName = DbWatcher.DefaultWatcherName;
             initilized = false;
             _SyncTables = new DataSyncList(this);
-            _CacheSynchronize = new CacheSynchronizer(this);
+            //.._CacheSynchronize = new CacheSynchronizer(this);
             _state = DataCacheState.Closed;
             _SyncOption = SyncOption.Manual;
             //_DbContext = new DbContext(connectionKey);
@@ -174,16 +207,21 @@ namespace Nistec.Caching.Sync
         /// SyncDb Ctor 
         /// </summary>
         /// <param name="connectionKey"></param>
-        public SyncDb(string connectionKey, SyncOption syncOption,bool enableTrigger)
+        /// <param name="syncOption"></param>
+        /// <param name="enableTrigger"></param>
+        /// <param name="enableSyncEvent"></param>
+        public SyncDb( string connectionKey, SyncOption syncOption,bool enableTrigger, bool enableSyncEvent)
         {
+            //Owner = owner;SyncCacheBase owner,
             SyncState = CacheSyncState.Idle;
             _EnableTrigger = enableTrigger;
+            _EnableSyncEvent = enableSyncEvent;
             _storageName = connectionKey;
             _ClientId = Environment.MachineName + "$" + _storageName;
             _TableWatcherName = DbWatcher.DefaultWatcherName;
             initilized = false;
             _SyncTables = new DataSyncList(this);
-            _CacheSynchronize = new CacheSynchronizer(this);
+            //.._CacheSynchronize = new CacheSynchronizer(this);
             _state = DataCacheState.Closed;
             _SyncOption = syncOption;
             //_DbContext = new DbContext(connectionKey);
@@ -235,13 +273,13 @@ namespace Nistec.Caching.Sync
             if (disposing)
             {
                 Stop();
-
-                if (_CacheSynchronize != null)
-                {
-                    _CacheSynchronize.Dispose();
-                    _CacheSynchronize=null;
-                }
-                 if (_SyncTables != null)
+                //..
+                //if (_CacheSynchronize != null)
+                //{
+                //    _CacheSynchronize.Dispose();
+                //    _CacheSynchronize=null;
+                //}
+                if (_SyncTables != null)
                 {
                     _SyncTables.Dispose();
                     _SyncTables=null;
@@ -252,7 +290,7 @@ namespace Nistec.Caching.Sync
             //this._DbContext = null;
             this._storageName = null;
             this._TableWatcherName = null;
-            this.CacheName = null;
+            this.Name = null;
             
         }
 
@@ -265,7 +303,23 @@ namespace Nistec.Caching.Sync
             GC.SuppressFinalize(this);
         }
 
-       
+        public void DisposeCopy()
+        {
+            //..
+            //if (_CacheSynchronize != null)
+            //{
+            //    _CacheSynchronize.DisposeCopy();
+            //    _CacheSynchronize = null;
+            //}
+
+            //if (_SyncTables != null)
+            //{
+            //    _SyncTables.Dispose();
+            //    _SyncTables = null;
+            //}
+            GC.SuppressFinalize(this);
+        }
+
         #endregion
 
         #region internal Setting
@@ -308,16 +362,20 @@ namespace Nistec.Caching.Sync
         public void Start(int intervalSeconds)
         {
             if (initilized)
+            {
+                //..StartSynchronize(intervalSeconds);
                 return;
-
+            }
 
             if (_SyncOption == SyncOption.Auto)
             {
 
-                bool enableTrigger = _EnableTrigger;// CacheSettings.EnableSyncTypeEventTrigger;
+                //bool enableTrigger = _EnableTrigger;// CacheSettings.EnableSyncTypeEventTrigger;
 
-                if (enableTrigger)
+                if (_EnableTrigger)
                     CreateTablesTrigger(true, _TableWatcherName);
+                else if(_EnableSyncEvent)
+                    CreateTableWatcher(_TableWatcherName);
 
                 DataSyncEntity[] items = _SyncTables.GetItems();
                 if (items != null && items.Length > 0)
@@ -330,15 +388,28 @@ namespace Nistec.Caching.Sync
                 }
 
                 //if (enableTrigger)
-                    _CacheSynchronize.Start(intervalSeconds);
+                //..StartSynchronize(intervalSeconds);
                 
             }
             initilized = true;
             OnCacheStateChanged(EventArgs.Empty);
         }
 
-        
 
+       
+
+        internal void RegisterTable(DataSyncEntity entity)
+        {
+            //.._CacheSynchronize.RegisteredTableEvent(entity);
+
+            SyncTables.Set(entity);
+            DataSynchronizer.Global.RegisterSyncTable(entity, this);
+        }
+
+        //internal void StartSynchronize(int intervalSeconds)
+        //{
+        //    //_CacheSynchronize.Start(intervalSeconds);
+        //}
 
         /// <summary>
         /// Stop Cache Synchronization
@@ -357,7 +428,7 @@ namespace Nistec.Caching.Sync
                     //evt-
                     source.SyncSourceChanged -= new SyncDataSourceChangedEventHandler(source_SyncSourceChanged);
                 }
-                _CacheSynchronize.Stop();
+                //.._CacheSynchronize.Stop();
             }
 
             OnCacheStateChanged(EventArgs.Empty);
@@ -388,7 +459,7 @@ namespace Nistec.Caching.Sync
 
         public IDbContext Db()
         {
-            return new DbContext(ConnectionKey);
+            return DbContext.Create(ConnectionKey, CacheSettings.EnableConnectionProvider);
         }
 
         /// <summary>
@@ -414,6 +485,13 @@ namespace Nistec.Caching.Sync
         public bool EnableTrigger
         {
             get { return _EnableTrigger; }
+        }
+        /// <summary>
+        /// Get indicate if allow sync by event. 
+        /// </summary>
+        public bool EnableSyncEvent
+        {
+            get { return _EnableSyncEvent; }
         }
 
         bool _EnableNoLock = false;
@@ -455,7 +533,7 @@ namespace Nistec.Caching.Sync
         /// <summary>
         /// Get or set Cache Name  
         /// </summary>
-        public string CacheName
+        public string Name
         {
             get { return _storageName; }
             set
@@ -484,6 +562,20 @@ namespace Nistec.Caching.Sync
             {
                 return _SyncTables;
             }
+        }
+
+        /// <summary>
+        /// Determines whether a HashSet list contains the specified element.
+        /// </summary>
+        /// <param name="entity"></param>
+        /// <returns></returns>
+        public bool IsExists(SyncEntity entity)
+        {
+            if (SyncTables == null)
+                return false;
+
+            return SyncTables.IsExists(entity);
+
         }
 
         /// <summary>
@@ -516,12 +608,24 @@ namespace Nistec.Caching.Sync
         /// Store data table to storage
         /// </summary>
         /// <param name="dt">data table to add into the storage</param>
+        /// <param name="mappingName">maooing name in database</param>
         /// <param name="tableName">table name</param>
-        public void Store(DataTable dt, string tableName)
+        public void Store(DataTable dt,string mappingName, string tableName)
         {
-
+            //Parent.Store(dt, tableName);
+            Console.WriteLine("SyncDb Store");
         }
-       
+        /// <summary>
+        /// Refresh specific item in sync cache.
+        /// </summary>
+        /// <param name="syncName"></param>
+        public void Refresh(string syncName)
+        {
+            Parent.Refresh(syncName);
+            Console.WriteLine("SyncDb Refresh " + syncName);
+        }
+
+
         /// <summary>
         /// On Cache ThreadSetting State Changed
         /// </summary>
@@ -569,8 +673,24 @@ namespace Nistec.Caching.Sync
         }
 
         #endregion
-        
+
         #region Data cache
+
+        public bool IsEqual(IDataCache dc)
+        {
+            return (this.Name==dc.Name &&
+                this.ClientId==dc.ClientId&&
+                this.ConnectionKey==dc.ConnectionKey&&
+                this.EnableDataSource==dc.EnableDataSource &&
+                this.EnableSyncEvent==dc.EnableSyncEvent &&
+                this.EnableTrigger==dc.EnableTrigger&&
+                this.Parent==dc.Parent&&
+                //this.SyncOption==dc.SyncOption&&
+                this.SyncTables==dc.SyncTables&&
+                this.TableWatcherName==dc.TableWatcherName);
+               
+        }
+
 
         /// <summary>
         /// Add Item to SyncTables

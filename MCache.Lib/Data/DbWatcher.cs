@@ -26,6 +26,7 @@ using System.ComponentModel;
 using Nistec.Data;
 using Nistec.Data.Factory;
 using Nistec.Data.Entities;
+using Nistec.Caching.Config;
 
 namespace Nistec.Caching.Data
 {
@@ -245,10 +246,15 @@ VALUES('{1}','{2}',0)";
         {
             try
             {
-                using (IDbCmd dbCmd = DbFactory.Create(Owner.ConnectionKey))// Owner.Db.NewCmd())
+                using (var dbCmd = DbContext.Create(Owner.ConnectionKey, CacheSettings.EnableConnectionProvider))//db.NewCmd())
                 {
-                    return dbCmd.ExecuteNonQuery(string.Format("UPDATE {0} SET Edited=0 WHERE ClientId='{1}' and TableName='{2}'", Owner.TableWatcherName, Owner.ClientId, tableName));
+                    return dbCmd.NewCmd().ExecuteNonQuery(string.Format("UPDATE {0} SET Edited=0 WHERE ClientId='{1}' and TableName='{2}'", Owner.TableWatcherName, Owner.ClientId, tableName));
                 }
+
+                //using (IDbCmd dbCmd = DbFactory.Create(Owner.ConnectionKey))// Owner.Db.NewCmd())
+                //{
+                //    return dbCmd.ExecuteNonQuery(string.Format("UPDATE {0} SET Edited=0 WHERE ClientId='{1}' and TableName='{2}'", Owner.TableWatcherName, Owner.ClientId, tableName));
+                //}
             }
             catch (Exception ex)
             {
@@ -261,10 +267,16 @@ VALUES('{1}','{2}',0)";
         {
             try
             {
-                using (IDbCmd dbCmd = DbFactory.Create(Owner.ConnectionKey))//Owner.Db.NewCmd())
+                using (var dbCmd = DbContext.Create(Owner.ConnectionKey, CacheSettings.EnableConnectionProvider))//db.NewCmd())
                 {
-                    return dbCmd.ExecuteNonQuery(string.Format(SqlAddTableToWatcherTable, Owner.TableWatcherName, Owner.ClientId, tableName));
+                    return dbCmd.NewCmd().ExecuteNonQuery(string.Format(SqlAddTableToWatcherTable, Owner.TableWatcherName, Owner.ClientId, tableName));
                 }
+
+
+                //using (IDbCmd dbCmd = DbFactory.Create(Owner.ConnectionKey))//Owner.Db.NewCmd())
+                //{
+                //    return dbCmd.ExecuteNonQuery(string.Format(SqlAddTableToWatcherTable, Owner.TableWatcherName, Owner.ClientId, tableName));
+                //}
             }
             catch (Exception ex)
             {
@@ -291,14 +303,34 @@ VALUES('{1}','{2}',0)";
         {
             try
             {
-                using (IDbCmd dbCmd = DbFactory.Create(Owner.ConnectionKey))//Owner.Db.NewCmd())
+
+                //using (var dbCmd = new DbContext(Owner.ConnectionKey, CacheSettings.EnableConnectionProvider))//Owner.Db.NewCmd())
+                //{
+                //    string Database = dbCmd.Connection.Database;
+                //    int res = dbCmd.ExecuteCommandScalar<int>(string.Format(SqlIsTriggerExists, Database, tableName),null,0);
+                //    if (res == 1)
+                //        return 0;
+                //    return dbCmd.ExecuteCommandNonQuery(string.Format(SqlCreateTigger, Database, tableName, Owner.TableWatcherName),null);
+
+                //}
+
+                using (var dbCmd = DbContext.Create(Owner.ConnectionKey, CacheSettings.EnableConnectionProvider))//Owner.Db.NewCmd())
                 {
                     string Database = dbCmd.Connection.Database;
-                    int res = dbCmd.ExecuteScalar<int>(string.Format(SqlIsTriggerExists, Database, tableName));
+                    int res = dbCmd.NewCmd().ExecuteScalar<int>(string.Format(SqlIsTriggerExists, Database, tableName));
                     if (res == 1)
                         return 0;
-                    return dbCmd.ExecuteNonQuery(string.Format(SqlCreateTigger, Database, tableName, Owner.TableWatcherName));
+                    return dbCmd.NewCmd().ExecuteNonQuery(string.Format(SqlCreateTigger, Database, tableName, Owner.TableWatcherName));
                 }
+
+                //using (IDbCmd dbCmd = DbFactory.Create(Owner.ConnectionKey))//Owner.Db.NewCmd())
+                //{
+                //    string Database = dbCmd.Connection.Database;
+                //    int res = dbCmd.ExecuteScalar<int>(string.Format(SqlIsTriggerExists, Database, tableName));
+                //    if (res == 1)
+                //        return 0;
+                //    return dbCmd.ExecuteNonQuery(string.Format(SqlCreateTigger, Database, tableName, Owner.TableWatcherName));
+                //}
             }
             catch (Exception ex)
             {
@@ -312,11 +344,18 @@ VALUES('{1}','{2}',0)";
         {
             try
             {
-                DataTable dt = null; ;
-                using (IDbCmd dbCmd = DbFactory.Create(Owner.ConnectionKey))//Owner.Db.NewCmd())
+                DataTable dt = null;
+
+                using (var dbCmd = DbContext.Create(Owner.ConnectionKey, CacheSettings.EnableConnectionProvider))//Owner.Db.NewCmd())
                 {
-                    dt = dbCmd.ExecuteDataTable(Owner.TableWatcherName, string.Format("SELECT * FROM {0} WHERE ClientId='{1}'", Owner.TableWatcherName, Owner.ClientId), false);
+                    dt = dbCmd.NewCmd().ExecuteDataTable(Owner.TableWatcherName, string.Format("SELECT * FROM {0} WHERE ClientId='{1}'", Owner.TableWatcherName, Owner.ClientId), false);
                 }
+
+                //using (IDbCmd dbCmd = DbFactory.Create(Owner.ConnectionKey))//Owner.Db.NewCmd())
+                //{
+                //    dt = dbCmd.ExecuteDataTable(Owner.TableWatcherName, string.Format("SELECT * FROM {0} WHERE ClientId='{1}'", Owner.TableWatcherName, Owner.ClientId), false);
+                //}
+
                 if (dt == null)
                 {
                     throw new Exception("Could not load data table watche: " + Owner.TableWatcherName);
@@ -336,9 +375,57 @@ VALUES('{1}','{2}',0)";
         }
 
 
-		#endregion
+        #endregion
 
         #region static
+
+        public static DataTable GetEdited(IDataCache Owner)
+        {
+            DataTable dt = null;
+            try
+            {
+                using (var dbCmd = DbContext.Create(Owner.ConnectionKey, CacheSettings.EnableConnectionProvider))//Owner.Db.NewCmd())
+                {
+                    dt = dbCmd.NewCmd().ExecuteDataTable(Owner.TableWatcherName, string.Format("SELECT * FROM {0} WHERE ClientId='{1}' and Edited=1", Owner.TableWatcherName, Owner.ClientId), false);
+                }
+
+
+                //using (IDbCmd dbCmd = DbFactory.Create(Owner.ConnectionKey))//Owner.Db.NewCmd())
+                //{
+                //    dt = dbCmd.ExecuteDataTable(Owner.TableWatcherName, string.Format("SELECT * FROM {0} WHERE ClientId='{1}' and Edited=1", Owner.TableWatcherName, Owner.ClientId), false);
+                //}
+                //if (dt == null)
+                //{
+                //    throw new Exception("Could not load data table watche: " + Owner.TableWatcherName);
+                //}
+            }
+            catch (Exception ex)
+            {
+                Owner.RaiseException(ex.Message, DataCacheError.ErrorSyncCache);
+            }
+            return dt;
+        }
+        public static int UpdateEdited(IDataCache Owner,string tableName)
+        {
+            try
+            {
+                using (var dbCmd = DbContext.Create(Owner.ConnectionKey, CacheSettings.EnableConnectionProvider))//Owner.Db.NewCmd())
+                {
+                    return dbCmd.NewCmd().ExecuteNonQuery(string.Format("UPDATE {0} SET Edited=0 WHERE ClientId='{1}' and TableName='{2}'", Owner.TableWatcherName, Owner.ClientId, tableName));
+                }
+
+
+                //using (IDbCmd dbCmd = DbFactory.Create(Owner.ConnectionKey))// Owner.Db.NewCmd())
+                //{
+                //    return dbCmd.ExecuteNonQuery(string.Format("UPDATE {0} SET Edited=0 WHERE ClientId='{1}' and TableName='{2}'", Owner.TableWatcherName, Owner.ClientId, tableName));
+                //}
+            }
+            catch (Exception ex)
+            {
+                CacheLogger.Error("DbWatcher UpdateEdited Error: " + ex.Message);
+            }
+            return 0;
+        }
 
         public static int CreateTableWatcher(string connectionKey)
         {
@@ -348,15 +435,26 @@ VALUES('{1}','{2}',0)";
         {
             try
             {
-                using (IDbCmd dbCmd = DbFactory.Create(connectionKey))// db.NewCmd())
+                using (var dbCmd = DbContext.Create(connectionKey, CacheSettings.EnableConnectionProvider))//Owner.Db.NewCmd())
                 {
                     string Database = dbCmd.Connection.Database;
-                    int res = dbCmd.ExecuteScalar<int>(string.Format(SqlIsTableWatcherExists, Database, TableWatcherName));
+                    int res = dbCmd.NewCmd().ExecuteScalar<int>(string.Format(SqlIsTableWatcherExists, Database, TableWatcherName));
                     if (res == 1)
                         return res;
                     string cmd = string.Format(SqlCreateTableWatcher, Database, TableWatcherName);
-                    return dbCmd.ExecuteNonQuery(cmd);
+                    return dbCmd.NewCmd().ExecuteNonQuery(cmd);
                 }
+
+
+                //using (IDbCmd dbCmd = DbFactory.Create(connectionKey))// db.NewCmd())
+                //{
+                //    string Database = dbCmd.Connection.Database;
+                //    int res = dbCmd.ExecuteScalar<int>(string.Format(SqlIsTableWatcherExists, Database, TableWatcherName));
+                //    if (res == 1)
+                //        return res;
+                //    string cmd = string.Format(SqlCreateTableWatcher, Database, TableWatcherName);
+                //    return dbCmd.ExecuteNonQuery(cmd);
+                //}
             }
             catch (Exception ex)
             {
@@ -396,7 +494,10 @@ VALUES('{1}','{2}',0)";
             IDbCmd dbCmd = null;
             try
             {
-                dbCmd = DbFactory.Create(connectionKey);
+
+                dbCmd = DbContext.Create(connectionKey, CacheSettings.EnableConnectionProvider).NewCmd();
+
+                //dbCmd = DbFactory.Create(connectionKey);
                
                 //dbCmd = db.NewCmd();
                 object[] results = null;
@@ -454,10 +555,17 @@ VALUES('{1}','{2}',0)";
                 {
                     registers[i] = string.Format(SqlAddTableToWatcherTable, tableWatcher, clientId, tables[i]);
                 }
-                using (IDbCmd dbCmd = DbFactory.Create(connectionKey))//db.NewCmd())
+
+                using (var dbCmd = DbContext.Create(connectionKey, CacheSettings.EnableConnectionProvider))//db.NewCmd())
                 {
-                    dbCmd.MultiExecuteNonQuery(registers, false);
+                    dbCmd.NewCmd().MultiExecuteNonQuery(registers, false);
                 }
+
+
+                //using (IDbCmd dbCmd = DbFactory.Create(connectionKey))//db.NewCmd())
+                //{
+                //    dbCmd.MultiExecuteNonQuery(registers, false);
+                //}
             }
             catch (Exception ex)
             {

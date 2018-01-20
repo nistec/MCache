@@ -7,7 +7,7 @@ using Nistec.Data.Entities;
 using Nistec.Data.Entities.Cache;
 using Nistec.Caching.Demo.Entities;
 using Nistec.Caching.Sync.Embed;
-
+using Nistec.Channels;
 
 namespace Nistec.Caching.Demo.Hosted
 {
@@ -39,16 +39,20 @@ namespace Nistec.Caching.Demo.Hosted
         public void AddItems()
         {
 
-            SyncCache.AddItem<ContactEntity>("AdventureWorks", "contactGeneric", "Person.Contact", new string[] { "Person.Contact" }, EntitySourceType.Table, new string[] { "ContactID" }, TimeSpan.FromMinutes(10), SyncType.Interval);
+            SyncCache.AddItem<ContactEntity>("AdventureWorks", "contactGeneric", "Person.Contact", new string[] { "Person.Contact" }, EntitySourceType.Table, new string[] { "ContactID" }, "*", TimeSpan.FromMinutes(10), SyncType.Interval);
 
-            SyncCache.AddItem<ContactEntity>("AdventureWorks", "contactEntity", "Person.Contact", new string[] { "Person.Contact" }, EntitySourceType.Table, new string[] { "ContactID" }, TimeSpan.FromMinutes(10), SyncType.Interval);
+            SyncCache.AddItem<ContactEntity>("AdventureWorks", "contactEntity", "Person.Contact", new string[] { "Person.Contact" }, EntitySourceType.Table, new string[] { "ContactID" }, "*", TimeSpan.FromMinutes(10), SyncType.Interval);
+
+            SyncCache.Refresh("contactGeneric");
+            SyncCache.Refresh("contactEntity");
+
         }
 
         //Get item value from sync cache.
         public void GetValue()
         {
             string key = "1";
-            var item = SyncCache.Get<ContactEntity>(CacheKeyInfo.Get("contactEntity", new string[] { "1" }));
+            var item = SyncCache.Get<ContactEntity>(ComplexArgs.Get("contactEntity", new string[] { "1" }));
             if (item == null)
                 Console.WriteLine("item not found " + key);
             else
@@ -59,7 +63,7 @@ namespace Nistec.Caching.Demo.Hosted
         public void GetRecord()
         {
             string key = "1";
-            var item = SyncCache.GetRecord(CacheKeyInfo.Get("contactEntity", new string[] { "1" }));
+            var item = SyncCache.GetRecord(ComplexArgs.Get("contactEntity", new string[] { "1" }));
             if (item == null)
                 Console.WriteLine("item not found " + key);
             else
@@ -81,9 +85,9 @@ namespace Nistec.Caching.Demo.Hosted
         //get entity from sync cache as EntityStream.
         public void GetEntityStream()
         {
-            var keyInfo=CacheKeyInfo.Get("contactEntity", new string[] { "1" });
-            var item = SyncCache.GetItem(keyInfo.ToString());
-            var stream = item.GetItemStream(keyInfo);
+            var keyInfo= ComplexArgs.Get("contactEntity", new string[] { "1" });
+            var item = SyncCache.GetItem(keyInfo.Prefix);
+            var stream = item.GetItemStream(keyInfo.Suffix);
             ContactEntityContext context = new ContactEntityContext();
             context.EntityRead(stream,null);
             ContactEntity entity = context.Entity;

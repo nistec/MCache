@@ -44,21 +44,28 @@ namespace Nistec.Services
     public class ServiceManager
     {
 
-        private PipeCacheServer mcache;
-        private PipeDataServer mdata;
-        private PipeSessionServer msession;
+        //private PipeCacheServer mcache;
+        //private PipeDataServer mdata;
+        //private PipeSessionServer msession;
+        //private PipeSyncServer msync;
+
         private PipeManagerServer mmanger;
-        private PipeSyncServer msync;
 
         private TcpBundleServer tcpbundle;
         private PipeBundleServer pipebundle;
         private HttpBundleServer httpbundle;
-        
-        private TcpCacheServer tcpcache;
-        private TcpDataServer tcpdata;
-        private TcpSessionServer tcpsession;
+
+        private TcpJsonBundleServer tcpjsonbundle;
+        private PipeJsonBundleServer pipejsonbundle;
+        private HttpJsonBundleServer httpjsonbundle;
+
         private TcpManagerServer tcpmanger;
-        private TcpSyncServer tcpsync;
+
+        //private TcpCacheServer tcpcache;
+        //private TcpDataServer tcpdata;
+        //private TcpSessionServer tcpsession;
+        //private TcpSyncServer tcpsync;
+
         private ConfigFileWatcher configWatcher;
         bool _loaded = false;
 
@@ -84,86 +91,136 @@ namespace Nistec.Services
                     Netlog.Debug(Settings.ServiceName + " start...");
 
 
-                    var settings = CacheConfigServer.GetCacheApiSettings();
-
-                    //Tcp
-                    if (CacheSettings.EnableTcpBundle)
+                //var settings = CacheConfigServer.GetCacheApiSettings();
+               
+                //Tcp Bundle
+                if (CacheSettings.EnableTcpBundle)
+                {
+                    if (CacheSettings.TcpBundleFormatter.HasFlag(BundleFormatter.Json))
                     {
-                        tcpbundle = new TcpBundleServer(settings.Get("RemoteBundleHostName"));
+                        tcpjsonbundle = new TcpJsonBundleServer(CacheDefaults.DefaultBundleHostName);
+                        tcpjsonbundle.Start();
+                    }
+                    else if (CacheSettings.TcpBundleFormatter.HasFlag(BundleFormatter.Binary))
+                    {
+                        tcpbundle = new TcpBundleServer(CacheDefaults.DefaultBundleHostName);
                         tcpbundle.Start();
                     }
-                    else
+                }
+
+                //Pipe Bundle
+                if (CacheSettings.EnablePipeBundle)
+                {
+                    if (CacheSettings.PipeBundleFormatter.HasFlag(BundleFormatter.Json))
                     {
-                        //Tcp
-                        if (CacheSettings.RemoteCacheProtocol.HasFlag(NetProtocol.Tcp))
-                        {
-                            tcpcache = new TcpCacheServer(settings.Get("RemoteCacheHostName"));
-                            tcpcache.Start();
-                        }
-                        if (CacheSettings.SessionCacheProtocol.HasFlag(NetProtocol.Tcp))
-                        {
-                            tcpsession = new TcpSessionServer(settings.Get("RemoteSessionHostName"));
-                            tcpsession.Start();
-                        }
-                        if (CacheSettings.SyncCacheProtocol.HasFlag(NetProtocol.Tcp))
-                        {
-                            tcpsync = new TcpSyncServer(settings.Get("RemoteSyncCacheHostName"));
-                            tcpsync.Start();
-                        }
-                        if (CacheSettings.DataCacheProtocol.HasFlag(NetProtocol.Tcp))
-                        {
-                            tcpdata = new TcpDataServer(settings.Get("RemoteDataCacheHostName"));
-                            tcpdata.Start();
-                        }
-                       
+                        pipejsonbundle = new PipeJsonBundleServer(CacheDefaults.DefaultBundleHostName);
+                        pipejsonbundle.Start();
                     }
-                    //Pipe
-                    if (CacheSettings.EnablePipeBundle)
+                    else if (CacheSettings.PipeBundleFormatter.HasFlag(BundleFormatter.Binary))
                     {
-                        pipebundle = new PipeBundleServer(settings.Get("RemoteBundleHostName"));
+                        pipebundle = new PipeBundleServer(CacheDefaults.DefaultBundleHostName);
                         pipebundle.Start();
                     }
-                    else
+                }
+
+                //Http Bundle
+                if (CacheSettings.EnableHttpBundle)
+                {
+                    if (CacheSettings.HttpBundleFormatter.HasFlag(BundleFormatter.Json))
                     {
-                        //Pipe
-                        if (CacheSettings.RemoteCacheProtocol.HasFlag(NetProtocol.Pipe))
-                        {
-                            mcache = new PipeCacheServer(settings.Get("RemoteCacheHostName"), true);
-                            mcache.Start();
-                        }
-                        if (CacheSettings.SessionCacheProtocol.HasFlag(NetProtocol.Pipe))
-                        {
-                            msession = new PipeSessionServer(settings.Get("RemoteSessionHostName"), true);
-                            msession.Start();
-                        }
-                        if (CacheSettings.SyncCacheProtocol.HasFlag(NetProtocol.Pipe))
-                        {
-                            msync = new PipeSyncServer(settings.Get("RemoteSyncCacheHostName"), true);
-                            msync.Start();
-                        }
-                        if (CacheSettings.DataCacheProtocol.HasFlag(NetProtocol.Pipe))
-                        {
-                            mdata = new PipeDataServer(settings.Get("RemoteDataCacheHostName"), true);
-                            mdata.Start();
-                        }
+                        httpjsonbundle = new HttpJsonBundleServer(CacheDefaults.DefaultBundleHostName);
+                        httpjsonbundle.Start();
                     }
-                    //Http
-                    if (CacheSettings.EnableHttpBundle)
+                    else if (CacheSettings.HttpBundleFormatter.HasFlag(BundleFormatter.Binary))
                     {
-                        httpbundle = new HttpBundleServer(settings.Get("RemoteBundleHostName"));
+                        httpbundle = new HttpBundleServer(CacheDefaults.DefaultBundleHostName);
                         httpbundle.Start();
                     }
+                }
+                //Tcp
+                //if (CacheSettings.EnableTcpBundle)
+                //    {
+                //        tcpbundle = new TcpBundleServer(settings.Get("RemoteBundleHostName"));
+                //        tcpbundle.Start();
+                //    }
 
-                    //manager
-                    if (CacheSettings.CacheManagerProtocol.HasFlag(NetProtocol.Pipe))
+                //else
+                //{
+                //    //Tcp
+                //    if (CacheSettings.RemoteCacheProtocol.HasFlag(NetProtocol.Tcp))
+                //    {
+                //        tcpcache = new TcpCacheServer(settings.Get("RemoteCacheHostName"));
+                //        tcpcache.Start();
+                //    }
+                //    if (CacheSettings.SessionCacheProtocol.HasFlag(NetProtocol.Tcp))
+                //    {
+                //        tcpsession = new TcpSessionServer(settings.Get("RemoteSessionHostName"));
+                //        tcpsession.Start();
+                //    }
+                //    if (CacheSettings.SyncCacheProtocol.HasFlag(NetProtocol.Tcp))
+                //    {
+                //        tcpsync = new TcpSyncServer(settings.Get("RemoteSyncCacheHostName"));
+                //        tcpsync.Start();
+                //    }
+                //    if (CacheSettings.DataCacheProtocol.HasFlag(NetProtocol.Tcp))
+                //    {
+                //        tcpdata = new TcpDataServer(settings.Get("RemoteDataCacheHostName"));
+                //        tcpdata.Start();
+                //    }
+                //}
+
+
+
+                ////Pipe
+                //if (CacheSettings.EnablePipeBundle)
+                //    {
+                //        pipebundle = new PipeBundleServer(settings.Get("RemoteBundleHostName"));
+                //        pipebundle.Start();
+                //    }
+                //else
+                //{
+                //    //Pipe
+                //    if (CacheSettings.RemoteCacheProtocol.HasFlag(NetProtocol.Pipe))
+                //    {
+                //        mcache = new PipeCacheServer(settings.Get("RemoteCacheHostName"), true);
+                //        mcache.Start();
+                //    }
+                //    if (CacheSettings.SessionCacheProtocol.HasFlag(NetProtocol.Pipe))
+                //    {
+                //        msession = new PipeSessionServer(settings.Get("RemoteSessionHostName"), true);
+                //        msession.Start();
+                //    }
+                //    if (CacheSettings.SyncCacheProtocol.HasFlag(NetProtocol.Pipe))
+                //    {
+                //        msync = new PipeSyncServer(settings.Get("RemoteSyncCacheHostName"), true);
+                //        msync.Start();
+                //    }
+                //    if (CacheSettings.DataCacheProtocol.HasFlag(NetProtocol.Pipe))
+                //    {
+                //        mdata = new PipeDataServer(settings.Get("RemoteDataCacheHostName"), true);
+                //        mdata.Start();
+                //    }
+                //}
+
+
+
+                //Http
+                //if (CacheSettings.EnableHttpBundle)
+                //    {
+                //        httpbundle = new HttpBundleServer(settings.Get("RemoteBundleHostName"));
+                //        httpbundle.Start();
+                //    }
+
+                //manager
+                if (CacheSettings.CacheManagerProtocol.HasFlag(NetProtocol.Pipe))
                     {
-                        mmanger = new PipeManagerServer(settings.Get("RemoteCacheManagerHostName"), true);
+                        mmanger = new PipeManagerServer(CacheDefaults.DefaultManagerHostName, true);
                         mmanger.Start();
                     }
 
                     if (CacheSettings.CacheManagerProtocol.HasFlag(NetProtocol.Tcp))
                     {
-                        tcpmanger = new TcpManagerServer(settings.Get("RemoteCacheManagerHostName"));
+                        tcpmanger = new TcpManagerServer(CacheDefaults.DefaultManagerHostName);
                         tcpmanger.Start();
                     }
 
@@ -182,32 +239,41 @@ namespace Nistec.Services
             {
                 Netlog.Debug(Settings.ServiceName + " stop...");
 
-                if (mcache != null)
-                    mcache.Stop();
-                if (mdata != null)
-                    mdata.Stop();
-                if (msession != null)
-                    msession.Stop();
-                if (mmanger != null)
-                    mmanger.Stop();
-                if (msync != null)
-                    msync.Stop();
+                //if (mcache != null)
+                //    mcache.Stop();
+                //if (mdata != null)
+                //    mdata.Stop();
+                //if (msession != null)
+                //    msession.Stop();
+                //if (msync != null)
+                //    msync.Stop();
 
-                if (tcpbundle != null)
+            if (mmanger != null)
+                mmanger.Stop();
+
+
+            if (tcpbundle != null)
                     tcpbundle.Stop();
                 if (pipebundle != null)
                     pipebundle.Stop();
                 if (httpbundle != null)
                     httpbundle.Stop();
+
+                if (tcpjsonbundle != null)
+                    tcpjsonbundle.Stop();
+                if (pipejsonbundle != null)
+                    pipejsonbundle.Stop();
+                if (httpjsonbundle != null)
+                    httpjsonbundle.Stop();
                 
-                if (tcpcache != null)
-                    tcpcache.Stop();
-                if (tcpdata != null)
-                    tcpdata.Stop();
-                if (tcpsession != null)
-                    tcpsession.Stop();
-                if (tcpsync != null)
-                    tcpsync.Stop();
+                //if (tcpcache != null)
+                //    tcpcache.Stop();
+                //if (tcpdata != null)
+                //    tcpdata.Stop();
+                //if (tcpsession != null)
+                //    tcpsession.Stop();
+                //if (tcpsync != null)
+                //    tcpsync.Stop();
 
                 if (tcpmanger != null)
                     tcpmanger.Stop();

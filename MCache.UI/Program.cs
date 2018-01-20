@@ -12,11 +12,17 @@ namespace Nistec.Caching.Remote.UI
         [STAThread]
         static void Main()
         {
-
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
-            //McLock.Lock.ValidateLock();
-            Application.Run(new CacheManagmentForm());
+            try
+            {
+                Application.EnableVisualStyles();
+                Application.SetCompatibleTextRenderingDefault(false);
+                Application.Run(new CacheManagmentForm());
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Remote.UI error: " + ex.Message);
+                Application.Restart();
+            }
         }
     }
 }

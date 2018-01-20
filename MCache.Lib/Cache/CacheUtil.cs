@@ -33,6 +33,7 @@ using Nistec.Drawing;
 using Nistec.Data.Advanced;
 using Nistec.Runtime;
 using Nistec.Serialization;
+using Nistec.Channels;
 
 namespace Nistec.Caching
 {
@@ -41,6 +42,61 @@ namespace Nistec.Caching
     /// </summary>
     public static class CacheUtil
     {
+        internal static TransType ToTransType(CacheState state)
+        {
+            if ((int)state >= 500)
+                return TransType.Error;
+            else
+                return TransType.Info;
+        }
+        internal static MessageState ToMessageState(CacheState state)
+        {
+
+            switch (state)
+            {
+                case CacheState.ItemAdded:
+                case CacheState.ItemChanged:
+                case CacheState.ItemRemoved:
+                case CacheState.Ok:
+                    return MessageState.Ok;
+
+                case CacheState.NotFound:
+                    return MessageState.ItemNotFound;
+                case CacheState.UnexpectedError:
+                    return MessageState.UnexpectedError;
+                case CacheState.SerializationError:
+                    return MessageState.SerializeError;
+                case CacheState.CommandNotSupported:
+                    return MessageState.NotSupportedError;
+
+
+                case CacheState.AddItemFailed:
+                case CacheState.MergeItemFailed:
+                case CacheState.SetItemFailed:
+                case CacheState.RemoveItemFailed:
+                case CacheState.ItemAllreadyExists:
+                    return MessageState.Failed;
+
+
+
+                case CacheState.InvalidItem:
+                case CacheState.InvalidSession:
+                case CacheState.ArgumentsError:
+                    return MessageState.ArgumentsError;
+
+                case CacheState.CacheNotReady:
+                case CacheState.CacheIsFull:
+                    return MessageState.OperationError;
+
+
+                default:
+
+                    if ((int)state >= 500)
+                        return MessageState.Failed;
+                    else
+                        return MessageState.Ok;
+            }
+        }
         /// <summary>
         /// Split str with trim.
         /// </summary>
@@ -298,8 +354,47 @@ namespace Nistec.Caching
                 return 0;
             }
         }
-        
 
+        /// <summary>
+        /// Get object size in bytes.
+        /// </summary>
+        /// <param name="objA"></param>
+        /// <param name="objB"></param>
+        /// <returns></returns>
+        public static int[] SizeOf(object objA, object objB)
+        {
+            return new int[] { SizeOf(objA), SizeOf(objB) };
+        }
+
+        /// <summary>
+        /// Get object size in bytes.
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <returns></returns>
+        public static int SizeOf(object obj)
+        {
+            try
+            {
+                if (obj == null)
+                    return 0;
+                Type type = obj.GetType();
+
+                if (type == typeof(string))
+                    return Encoding.UTF8.GetByteCount(obj.ToString());
+                if (type.IsValueType)
+                    return Marshal.SizeOf(obj);
+                if (type.IsSerializable)
+                    return NetSerializer.SizeOf(obj);
+
+                return BinarySerializer.SizeOf(obj);
+            }
+            catch (Exception)
+            {
+                return 0;
+            }
+        }
+
+        
         /// <summary>
         /// Deserialize Class FromBase64
         /// </summary>

@@ -9,7 +9,7 @@
     <OutputType>WinExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Nistec.Caching.UI</RootNamespace>
-    <AssemblyName>Nistec.Cache.UI</AssemblyName>
+    <AssemblyName>Nistec.Cache.Monitor</AssemblyName>
     <FileUpgradeFlags>
     </FileUpgradeFlags>
     <OldToolsVersion>3.5</OldToolsVersion>
@@ -50,7 +50,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
+    <OutputPath>..\References\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -85,20 +85,26 @@
     <ApplicationManifest>Properties\app.manifest</ApplicationManifest>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Nistec.Charts">
-      <HintPath>..\..\References\Debug\Nistec.Charts.dll</HintPath>
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Nistec.Charts, Version=4.0.2.0, Culture=neutral, PublicKeyToken=734a739868a76423, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\References\_WinDll\Nistec.Charts.dll</HintPath>
     </Reference>
-    <Reference Include="Nistec.GridView">
-      <HintPath>..\..\References\Debug\Nistec.GridView.dll</HintPath>
+    <Reference Include="Nistec.GridView, Version=4.0.2.0, Culture=neutral, PublicKeyToken=734a739868a76423, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\References\_WinDll\Nistec.GridView.dll</HintPath>
     </Reference>
-    <Reference Include="Nistec.Win">
-      <HintPath>..\..\References\Debug\Nistec.Win.dll</HintPath>
+    <Reference Include="Nistec.Win, Version=4.0.2.0, Culture=neutral, PublicKeyToken=734a739868a76423, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\References\_WinDll\Nistec.Win.dll</HintPath>
     </Reference>
-    <Reference Include="Nistec.WinForms">
-      <HintPath>..\..\References\Debug\Nistec.WinForms.dll</HintPath>
+    <Reference Include="Nistec.WinForms, Version=4.0.2.0, Culture=neutral, PublicKeyToken=734a739868a76423, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\References\_WinDll\Nistec.WinForms.dll</HintPath>
     </Reference>
-    <Reference Include="Nistec.Wizards">
-      <HintPath>..\..\Win_4.0.2.1\References\Debug\Nistec.Wizards.dll</HintPath>
+    <Reference Include="Nistec.Wizards, Version=4.0.2.0, Culture=neutral, PublicKeyToken=734a739868a76423, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\References\_WinDll\Nistec.Wizards.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core">
@@ -112,12 +118,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AddItemDlg.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="AddDataItemDlg.cs">
-      <SubType>Form</SubType>
-    </Compile>
     <Compile Include="Install\wfrm_Install.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -127,21 +127,15 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Install\ResManager.cs" />
-    <EmbeddedResource Include="AddItemDlg.resx">
-      <DependentUpon>AddItemDlg.cs</DependentUpon>
-      <SubType>Designer</SubType>
-    </EmbeddedResource>
-    <EmbeddedResource Include="AddDataItemDlg.resx">
-      <DependentUpon>AddDataItemDlg.cs</DependentUpon>
-      <SubType>Designer</SubType>
-    </EmbeddedResource>
+    <Compile Include="CacheManagmentForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="CacheManagmentForm.designer.cs">
+      <DependentUpon>CacheManagmentForm.cs</DependentUpon>
+    </Compile>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
-      <SubType>Designer</SubType>
-    </EmbeddedResource>
-    <EmbeddedResource Include="CacheManagmentForm.resx">
-      <DependentUpon>CacheManagmentForm.cs</DependentUpon>
       <SubType>Designer</SubType>
     </EmbeddedResource>
     <Compile Include="Properties\Resources.Designer.cs">
@@ -149,12 +143,10 @@
       <DependentUpon>Resources.resx</DependentUpon>
       <DesignTime>True</DesignTime>
     </Compile>
-    <Compile Include="CacheManagmentForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="CacheManagmentForm.designer.cs">
+    <EmbeddedResource Include="CacheManagmentForm.resx">
       <DependentUpon>CacheManagmentForm.cs</DependentUpon>
-    </Compile>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <Content Include="Resources\xmlDoc.png" />
@@ -260,6 +252,10 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\Nistec.Channels\Nistec.Channels\Nistec.Channels.csproj">
+      <Project>{0839a364-a34d-4143-ad4c-aef4c7b232ac}</Project>
+      <Name>Nistec.Channels</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\Nistec.Data\Nistec.Data\Nistec.Data.csproj">
       <Project>{d5fd6c68-86ea-48bf-8f6d-29ce57419500}</Project>
       <Name>Nistec.Data</Name>
@@ -277,6 +273,7 @@
       <Name>Nistec.Cache</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

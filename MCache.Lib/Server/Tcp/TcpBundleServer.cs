@@ -28,7 +28,7 @@ using Nistec.Channels;
 using Nistec.Caching.Remote;
 using Nistec.IO;
 using System.Threading.Tasks;
-using Nistec.Caching.Channels;
+//using Nistec.Caching.Channels;
 using Nistec.Caching.Config;
 using Nistec.Channels.Tcp;
 using System.Net.Sockets;
@@ -39,7 +39,7 @@ namespace Nistec.Caching.Server.Tcp
     /// <summary>
     /// Represent a cache tcp server listner.
     /// </summary>
-    public class TcpBundleServer : TcpServer<CacheMessage>//TcpServerPool<CacheMessage>
+    public class TcpBundleServer : TcpServer<MessageStream>//TcpServerPool<CacheMessage>
     {
         bool isCache=false;
         bool isDataCache=false;
@@ -47,6 +47,7 @@ namespace Nistec.Caching.Server.Tcp
         bool isSession=false;
 
         #region override
+
         /// <summary>
         /// OnStart
         /// </summary>
@@ -54,13 +55,13 @@ namespace Nistec.Caching.Server.Tcp
         {
             base.OnStart();
             if (isCache)
-                AgentManager.Cache.Start();
+                if (!AgentManager.Cache.Initialized) AgentManager.Cache.Start();
             if (isDataCache)
-                AgentManager.DbCache.Start();
+                if (!AgentManager.DbCache.Initialized) AgentManager.DbCache.Start();
             if (isSyncCache)
-                AgentManager.SyncCache.Start(CacheSettings.EnableSyncFileWatcher, CacheSettings.ReloadSyncOnChange);
+                if (!AgentManager.SyncCache.Initialized) AgentManager.SyncCache.Start();// CacheSettings.EnableSyncFileWatcher, CacheSettings.ReloadSyncOnChange);
             if (isSession)
-                AgentManager.Session.Start();
+                if (!AgentManager.Session.Initialized) AgentManager.Session.Start();
 
             CacheLogger.Logger.LogAction(CacheAction.General, CacheActionState.Debug, "TcpBundleServer.OnStart : " + Settings.HostName);
         }
@@ -72,16 +73,17 @@ namespace Nistec.Caching.Server.Tcp
             base.OnStop();
 
             if (isCache)
-                AgentManager.Cache.Stop();
+                if (AgentManager.Cache.Initialized) AgentManager.Cache.Stop();
             if (isDataCache)
-                AgentManager.DbCache.Stop();
+                if (AgentManager.DbCache.Initialized) AgentManager.DbCache.Stop();
             if (isSyncCache)
-                AgentManager.SyncCache.Stop();
+                if (AgentManager.SyncCache.Initialized) AgentManager.SyncCache.Stop();
             if (isSession)
-                AgentManager.Session.Stop();
+                if (AgentManager.Session.Initialized) AgentManager.Session.Stop();
 
             CacheLogger.Logger.LogAction(CacheAction.General, CacheActionState.Debug, "TcpBundleServer.OnStop : " + Settings.HostName);
         }
+
         /// <summary>
         /// OnLoad
         /// </summary>
@@ -141,7 +143,7 @@ namespace Nistec.Caching.Server.Tcp
         /// </summary>
         /// <param name="message"></param>
         /// <returns></returns>
-        protected override NetStream ExecRequset(CacheMessage message)
+        protected override TransStream ExecRequset(MessageStream message)
         {
             return AgentManager.ExecCommand(message);
         }
@@ -150,9 +152,9 @@ namespace Nistec.Caching.Server.Tcp
         /// </summary>
         /// <param name="stream"></param>
         /// <returns></returns>
-        protected override CacheMessage ReadRequest(NetworkStream stream)
+        protected override MessageStream ReadRequest(NetworkStream stream)
         {
-            return CacheMessage.ReadRequest(stream, Settings.ReceiveBufferSize);
+            return MessageStream.ReadRequest(stream, Settings.ReceiveBufferSize);
         }
        
         #endregion

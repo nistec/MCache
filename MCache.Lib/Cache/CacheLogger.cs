@@ -33,8 +33,6 @@ using Nistec.Caching.Config;
 namespace Nistec.Caching
 {
 
-
-
     #region  Log delegate
 
     /// <summary>
@@ -91,9 +89,12 @@ namespace Nistec.Caching
     /// </summary>
     public class CacheLogger : System.ComponentModel.Component
     {
+
+        internal static int logCapacity = 1000;
+        internal static bool debugEnabled = true;
         #region  members
 
-        int logCapacity = 1000;
+        //int logCapacity = 1000;
         private AsyncCallback onRequestCompleted;
         private ManualResetEvent resetEvent;
         /// <summary>
@@ -112,7 +113,8 @@ namespace Nistec.Caching
 
         static CacheLogger()
         {
-
+            logCapacity = CacheSettings.LogMonitorCapacityLines;
+            debugEnabled = CacheSettings.LogMonitorDebugEnabled;
         }
         /// <summary>
         /// Read log as string array.
@@ -126,7 +128,7 @@ namespace Nistec.Caching
                 copy = log.ToList<string>();
             }
             if (copy == null)
-                return new string[] {""};
+                return new string[] { "" };
             copy.Reverse();
             return copy.ToArray();
         }
@@ -139,7 +141,7 @@ namespace Nistec.Caching
         /// <summary>
         /// Get or Set Logger that implements <see cref="ILogger"/> interface.
         /// </summary>
-        public ILogger ILog { get { return _ILogger; } set { if (value != null)_ILogger = value; } }
+        public ILogger ILog { get { return _ILogger; } set { if (value != null) _ILogger = value; } }
 
 
         static CacheLogger _Logger;
@@ -228,7 +230,7 @@ namespace Nistec.Caching
         /// AsyncLog
         /// </summary>
         /// <returns></returns>
-        internal void Log(string text)
+        void Log(string text)
         {
             LogItemCallback caller = new LogItemCallback(LogItemWorker);
 
@@ -363,54 +365,96 @@ namespace Nistec.Caching
         {
 
             string msg = string.Format(text, args);
+            WriteLog(level, msg);
 
-            Log(level.ToString() + "-" + msg);
+            //Log(level.ToString() + "-" + msg);
 
-            if (CacheSettings.EnableLog)
+            //switch (level)
+            //{
+            //    case LoggerLevel.Error:
+            //        Log(level.ToString() + "-" + msg);
+            //        if (CacheSettings.EnableLog)
+            //            ILog.Error(msg); break;
+            //    case LoggerLevel.Debug:
+            //        if (debugEnabled)
+            //            Log(level.ToString() + "-" + msg);
+            //        if (CacheSettings.EnableLog)
+            //            ILog.Debug(msg); break;
+            //    case LoggerLevel.Info:
+            //        Log(level.ToString() + "-" + msg);
+            //        if (CacheSettings.EnableLog)
+            //            ILog.Info(msg); break;
+            //    case LoggerLevel.Warn:
+            //        Log(level.ToString() + "-" + msg);
+            //        if (CacheSettings.EnableLog)
+            //            ILog.Warn(msg); break;
+            //        //case LoggerLevel.Trace:
+            //        //    Netlog.Trace(msg); break;
+            //}
+
+
+            //Console.WriteLine(msg);
+        }
+
+        void WriteLog(LoggerLevel level, string msg)
+        {
+
+            switch (level)
             {
-                switch (level)
-                {
-                    case LoggerLevel.Error:
+                case LoggerLevel.Error:
+                    Log(level.ToString() + "-" + msg);
+                    if (CacheSettings.EnableLog)
                         ILog.Error(msg); break;
-                    case LoggerLevel.Debug:
+                case LoggerLevel.Debug:
+                    if (debugEnabled)
+                        Log(level.ToString() + "-" + msg);
+                    if (CacheSettings.EnableLog)
                         ILog.Debug(msg); break;
-                    case LoggerLevel.Info:
+                case LoggerLevel.Info:
+                    Log(level.ToString() + "-" + msg);
+                    if (CacheSettings.EnableLog)
                         ILog.Info(msg); break;
-                    case LoggerLevel.Warn:
+                case LoggerLevel.Warn:
+                    Log(level.ToString() + "-" + msg);
+                    if (CacheSettings.EnableLog)
                         ILog.Warn(msg); break;
                     //case LoggerLevel.Trace:
                     //    Netlog.Trace(msg); break;
-                }
             }
-
             Console.WriteLine(msg);
         }
 
-        /// <summary>
-        ///  Write new line to cache logger using arguments.
-        /// </summary>
-        /// <param name="action"></param>
-        /// <param name="text"></param>
-        /// <param name="state"></param>
-        /// <param name="args"></param>
-        public void Log(CacheAction action, string text, CacheActionState state, params string[] args)
-        {
- 
-            Log(string.Format(action + "-" + text, args));
+        ///// <summary>
+        /////  Write new line to cache logger using arguments.
+        ///// </summary>
+        ///// <param name="action"></param>
+        ///// <param name="text"></param>
+        ///// <param name="state"></param>
+        ///// <param name="args"></param>
+        //public void Log(CacheAction action, string text, CacheActionState state, params string[] args)
+        //{
 
-            if (CacheSettings.EnableLog)
-            {
-                switch (state)
-                {
-                    case CacheActionState.Error:
-                        ILog.Error(action + "-" + text, args); break;
-                    case CacheActionState.Debug:
-                        ILog.Debug(action + "-" + text, args); break;
-                    default:
-                        ILog.Info(action + "-" + text, args); break;
-                }
-            }
-        }
+        //    // Log(string.Format(action + "-" + text, args));
+
+        //    //if (CacheSettings.EnableLog)
+        //    //{
+        //    switch (state)
+        //    {
+        //        case CacheActionState.Error:
+        //            WriteLog(LoggerLevel.Error, action + "-" + text, args);
+        //            //ILog.Error(action + "-" + text, args);
+        //            break;
+        //        case CacheActionState.Debug:
+        //            WriteLog(LoggerLevel.Debug, action + "-" + text, args);
+        //            //ILog.Debug(action + "-" + text, args); 
+        //            break;
+        //        default:
+        //            WriteLog(LoggerLevel.Info, action + "-" + text, args);
+        //            //ILog.Info(action + "-" + text, args); 
+        //            break;
+        //    }
+        //    //}
+        //}
 
         /// <summary>
         /// Write new line to cache logger using arguments.
@@ -420,20 +464,26 @@ namespace Nistec.Caching
         /// <param name="text"></param>
         public void LogAction(CacheAction action, CacheActionState state, string text)
         {
- 
-            Log(string.Format("{0}-{1}", action, text));
-            if (CacheSettings.EnableLog)
+
+            //Log(string.Format("{0}-{1}", action, text));
+            //if (CacheSettings.EnableLog)
+            //{
+            switch (state)
             {
-                switch (state)
-                {
-                    case CacheActionState.Error:
-                        ILog.Error(action + "-" + text); break;
-                    case CacheActionState.Debug:
-                        ILog.Debug(action + "-" + text); break;
-                    default:
-                       ILog.Info(action + "-" + text); break;
-                }
+                case CacheActionState.Error:
+                    WriteLog(LoggerLevel.Error, action + "-" + text);
+                    //ILog.Error(action + "-" + text);
+                    break;
+                case CacheActionState.Debug:
+                    WriteLog(LoggerLevel.Debug, action + "-" + text);
+                    //ILog.Debug(action + "-" + text);
+                    break;
+                default:
+                    WriteLog(LoggerLevel.Info, action + "-" + text);
+                    //ILog.Info(action + "-" + text);
+                    break;
             }
+            // }
         }
         /// <summary>
         /// Write new line to cache logger using arguments.
@@ -444,19 +494,25 @@ namespace Nistec.Caching
         /// <param name="args"></param>
         public void LogAction(CacheAction action, CacheActionState state, string text, params string[] args)
         {
-            Log(string.Format(action + "-" + text, args));
-            if (CacheSettings.EnableLog)
+            //Log(string.Format(action + "-" + text, args));
+            //if (CacheSettings.EnableLog)
+            //{
+            switch (state)
             {
-                switch (state)
-                {
-                    case  CacheActionState.Error:
-                        ILog.Error(action + "-" + text, args);break;
-                    case CacheActionState.Debug:
-                        ILog.Debug(action + "-" + text, args); break;
-                    default:
-                        ILog.Info(action + "-" + text, args);break;
-                }
+                case CacheActionState.Error:
+                    WriteLog(LoggerLevel.Error, action + "-" + text, args);
+                    //ILog.Error(action + "-" + text, args);
+                    break;
+                case CacheActionState.Debug:
+                    WriteLog(LoggerLevel.Debug, action + "-" + text, args);
+                    //ILog.Debug(action + "-" + text, args);
+                    break;
+                default:
+                    WriteLog(LoggerLevel.Info, action + "-" + text, args);
+                    //ILog.Info(action + "-" + text, args);
+                    break;
             }
+            //}
         }
     }
 

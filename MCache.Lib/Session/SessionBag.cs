@@ -28,6 +28,9 @@ using Nistec.Runtime;
 using System.IO;
 using Nistec.IO;
 using Nistec.Caching.Config;
+using Nistec.Generic;
+using System.Dynamic;
+using System.Threading.Tasks;
 
 namespace Nistec.Caching.Session
 {
@@ -59,7 +62,7 @@ namespace Nistec.Caching.Session
         /// <summary>
         /// Serializabtion constrauctor.
         /// </summary>
-        public SessionBag() { }
+        public SessionBag() { State = 0; }
 
         /// <summary>
         /// Initialize a new instance of session bag.
@@ -80,6 +83,7 @@ namespace Nistec.Caching.Session
         /// <param name="args"></param>
         public SessionBag(SessionCache owner, string sessionId, string userId, int timeout, string args)
         {
+            State = 0;
             Owner = owner;
             _SessionId = sessionId;
             _UserId = userId;
@@ -91,7 +95,7 @@ namespace Nistec.Caching.Session
             int concurrencyLevel = numProcs * 2;
             int initialCapacity = 10;
             this.m_SessionItems = new ConcurrentDictionary<string, SessionEntry>(concurrencyLevel, initialCapacity);
-
+            CacheLogger.Logger.LogAction(CacheAction.SessionCache, CacheActionState.Debug, "New SessionBag Created: "+ sessionId);
 
         }
         #endregion
@@ -109,13 +113,15 @@ namespace Nistec.Caching.Session
         /// <returns></returns>
         public static int GetValidTimeout(int timeout)
         {
-            if (timeout == 0)
-                return CacheDefaults.MaxSessionTimeout;
-            if (timeout < 0)
-                return CacheDefaults.SessionTimeout;
-            if (timeout > CacheDefaults.MaxSessionTimeout)
-                return CacheDefaults.MaxSessionTimeout;
-            return timeout;
+            return CacheSettings.GetValidSessionTimeout(timeout);
+
+            //if (timeout == 0)
+            //    return CacheDefaults.MaxSessionTimeout;
+            //if (timeout < 0)
+            //    return CacheDefaults.GetValidSessionTimeout(CacheSettings.SessionTimeout);
+            //if (timeout > CacheDefaults.MaxSessionTimeout)
+            //    return CacheDefaults.MaxSessionTimeout;
+            //return timeout;
         }
 
         /// <summary>
@@ -123,7 +129,8 @@ namespace Nistec.Caching.Session
         /// </summary>
         public bool IsTimeOut
         {
-            get { return TimeSpan.FromMinutes(Timeout) < DateTime.Now.Subtract(LastUsed); }
+            get { return DateTime.Now.Subtract(LastUsed).TotalMinutes > Timeout; }
+            //get { return TimeSpan.FromMinutes(Timeout) < DateTime.Now.Subtract(LastUsed); }
         }
 
         /// <summary>
@@ -131,22 +138,36 @@ namespace Nistec.Caching.Session
         /// </summary>
         public SessionState State
         {
-            get 
-            {
-
-                if (CacheDefaults.MaxSessionTimeout >= Timeout && TimeSpan.FromMinutes(Timeout) < DateTime.Now.Subtract(LastUsed))
-                    return SessionState.Idle;
-                if (TimeSpan.FromMinutes(Timeout) < DateTime.Now.Subtract(LastUsed))
-                    return SessionState.Timedout;
-                return  SessionState.Active; 
-            }
+            get; internal set;
         }
+
+        ///// <summary>
+        ///// Get the session state.
+        ///// </summary>
+        //public SessionState State
+        //{
+        //    get
+        //    {
+        //        if (DateTime.Now.Subtract(LastUsed).TotalMinutes < Timeout && LastUsed > Creation)
+        //            return SessionState.Active;
+        //        if (DateTime.Now.Subtract(LastUsed).TotalMinutes > Timeout)
+        //            return SessionState.Timedout;
+        //        return SessionState.Idle;
+
+        //        //if (CacheDefaults.MaxSessionTimeout >= Timeout && TimeSpan.FromMinutes(Timeout) < DateTime.Now.Subtract(LastUsed))
+        //        //    return SessionState.Idle;
+        //        //if (TimeSpan.FromMinutes(Timeout) < DateTime.Now.Subtract(LastUsed))
+        //        //    return SessionState.Timedout;
+        //        //return  SessionState.Active; 
+        //    }
+        //}
 
         /// <summary>
         /// Synchronize the current session.
         /// </summary>
         public void Sync()
         {
+            Owner.OnUsed(this.SessionId, this.Timeout);
             LastUsed = DateTime.Now;
             //_State = SessionState.Active;
         }
@@ -158,12 +179,13 @@ namespace Nistec.Caching.Session
             m_SessionItems.Clear();
             Owner.SizeRefresh();
             _Size = 0;
+            CacheLogger.Logger.LogAction(CacheAction.SessionCache, CacheActionState.Debug, "SessionBag was clear, "+ SessionId);
         }
         /// <summary>
         /// Gets a collection containing the keys in the <see cref="SessionBag"/>.
         /// </summary>
         /// <returns></returns>
-        public ICollection<string> ItemsKeys()
+        internal ICollection<string> ItemsKeys()
         {
             return m_SessionItems.Keys; 
         }
@@ -171,7 +193,7 @@ namespace Nistec.Caching.Session
         /// Gets a collection containing the values in the <see cref="SessionBag"/>.
         /// </summary>
         /// <returns></returns>
-        public ICollection<SessionEntry> ItemsValues()
+        internal ICollection<SessionEntry> ItemsValues()
         {
             return m_SessionItems.Values; 
         }
@@ -194,7 +216,7 @@ namespace Nistec.Caching.Session
         {
             foreach (var entry in entries)
             {
-                m_SessionItems[entry.Key] = entry;
+                m_SessionItems[entry.Id] = entry;
             }
         }
 
@@ -217,6 +239,7 @@ namespace Nistec.Caching.Session
             {
                 oldSize = entry.Size;
                 SetSize(oldSize, 0, 1,0, false);
+                CacheLogger.Logger.LogAction(CacheAction.SessionCache, CacheActionState.Debug, "SessionBag Removed: " + key);
                 return true;
             }
             return false;
@@ -254,7 +277,11 @@ namespace Nistec.Caching.Session
         /// Get the size in bytes of current session.
         /// </summary>
         public long Size { get { return _Size; } }
-  
+        /// <summary>
+        /// Get the Count items of current session.
+        /// </summary>
+        public int Count { get { return m_SessionItems.Count; } }
+
         /// <summary>
         /// Determines whether the session bag contains the specified key.
         /// </summary>
@@ -280,7 +307,20 @@ namespace Nistec.Caching.Session
             SessionEntry o = null;
             if (m_SessionItems.TryGetValue(key, out o))
             {
-                return o;
+                return o.Copy();
+            }
+
+            return null;
+        }
+        public SessionEntry View(string key)
+        {
+            // no Sync ;
+            if (string.IsNullOrEmpty(key))
+                return null;
+            SessionEntry o = null;
+            if (m_SessionItems.TryGetValue(key, out o))
+            {
+                return o.Copy();
             }
 
             return null;
@@ -289,19 +329,48 @@ namespace Nistec.Caching.Session
         /// Add new <see cref="SessionEntry"/> to the session bag.
         /// </summary>
         /// <param name="value"></param>
-        public void AddItem(SessionEntry value)
+        public CacheState AddItem(SessionEntry value)
         {
-            AddItem(value.Key, value);
+            return AddItem(value.Id, value);
         }
         /// <summary>
         /// Add new <see cref="SessionEntry"/> to the session bag.
         /// </summary>
         /// <param name="key"></param>
         /// <param name="value"></param>
-        public void AddItem(string key, SessionEntry value)
+        public CacheState AddItem(string key, SessionEntry value)
+        {
+            if (string.IsNullOrEmpty(key) || value == null)
+                return CacheState.ArgumentsError;
+            int oldSize = 0;
+
+            if (m_SessionItems.TryAdd(key, value))
+            {
+                Sync();
+                SetSize(oldSize, GetSize(value), 0, 1, false);
+                return CacheState.ItemAdded;
+            }
+            else
+                return CacheState.AddItemFailed;
+        }
+
+        /// <summary>
+        /// Add new <see cref="SessionEntry"/> to the session bag.
+        /// </summary>
+        /// <param name="value"></param>
+        public CacheState SetItem(SessionEntry value)
+        {
+            return SetItem(value.Id, value);
+        }
+        /// <summary>
+        /// Add new <see cref="SessionEntry"/> to the session bag.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="value"></param>
+        public CacheState SetItem(string key, SessionEntry value)
         {
             if (string.IsNullOrEmpty(key))
-                return;
+                return CacheState.ArgumentsError;
             int oldSize = 0;
 
             SessionEntry entry;
@@ -314,23 +383,24 @@ namespace Nistec.Caching.Session
                     SetSize(oldSize, GetSize(value), 0, 1, false);
                     m_SessionItems[key] = value;
                 }
+                return CacheState.ItemChanged;
             }
-            else if (value != null)
+            else //if (value != null)
             {
                 Sync();
                 SetSize(oldSize, GetSize(value), 0, 1, false);
                 m_SessionItems[key] = value;
+                return CacheState.ItemAdded;
             }
         }
-
-        private CacheState SetSize(int oldSize, int newSize,int oldCount,int newCount,bool exchange)
+        private void SetSize(int oldSize, int newSize,int oldCount,int newCount,bool exchange)
         {
 
             _Size += (newSize - oldSize);
             if (_Size < 0)
                 _Size = 0;
 
-            return Owner.SizeExchage(oldSize, newSize, oldCount,newCount, exchange);
+            Owner.SizeExchage(oldSize, newSize, oldCount,newCount, exchange);
         }
 
         private int GetSize(SessionEntry o)
@@ -347,12 +417,64 @@ namespace Nistec.Caching.Session
         {
             return string.Format("SessionId:{0},Size:{1},State:{2},UserId:{3},Timeout:{4},ItemsCount:{5}", SessionId, Size,State, UserId, Timeout, m_SessionItems.Count);
         }
-       
+
         #endregion
 
+        public SessionBagStream Copy()
+        {
+            return GetSessionBagStream();
+        }
+
+        public ICollection<SessionEntry> Items()
+        {
+            return m_SessionItems.Values.ToArray();
+
+            //var list = new List<SessionEntry>();
+            //foreach (var entry in m_SessionItems)
+            //{
+            //    list.Add(entry.Value.Copy());
+            //}
+            //return list;
+        }
 
 
+        public IDictionary<string, object> ToDictionary()
+        {
+
+            return m_SessionItems.ToDictionary(c => c.Key, c => c.Value.DecodeBody());
+
+            //Dictionary < string, object> sessItems = new Dictionary<string, object>();
+            //foreach (var entry in m_SessionItems)
+            //{
+            //    sessItems[entry.Id] = entry.Value.DecodeBody();
+            //}
+            //return sessItems;
+        }
+
+        public DynamicEntity ToEntity()
+        {
+            var list = new List<DynamicEntity>();
+            foreach (var entry in m_SessionItems)
+            {
+                list.Add(new DynamicEntity(entry.Value.ToEntity()));
+            }
+
+            dynamic entity = new DynamicEntity();
+            entity.Args = this.Args;
+            entity.Creation = this.Creation;
+            entity.IsTimeOut = this.IsTimeOut;
+            entity.LastUsed = this.LastUsed;
+            entity.SessionId = this.SessionId;
+            entity.Size = this.Size;
+            entity.State = (int)this.State;
+            entity.Timeout = this.Timeout;
+            entity.UserId = this.UserId;
+            entity.SessionItems = list;// m_SessionItems.ToDictionary();
+            return entity;
+        }
+
+       
     }
-   
+  
 
 }

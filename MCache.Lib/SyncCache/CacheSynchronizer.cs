@@ -36,11 +36,29 @@ namespace Nistec.Caching.Sync
     /// </summary>
     internal class CacheSynchronizer : ITaskSync,IDisposable
     {
+
+        internal CacheSynchronizer Copy()
+        {
+            return new CacheSynchronizer()
+            {
+                enableTrigger = this.enableTrigger,
+                enableSyncEvent=this.enableSyncEvent,
+                intervalSeconds = this.intervalSeconds,
+                Owner = this.Owner,//.Copy(),
+                synchronized = this.synchronized,
+                watcher = this.watcher,
+                _TimerTask = this._TimerTask
+
+            };
+        }
+
+
         internal IDataCache Owner;
         int synchronized;
         private DbWatcher watcher;
         int intervalSeconds = CacheDefaults.DefaultIntervalSeconds;
         bool enableTrigger;
+        bool enableSyncEvent;
 
         SyncTask _TimerTask;
         internal SyncTask TimerTask
@@ -57,6 +75,19 @@ namespace Nistec.Caching.Sync
             }
         }
 
+        internal SyncTask GetTimerTask(DataSyncEntity entity)
+        {
+            var syncTime = entity.SyncTime;
+            if (syncTime == null)
+                syncTime = new SyncTimer(TimeSpan.FromSeconds(this.intervalSeconds), SyncType.Interval);
+            return new SyncTask() { Item = this, ItemName = Owner.CacheName, Timer = syncTime, Entity = entity, Owner = Owner };
+        }
+
+        private CacheSynchronizer()
+        {
+
+        }
+
         /// <summary>
         /// CacheSynchronize Ctor
         /// </summary>
@@ -64,6 +95,7 @@ namespace Nistec.Caching.Sync
         public CacheSynchronizer(IDataCache owner)
         {
             enableTrigger = owner.EnableTrigger;// CacheSettings.EnableSyncTypeEventTrigger;
+            enableSyncEvent = owner.EnableSyncEvent;
             this.Owner = owner;
             this.watcher = new DbWatcher(this.Owner);
         }
@@ -81,7 +113,14 @@ namespace Nistec.Caching.Sync
             Dispose(true);
             GC.SuppressFinalize(this);
         }
-
+        public void DisposeCopy()
+        {
+            if (watcher != null)
+            {
+                watcher.Dispose();
+            }
+            GC.SuppressFinalize(this);
+        }
 
         bool disposed = false;
         /// <summary>
@@ -114,8 +153,9 @@ namespace Nistec.Caching.Sync
         /// <param name="intervalSeconds"></param>
         public void Start(int intervalSeconds)
         {
+           //~Console.WriteLine("Debuger-CacheSynchronizer.Start...");
             this.intervalSeconds = CacheDefaults.GetValidIntervalSeconds(intervalSeconds);
-            Task.Factory.StartNew(() => RegisteredTablesEvent());
+            //Task.Factory.StartNew(() => RegisteredTablesEvent());
             if (enableTrigger)
                 TimerSyncDispatcher.Instance.Add(TimerTask);
         }
@@ -125,7 +165,8 @@ namespace Nistec.Caching.Sync
         /// </summary>
         public void Stop()
         {
-            if (enableTrigger)
+           //~Console.WriteLine("Debuger-CacheSynchronizer.Stop...");
+            //if (enableTrigger)
                 TimerSyncDispatcher.Instance.Remove(TimerTask);
             Task.Factory.StartNew(() => RemoveTablesEvent());
         }
@@ -145,6 +186,8 @@ namespace Nistec.Caching.Sync
         /// </summary>
         public void DoSynchronize()
         {
+           //~Console.WriteLine("Debuger-CacheSynchronizer.DoSynchronize...");
+
             try
             {
                // CacheLogger.Debug("CacheSynchronizer DoSynchronize start...");
@@ -179,7 +222,6 @@ namespace Nistec.Caching.Sync
                     {
                         if (o.Edited)
                         {
-
                             SyncBox.Instance.Add(new SyncBoxTask(o, Owner));
                             i++;
                         }
@@ -225,7 +267,7 @@ namespace Nistec.Caching.Sync
                     {
                         CacheLogger.Debug("Is Edited : " + o.ViewName);
                         o.SetEdited(true);
-                        list.Add(o);
+                        list.Add(o.Copy());
                     }
                 }
                 else if (!eventOnly) //if (o.SyncTime.HasTimeToRun())
@@ -235,7 +277,7 @@ namespace Nistec.Caching.Sync
                     if (isTimeToRun)
                     {
                         o.SetEdited(true);
-                        list.Add(o);
+                        list.Add(o.Copy());
 
                         CacheLogger.DebugFormat("SyncTimer Added to  DataSyncEntity list: {0} ", o.ViewName);
 
@@ -246,6 +288,32 @@ namespace Nistec.Caching.Sync
             return list.ToArray();
         }
 
+        /// <summary>
+        /// Register Tables that has sync option by event.
+        /// </summary>
+        public void RegisteredTableEvent(DataSyncEntity entity)
+        {
+
+            if (entity != null)
+            {
+                if (entity.SyncType == SyncType.Event)
+                {
+                    if (enableTrigger)
+                        entity.CreateTableTrigger(Owner);
+                    if (enableSyncEvent)
+                    {
+                        entity.Register(Owner);
+                        TimerSyncDispatcher.Instance.Add(TimerTask);
+                    }
+                }
+                else if (entity.SyncType == SyncType.Daily || entity.SyncType == SyncType.Interval)
+                {
+                    //TimerSyncDispatcher.Instance.Add(new SyncTask() { Item = this, IntervalSeconds =(int) o.SyncTime.Interval.TotalSeconds, ItemName = o.EntityName, Entity=o, Owner=Owner });
+                    TimerSyncDispatcher.Instance.Add(new SyncTask() { Item = this, Timer = entity.SyncTime, ItemName = entity.EntityName, Entity = entity, Owner = Owner });
+                }
+
+            }
+        }
 
         /// <summary>
         /// Registered All Tables that has sync option by event.
@@ -266,6 +334,14 @@ namespace Nistec.Caching.Sync
                     {
                         o.CreateTableTrigger(Owner);
                         o.Register(Owner);
+
+                        //if (enableTrigger)
+                        //    o.CreateTableTrigger(Owner);
+                        //if (enableSyncEvent)
+                        //{
+                        //    o.Register(Owner);
+                        //    TimerSyncDispatcher.Instance.Add(TimerTask);
+                        //}
                     }
                     else if (o.SyncType == SyncType.Daily || o.SyncType == SyncType.Interval)
                     {

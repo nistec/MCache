@@ -93,19 +93,20 @@ namespace Nistec.Caching.Config
             }
             return config.FindHttpServer(hostName);
         }
-        /// <summary>
-        /// Get cache api settings.
-        /// </summary>
-        /// <returns></returns>
-        public static NetConfigItems GetCacheApiSettings()
-        {
-            var config = GetConfig();
-            if (config == null)
-            {
-                throw new Exception("Tcp GetCacheApiSettings not found");
-            }
-            return config.CacheApiSettings;
-        }
+
+        ///// <summary>
+        ///// Get cache api settings.
+        ///// </summary>
+        ///// <returns></returns>
+        //public static NetConfigItems GetCacheApiSettings()
+        //{
+        //    var config = GetConfig();
+        //    if (config == null)
+        //    {
+        //        throw new Exception("GetCacheApiSettings not found");
+        //    }
+        //    return config.CacheApiSettings;
+        //}
 
         /// <summary>
         /// Get Cache Settings items.
@@ -120,23 +121,27 @@ namespace Nistec.Caching.Config
                 return o as NetConfigItems;
             }
         }
+        //public void ResetSettings()
+        //{
+        //    this.Reset(this.CacheSettings);
+        //}
 
-        /// <summary>
-        /// Get Cache Api Settings.
-        /// </summary>
-        [System.Configuration.ConfigurationProperty("CacheApiSettings")]
-        [ConfigurationCollection(typeof(NetConfigItems), AddItemName = "add")]
-        public NetConfigItems CacheApiSettings
-        {
-            get
-            {
-                object o = this["CacheApiSettings"];
-                return o as NetConfigItems;
-            }
-        }
+        ///// <summary>
+        ///// Get Cache Api Settings.
+        ///// </summary>
+        //[System.Configuration.ConfigurationProperty("CacheApiSettings")]
+        //[ConfigurationCollection(typeof(NetConfigItems), AddItemName = "add")]
+        //public NetConfigItems CacheApiSettings
+        //{
+        //    get
+        //    {
+        //        object o = this["CacheApiSettings"];
+        //        return o as NetConfigItems;
+        //    }
+        //}
 
         #region Pipe
-        
+
         /// <summary>
         /// Get <see cref="PipeServerConfigItems"/> collection.
         /// </summary>

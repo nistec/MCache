@@ -31,7 +31,9 @@ using Nistec.Runtime;
 using Nistec.Caching.Session;
 using Nistec.Caching.Config;
 using System.Data;
-
+using Nistec.Channels;
+using System.Threading.Tasks;
+using Nistec.Data.Ado;
 
 namespace Nistec.Caching.Server
 {
@@ -76,17 +78,17 @@ namespace Nistec.Caching.Server
         }
 
 
-        static DbCacheAgent _DbCache;
+        static DataCacheAgent _DbCache;
         /// <summary>
         /// Get <see cref="DbCache"/> as Singleton.
         /// </summary>
-        internal static DbCacheAgent DbCache
+        internal static DataCacheAgent DbCache
         {
             get
             {
                 if (_DbCache == null)
                 {
-                    _DbCache = new DbCacheAgent("DbCache");
+                    _DbCache = new DataCacheAgent("DbCache");
                 }
                 return _DbCache;
             }
@@ -112,6 +114,19 @@ namespace Nistec.Caching.Server
 
         #endregion
 
+        static ConnectionSettings _Connections;
+        public static ConnectionSettings Connections
+        {
+            get
+            {
+                if (_Connections == null)
+                {
+                    _Connections = ConnectionSettings.Instance;
+                    //_Connections.Load();
+                }
+                return _Connections;
+            }
+        }
 
         /// <summary>
         /// Get Cache prformance report <see cref="CachePerformanceReport"/>
@@ -167,13 +182,13 @@ namespace Nistec.Caching.Server
                     if (_Cache != null)
                         report.AddItemReport(Cache.PerformanceCounter); break;
                 case CacheAgentType.SyncCache:
-                    if (_Cache != null)
+                    if (_SyncCache != null)
                         report.AddItemReport(SyncCache.PerformanceCounter); break;
                 case CacheAgentType.SessionCache:
-                    if (_Cache != null)
+                    if (_Session != null)
                         report.AddItemReport(Session.PerformanceCounter); break;
                 case CacheAgentType.DataCache:
-                    if (_Cache != null)
+                    if (_DbCache != null)
                         report.AddItemReport(DbCache.PerformanceCounter); break;
 
             }
@@ -240,27 +255,29 @@ namespace Nistec.Caching.Server
             {
                 if (_Tasker == null)
                 {
-                    _Tasker = new Threading.AsyncTasker(100, 1000);
+                    _Tasker = new Threading.AsyncTasker(false, true, 300, 3000);
                    
                     _Tasker.Start();
+                   //~Console.WriteLine("Debuger-AgentManager.Tasker satart...");
                 }
                 return _Tasker;
             }
         }
 
-        static Nistec.Threading.TaskerQueue _PerformanceTasker;
+        static AsyncTasker _PerformanceTasker;
         /// <summary>
         /// Get <see cref="AsyncTasker"/> as Singleton.
         /// </summary>
-        public static TaskerQueue PerformanceTasker
+        public static AsyncTasker PerformanceTasker
         {
             get
             {
                 if (_PerformanceTasker == null)
                 {
-                    _PerformanceTasker = new Threading.TaskerQueue(100, 100);
+                    _PerformanceTasker = new AsyncTasker(false,false,10,5000);
 
                     _PerformanceTasker.Start();
+                   //~Console.WriteLine("Debuger-AgentManager.PerformanceTasker satart...");
                 }
                 return _PerformanceTasker;
             }
@@ -281,20 +298,48 @@ namespace Nistec.Caching.Server
         /// </summary>
         /// <param name="message"></param>
         /// <returns></returns>
-        internal static NetStream ExecManager(CacheMessage message)
+        internal static TransStream ExecManager(MessageStream message)
         {
             CacheState state = CacheState.Ok;
+            DateTime requestTime = DateTime.Now;
             try
             {
-                NetStream stream = null;
-                switch (message.Command)
+                //NetStream stream = null;
+
+                if (message == null || message.Command == null)
+                {
+                    throw new ArgumentNullException("ExecManager.message");
+                }
+
+                if (!message.Command.StartsWith("mang_"))
+                    return ExecCommand(message);
+                
+                switch (message.Command.ToLower())
                 {
                     case CacheManagerCmd.Reply:
-                        return CacheEntry.GetAckStream(CacheState.Ok, CacheManagerCmd.Reply, message.Key);
+                        return TransStream.Write("Reply: "+message.Id, TransType.Object);
                     case CacheManagerCmd.CacheProperties:
                         if (_Cache == null)
                             return null;
-                        return message.AsyncTask(() => Cache.PerformanceCounter.GetPerformanceProperties(), message.Command);
+                        return AsyncTransObject(() => Cache.PerformanceCounter.GetPerformanceProperties(), message.Command);
+
+                    case CacheManagerCmd.ReportCacheItems:
+                        return AsyncTransObject(() => Cache.GetReport(), message.Command);
+                    case CacheManagerCmd.ReportSessionItems:
+                        return AsyncTransObject(() => Session.GetReport(), message.Command);
+                    case CacheManagerCmd.ReportDataTimer:
+                        return AsyncTransObject(() => DbCache.GetTimerReport(), message.Command);
+
+                    case CacheManagerCmd.ReportCacheTimer:
+                        return AsyncTransObject(() => Cache.GetTimerReport(), message.Command);
+                    case CacheManagerCmd.ReportSessionTimer:
+                        return AsyncTransObject(() => Session.GetTimerReport(), message.Command);
+                    case CacheManagerCmd.ReportSyncBoxItems:
+                        return AsyncTransObject(() => SyncBox.Instance.GetBoxReport(), message.Command);
+                    case CacheManagerCmd.ReportSyncBoxQueue:
+                        return AsyncTransObject(() => SyncBox.Instance.GetQueueReport(), message.Command);
+                    case CacheManagerCmd.ReportTimerSyncDispatcher:
+                        return AsyncTransObject(() => TimerSyncDispatcher.Instance.GetReport(), message.Command);
 
 
                     case CacheManagerCmd.CloneItems:
@@ -302,89 +347,44 @@ namespace Nistec.Caching.Server
                             return null;
                         var args = message.GetArgs();
                         CloneType ct = EnumExtension.Parse<CloneType>(args.Get<string>("value"), CloneType.All);
-                        return message.AsyncTask(() => Cache.CloneItems(ct), message.Command);
+                        return AsyncTransObject(() => Cache.CloneItems(ct), message.Command);
 
                     case CacheManagerCmd.GetAllKeys:
                         if (_Cache == null)
                             return null;
-                        return message.AsyncTask(() => Cache.GetAllKeys(), message.Command);
+                        return AsyncTransObject(() => Cache.GetAllKeys(), message.Command);
                     case CacheManagerCmd.GetAllKeysIcons:
                         if (_Cache == null)
                             return null;
-                        return message.AsyncTask(() => Cache.GetAllKeysIcons(), message.Command);
+                        return AsyncTransObject(() => Cache.GetAllKeysIcons(), message.Command);
                     case CacheManagerCmd.StateCounterCache:
-                        return message.AsyncTask(() => CacheStateCounter(CacheAgentType.Cache), message.Command);
+                        return AsyncTransObject(() => CacheStateCounter(CacheAgentType.Cache), message.Command);
                     case CacheManagerCmd.StateCounterSync:
-                        return message.AsyncTask(() => CacheStateCounter(CacheAgentType.SyncCache), message.Command);
+                        return AsyncTransObject(() => CacheStateCounter(CacheAgentType.SyncCache), message.Command);
                     case CacheManagerCmd.StateCounterSession:
-                        return message.AsyncTask(() => CacheStateCounter(CacheAgentType.SessionCache), message.Command);
+                        return AsyncTransObject(() => CacheStateCounter(CacheAgentType.SessionCache), message.Command);
                     case CacheManagerCmd.StateCounterDataCache:
-                        return message.AsyncTask(() => CacheStateCounter(CacheAgentType.DataCache), message.Command);
+                        return AsyncTransObject(() => CacheStateCounter(CacheAgentType.DataCache), message.Command);
                     case CacheManagerCmd.GetStateCounterReport:
-                        return message.AsyncTask(() => CacheStateCounter(), message.Command);
+                        return AsyncTransObject(() => CacheStateCounter(), message.Command);
                     case CacheManagerCmd.GetPerformanceReport:
-                        return message.AsyncTask(() => PerformanceReport(), message.Command);
+                        return AsyncTransObject(() => PerformanceReport(), message.Command);
                     case CacheManagerCmd.GetAgentPerformanceReport:
-                        CacheAgentType agentType = CachePerformanceCounter.GetAgent(message.Key);
-                        return message.AsyncTask(() => PerformanceReport(agentType), message.Command);
+                        CacheAgentType agentType = CachePerformanceCounter.GetAgent(message.Id);
+                        return AsyncTransObject(() => PerformanceReport(agentType), message.Command);
                     case CacheManagerCmd.ResetPerformanceCounter:
                         message.AsyncTask(() => ResetPerformanceCounter());
                         return null;
                     case CacheManagerCmd.GetAllDataKeys:
                         if (_DbCache == null)
                             return null;
-                        return message.AsyncTask(() => DbCache.GetAllDataKeys(), message.Command);
+                        return AsyncTransObject(() => DbCache.GetAllDataKeys(), message.Command);
                     case CacheManagerCmd.GetAllSyncCacheKeys:
                         if (_SyncCache == null)
                             return null;
-                        return message.AsyncTask(() => SyncCache.CacheKeys().ToArray(), message.Command);
+                        return AsyncTransObject(() => SyncCache.CacheKeys().ToArray(), message.Command);
                     case CacheManagerCmd.CacheLog:
-                        return message.AsyncTask(() => CacheLogger.Logger.CacheLog(), message.Command);
-                    case CacheManagerCmd.GetAllSessionsKeys:
-                        if (_Session == null)
-                            return null;
-                        return message.AsyncTask(() => Session.GetAllSessionsKeys(), message.Command);
-                    case CacheManagerCmd.GetAllSessionsStateKeys:
-                        if (_Session == null)
-                            return null;
-                        stream = new NetStream();
-                        SessionState st = (SessionState)message.GetArgs().Get<int>("state");
-                        return message.AsyncTask(() => Session.GetAllSessionsStateKeys(st), message.Command);
-                    case CacheManagerCmd.GetSessionItemsKeys:
-                        if (_Session == null)
-                            return null;
-                        return message.AsyncTask(() => Session.GetSessionsItemsKeys(message.Id), message.Command);
-
-                    //=== Cache api===================================================
-                    case CacheCmd.ViewItem:
-                    case CacheCmd.RemoveItem:
-                        return Cache.ExecRemote(message);
-
-                    //=== Data Cache api===================================================
-                    case DataCacheCmd.GetItemProperties:
-                    case DataCacheCmd.RemoveTable:
-                    //case DataCacheCmd.GetDataStatistic:
-                    case DataCacheCmd.GetDataTable:
-
-                        return DbCache.ExecRemote(message);
-
-                    //=== Sync Cache api===================================================
-
-                    case SyncCacheCmd.RemoveSyncItem:
-                    case SyncCacheCmd.GetSyncItem:
-                    //case SyncCacheCmd.GetSyncStatistic:
-                    case SyncCacheCmd.GetItemsReport:
-
-                        return SyncCache.ExecRemote(message);
-
-                    //=== Session Cache api===================================================
-
-                    case SessionCmd.RemoveSession:
-                    case SessionCmd.GetExistingSession:
-
-                        return Session.ExecRemote(message);
-
-
+                        return AsyncTransObject(() => CacheLogger.Logger.CacheLog(), message.Command);
                 }
             }
             catch (System.Runtime.Serialization.SerializationException se)
@@ -398,88 +398,128 @@ namespace Nistec.Caching.Server
                 CacheLogger.Logger.LogAction(CacheAction.CacheException, CacheActionState.Error, "ExecManager error: " + ex.Message);
             }
 
-            return CacheEntry.GetAckStream(state, message.Command); //null;
+            return TransStream.Write(message.Command+", "+ state.ToString(), CacheUtil.ToTransType(state));
         }
-
-
-        internal static NetStream ExecCommand(CacheMessage message)
+        //TOD:~
+        internal static TransStream ExecCommand(MessageStream message)
         {
-
-            switch (message.Command)
+            if(message==null || message.Command==null)
             {
-                case CacheCmd.Reply:
-                case CacheCmd.AddItem:
-                case CacheCmd.GetValue:
-                case CacheCmd.FetchValue:
-                case CacheCmd.GetItem:
-                case CacheCmd.FetchItem:
-                case CacheCmd.ViewItem:
-                case CacheCmd.RemoveItem:
-                case CacheCmd.RemoveItemAsync:
-                case CacheCmd.CopyItem:
-                case CacheCmd.CutItem:
-                case CacheCmd.KeepAliveItem:
-                case CacheCmd.RemoveCacheSessionItems:
-                case CacheCmd.LoadData:
+                CacheLogger.Logger.LogAction(CacheAction.CacheException, CacheActionState.Error, "AgentManager.ExecCommand error: Message is null or Command not supported!");
+                return TransStream.Write("Unknown message or command",  TransType.Error); 
+            }
+
+            string CommandType = message.Command.Substring(0, 5);
+
+            switch (CommandType)
+            {
+                case "cach_":
                     return AgentManager.Cache.ExecRemote(message);
-
-                case SyncCacheCmd.Reply:
-                case SyncCacheCmd.GetSyncItem:
-                case SyncCacheCmd.GetRecord:
-                case SyncCacheCmd.GetEntity:
-                case SyncCacheCmd.GetAs:
-                case SyncCacheCmd.Refresh:
-                case SyncCacheCmd.Reset:
-                case SyncCacheCmd.RefreshItem:
-                case SyncCacheCmd.Contains:
-                case SyncCacheCmd.AddSyncItem:
-                case SyncCacheCmd.RemoveSyncItem:
-                case SyncCacheCmd.AddSyncEntity:
-                case SyncCacheCmd.GetEntityItems:
-                case SyncCacheCmd.GetEntityKeys:
-                case SyncCacheCmd.GetAllEntityNames:
-                case SyncCacheCmd.GetItemsReport:
-                case SyncCacheCmd.GetEntityItemsCount:
+                case "sync_":
                     return AgentManager.SyncCache.ExecRemote(message);
-
-                case SessionCmd.Reply:
-                case SessionCmd.AddSession:
-                case SessionCmd.RemoveSession:
-                case SessionCmd.ClearSessionItems:
-                case SessionCmd.ClearAllSessions:
-                case SessionCmd.GetOrCreateSession:
-                case SessionCmd.GetExistingSession:
-                case SessionCmd.SessionRefresh:
-                case SessionCmd.RefreshOrCreate:
-                case SessionCmd.RemoveSessionItem:
-                case SessionCmd.AddItemExisting:
-                case SessionCmd.AddSessionItem:
-                case SessionCmd.GetSessionItem:
-                case SessionCmd.FetchSessionItem:
-                case SessionCmd.CopyTo:
-                case SessionCmd.FetchTo:
-                case SessionCmd.Exists:
-                case SessionCmd.GetAllSessionsKeys:
-                case SessionCmd.GetAllSessionsStateKeys:
-                case SessionCmd.GetSessionItemsKeys:
+                case "sess_":
                     return AgentManager.Session.ExecRemote(message);
-
-                case DataCacheCmd.SetValue:
-                case DataCacheCmd.GetDataValue:
-                case DataCacheCmd.GetRow:
-                case DataCacheCmd.GetDataTable:
-                case DataCacheCmd.RemoveTable:
-                case DataCacheCmd.GetItemProperties:
-                //case DataCacheCmd.GetDataStatistic:
-                case DataCacheCmd.AddDataItem:
-                case DataCacheCmd.AddDataItemSync:
-                case DataCacheCmd.AddSyncDataItem:
+                case "data_":
                     return AgentManager.DbCache.ExecRemote(message);
+                case "mang_":
+                    return ExecManager(message);
                 default:
                     CacheLogger.Logger.LogAction(CacheAction.CacheException, CacheActionState.Error, "AgentManager.ExecCommand error: Command not supported " + message.Command);
-                    return CacheEntry.GetAckStream(CacheState.CommandNotSupported, message.Command);
-
+                    return TransStream.Write("CommandNotSupported", TransType.Error);
             }
         }
+
+        #region Async Task
+
+        internal static TransStream AsyncTransStream(Func<NetStream> action, string command, CacheState successState= CacheState.Ok, CacheState failedState = CacheState.NotFound, TransType transType = TransType.Object)//TransformType transform = TransformType.Message)
+        {
+            Task<NetStream> task = Task.Factory.StartNew<NetStream>(action);
+            {
+                task.Wait();
+                if (task.IsCompleted)
+                {
+                    if (task.Result != null)
+                    {
+                        //SendState(requestTime, successState);
+                        return TransStream.Write(task.Result, transType);
+                    }
+                }
+            }
+            task.TryDispose();
+            //SendState(requestTime, failedState);
+            return TransStream.Write(command + ": " + failedState.ToString(), TransType.Error);
+        }
+        internal static TransStream AsyncTransObject(Func<object> action, string command, CacheState successState= CacheState.Ok, CacheState failedState = CacheState.NotFound, TransType transType = TransType.Object)//TransformType transform = TransformType.Message)
+        {
+            Task<object> task = Task.Factory.StartNew<object>(action);
+            {
+                task.Wait();
+                if (task.IsCompleted)
+                {
+                    if (task.Result != null)
+                    {
+                        //SendState(requestTime, successState);
+                        return TransStream.Write(task.Result, transType);// TransStream.ToTransType(transform));
+                    }
+                }
+            }
+            task.TryDispose();
+            //SendState(requestTime, failedState);
+            return TransStream.Write(command + ": " + failedState.ToString(), TransType.Error);
+        }
+
+        internal static TransStream AsyncTransState(Func<CacheState> action, CacheState failedState = CacheState.NotFound)
+        {
+            Task<CacheState> task = Task.Factory.StartNew<CacheState>(action);
+            {
+                task.Wait();
+                if (task.IsCompleted)
+                {
+                    //SendState(requestTime, task.Result);
+                    return TransStream.Write((int)task.Result, TransType.State);
+                }
+            }
+            task.TryDispose();
+            //SendState(requestTime, failedState);
+            return TransStream.Write((int)failedState, TransType.State);
+        }
+
+
+        internal static TransStream AsyncTransState(Func<bool> action, CacheState successState, CacheState failedState)
+        {
+            Task<bool> task = Task.Factory.StartNew<bool>(action);
+            {
+                task.Wait();
+                if (task.IsCompleted)
+                {
+                    CacheState state = task.Result ? successState : failedState;
+                    //SendState(requestTime, state);
+                    return TransStream.Write((int)state, TransType.State);
+                }
+            }
+            task.TryDispose();
+            //SendState(requestTime, failedState);
+            return TransStream.Write((int)failedState, TransType.State);
+        }
+
+        internal static TransStream AsyncTransState(Action action, CacheState successState= CacheState.Ok, CacheState failedState = CacheState.UnKnown)
+        {
+            Task task = Task.Factory.StartNew(action);
+            {
+                task.Wait();
+                if (task.IsCompleted)
+                {
+                    //SendState(requestTime, successState);
+                    return TransStream.Write((int)successState, TransType.State);
+                }
+            }
+            task.TryDispose();
+            //SendState(requestTime, failedState);
+            return TransStream.Write((int)failedState, TransType.State);
+        }
+
+        #endregion
+
+
     }
 }

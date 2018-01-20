@@ -28,7 +28,6 @@ namespace Nistec.Caching
 {
     internal interface ICachePerformance
     {
-
         /// <summary>
         ///  Sets the memory size as an atomic operation.
         /// </summary>
@@ -38,7 +37,6 @@ namespace Nistec.Caching
         /// Get the max size defined by user for current item.
         /// </summary>
         long GetMaxSize();
-        
         /// <summary>
         /// Get the sync interval in seconds.
         /// </summary>
@@ -51,8 +49,6 @@ namespace Nistec.Caching
         /// Get indicate whether the cache item is remote cache.
         /// </summary>
         bool IsRemote { get; }
-
-
     }
     /// <summary>
     /// Interface for CachePerformanceReport
@@ -142,6 +138,12 @@ namespace Nistec.Caching
         {
             get;
         }
+        /// <summary>
+        /// Get the unit size (byte|Kb|Mb)
+        /// </summary>
+        string UnitSize { get; }
+
+
 
         /// <summary>
         /// Get avarage response time.

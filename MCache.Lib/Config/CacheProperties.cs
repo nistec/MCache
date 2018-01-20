@@ -55,7 +55,7 @@ namespace Nistec.Caching.Config
         public long MaxSize
         {
             get { return _MaxSize; }
-            set { _MaxSize=CacheDefaults.GetValidCacheMaxSize(value); }
+            set { _MaxSize=CacheSettings.MaxSize; }
         }
         int _AutoResetIntervalHours = CacheDefaults.DefaultAutoResetIntervalHours;
         /// <summary>

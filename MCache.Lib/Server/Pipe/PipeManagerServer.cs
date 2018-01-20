@@ -28,7 +28,7 @@ using Nistec.Channels;
 using Nistec.Caching.Data;
 using Nistec.Caching.Remote;
 using Nistec.IO;
-using Nistec.Caching.Channels;
+//using Nistec.Caching.Channels;
 using Nistec.Runtime;
 
 namespace Nistec.Caching.Server.Pipe
@@ -36,7 +36,7 @@ namespace Nistec.Caching.Server.Pipe
     /// <summary>
     /// Represent a cache managment pipe server listner.
     /// </summary>
-    public class PipeManagerServer : PipeServer<CacheMessage>//PipeServerCache
+    public class PipeManagerServer : PipeServer<MessageStream>//PipeServerCache
     {
 
         #region override
@@ -54,7 +54,6 @@ namespace Nistec.Caching.Server.Pipe
         protected override void OnStop()
         {
             base.OnStop();
-
             //AgentManager.Cache.Stop();
         }
         /// <summary>
@@ -77,10 +76,10 @@ namespace Nistec.Caching.Server.Pipe
             {
                 HostName= "nistec_cache_manager",
                 ConnectTimeout = 5000,
-                InBufferSize = 8192,
+                ReceiveBufferSize = 8192,
                 MaxAllowedServerInstances = 255,
                 MaxServerConnections = 1,
-                OutBufferSize = 8192,
+                SendBufferSize = 8192,
                 PipeDirection = PipeDirection.InOut,
                 PipeName = "nistec_cache_manager",
                 PipeOptions = PipeOptions.None,
@@ -117,7 +116,7 @@ namespace Nistec.Caching.Server.Pipe
         /// </summary>
         /// <param name="message"></param>
         /// <returns></returns>
-        protected override NetStream ExecRequset(CacheMessage message)
+        protected override TransStream ExecRequset(MessageStream message)
         {
             return AgentManager.ExecManager(message);
         }
@@ -126,9 +125,9 @@ namespace Nistec.Caching.Server.Pipe
         /// </summary>
         /// <param name="pipeServer"></param>
         /// <returns></returns>
-        protected override CacheMessage ReadRequest(NamedPipeServerStream pipeServer)
+        protected override MessageStream ReadRequest(NamedPipeServerStream pipeServer)
         {
-            return CacheMessage.ReadRequest(pipeServer, InBufferSize);
+            return MessageStream.ReadRequest(pipeServer, ReceiveBufferSize);
         }
         ///// <summary>
         ///// Write Response

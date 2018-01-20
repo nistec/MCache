@@ -11,7 +11,7 @@ using System.Windows.Forms;
 using System.ServiceProcess;
 using System.Linq;
 using System.Threading.Tasks;
- 
+
 using Nistec.Data;
 using Nistec.Data.SqlClient;
 using Nistec.Collections;
@@ -27,7 +27,8 @@ using Nistec.Charts;
 using Nistec.GridView;
 using Nistec.WinForms;
 using Nistec.Data.Entities.Cache;
-
+using Nistec.Serialization;
+using Nistec.Channels;
 
 namespace Nistec.Caching.Remote.UI
 {
@@ -41,13 +42,16 @@ namespace Nistec.Caching.Remote.UI
             RemoteCache,
             DataCache,
             SyncDb,
-            Session,
-            SessionActive,
-            SessionIdle,
+            SessionGrid,
+            SessionTree,
+            TimersReport
+            //SessionActive,
+            //SessionIdle,
         }
         private enum SubActions
         {
             Default,
+            Log,
             Performance,
             Statistic,
             Usage
@@ -57,18 +61,14 @@ namespace Nistec.Caching.Remote.UI
         private Actions lastAction = Actions.Services;
         private SubActions curSubAction = SubActions.Default;
 
-        private bool shouldRefresh=true;
+        private bool shouldRefresh = true;
         //private System.ServiceProcess.ServiceController[] services;
 
         const string channelManager = "";
         const string channelServer = "";
 
-        //TreeNode nodeRoot;
-        //RemoteQueueClient client;
-        //RemoteQueue remote;
-        //string[] ObjTypeNodeList=new  string[]{"Default","RemotingData","TextFile","BinaryFile","ImageFile","XmlDocument","SerializeClass","HtmlFile"};
 
-        string[] Sections = new string[] { "RemoteCache", "DataCache", "SyncDb", "Session"};
+        string[] Sections = new string[] { "RemoteCache", "DataCache", "SyncDb", "Session" };
 
         #endregion
 
@@ -80,23 +80,13 @@ namespace Nistec.Caching.Remote.UI
             this.tbBack.Enabled = false;
             this.tbForward.Enabled = false;
             this.mcManagment.TreeView.ImageList = this.imageList1;
-            
-            //CreateNodeList();
-            //remote = new RemoteQueueClient("");// RemoteQueue.Instance;
-
         }
 
         protected override void OnLoad(EventArgs e)
         {
             base.OnLoad(e);
             CreateServicesNodeList();
-            LoadUsage();
-            //Config();
-            //LoadDal();
-            
-            //InitChart();
-            //this.timer1.Interval = interval;
-            //this.timer1.Enabled = true;
+            //LoadUsage();
         }
 
         #endregion
@@ -120,7 +110,7 @@ namespace Nistec.Caching.Remote.UI
 
                 mcManagment.TreeView.Nodes.Clear();
                 mcManagment.ListCaption = "Cache Data Items";
-               
+
                 string[] list = ManagerApi.GetAllDataKeys();
                 if (list == null)
                     goto Label_Exit;
@@ -163,20 +153,31 @@ namespace Nistec.Caching.Remote.UI
             }
         }
 
-        private void ShowGridDataItems(string name)
+        private void ShowGridDataItems(string nameKey)
         {
 
             try
             {
-                DataTable item = ManagerApi.DataCacheApi.GetDataTable(null, name);// RemoteDataClient.Instance.GetDataTable(name);
+                var ck = ComplexArgs.Parse(nameKey);
+                var reportItem = ManagerApi.DataCacheApi.GetItemsReport(ck.Prefix,ck.Suffix);
 
 
-                if (item == null)//.IsEmpty)
+                if (reportItem == null)
                     return;
 
                 this.mcManagment.SelectedPage = pgItems;
-                this.gridItems.CaptionText = item.TableName;
-                this.gridItems.DataSource = item;
+                this.gridItems.CaptionText = reportItem.Caption;
+                this.gridItems.DataSource = reportItem.Data;
+
+                WiredGridDropDown(1);
+
+                //DataTable item = ManagerApi.DataCacheApi.GetTable(null, name);
+                //if (item == null)
+                //    return;
+
+                //this.mcManagment.SelectedPage = pgItems;
+                //this.gridItems.CaptionText = item.TableName;
+                //this.gridItems.DataSource = item;
             }
             catch (Exception ex)
             {
@@ -254,15 +255,16 @@ namespace Nistec.Caching.Remote.UI
 
             try
             {
-                var reportItem = ManagerApi.SyncCacheApi.GetItemsReport(name);// RemoteDataClient.Instance.GetDataTable(name);
+                var reportItem = ManagerApi.SyncCacheApi.GetItemsReport(name);
 
 
-                if (reportItem == null)//.IsEmpty)
+                if (reportItem == null)
                     return;
 
                 this.mcManagment.SelectedPage = pgItems;
                 this.gridItems.CaptionText = reportItem.Caption;
                 this.gridItems.DataSource = reportItem.Data;
+                WiredGridDropDown(1);
             }
             catch (Exception ex)
             {
@@ -273,8 +275,98 @@ namespace Nistec.Caching.Remote.UI
 
         #endregion
 
-        #region Items
+        #region Cache grid
 
+        private void CreateNodeItems(bool shouldRefresh)
+        {
+            this.shouldRefresh = shouldRefresh;
+            CreateNodeItems();
+        }
+
+        private void CreateNodeItems()
+        {
+            if (!shouldRefresh && curAction == Actions.RemoteCache)
+                return;
+
+            try
+            {
+                DoClearSelectedItem();
+
+                mcManagment.TreeView.Nodes.Clear();
+                mcManagment.ListCaption = "Remote Cache Items";
+
+
+                int icon = 1;
+                string name = "Remote Cache";
+                TreeNode t = new TreeNode(name);
+                t.Tag = "Remote Cache";
+                t.ImageIndex = icon;
+                t.SelectedImageIndex = icon;
+                this.mcManagment.Items.Add(t);
+
+
+                shouldRefresh = false;
+                //LoadUsage();
+                curAction = Actions.RemoteCache;
+            }
+            catch (Exception ex)
+            {
+                MsgBox.ShowError(ex.Message);
+            }
+        }
+
+        //private void ShowGridItems()
+        //{
+        //    string text = GetSelectedItem();
+        //    if (text != null)
+        //    {
+        //        ShowGridItems(text);
+        //    }
+        //}
+        private void ShowGridItems(string selected)
+        {
+
+            try
+            {
+                var reportItem = ManagerApi.Report(CacheManagerCmd.ReportCacheItems);//.GetCacheItemsReport();
+
+                if (reportItem == null)
+                    return;
+
+                //this.mcManagment.SelectedPage = pgItems;
+                this.gridItems.CaptionText = reportItem.Caption;
+                this.gridItems.DataSource = reportItem.Data;
+                //WiredGridDropDown(1);
+            }
+            catch (Exception ex)
+            {
+                MsgBox.ShowError(ex.Message);
+            }
+        }
+
+        private void ShowGridItems()
+        {
+
+            try
+            {
+                var reportItem = ManagerApi.Report(CacheManagerCmd.ReportCacheItems);//.GetCacheItemsReport();
+
+                if (reportItem == null)
+                    return;
+
+                this.mcManagment.SelectedPage = pgItems;
+                this.gridItems.CaptionText = reportItem.Caption; 
+                this.gridItems.DataSource = reportItem.Data;
+                WiredGridDropDown(1);
+            }
+            catch (Exception ex)
+            {
+                MsgBox.ShowError(ex.Message);
+            }
+        }
+
+#if(false)
+        /*
         private void CreateNodeItems(bool shouldRefresh)
         {
             this.shouldRefresh = shouldRefresh;
@@ -293,26 +385,14 @@ namespace Nistec.Caching.Remote.UI
 
                 mcManagment.TreeView.Nodes.Clear();
                 mcManagment.ListCaption = "Cache Items";
-                //RemoteCacheClient rcc = new RemoteCacheClient();
-                string[] list = ManagerApi.GetAllKeysIcons();// rcc.GetAllKeysIcons();
+
+                string[] list = ManagerApi.GetAllKeysIcons();
                 if (list == null)
                     goto Label_Exit;
 
-                //parents
-                //TreeNode[] parents=new TreeNode[8];
-                //parents[0] = new TreeNode(CacheObjType.Default.ToString(),9,10);
-                //parents[1] = new TreeNode(CacheObjType.RemotingData.ToString(), 9, 10);
-                //parents[2] = new TreeNode(CacheObjType.TextFile.ToString(), 9, 10);
-                //parents[3] = new TreeNode(CacheObjType.BinaryFile.ToString(), 9, 10);
-                //parents[4] = new TreeNode(CacheObjType.ImageFile.ToString(), 9, 10);
-                //parents[5] = new TreeNode(CacheObjType.XmlDocument.ToString(), 9, 10);
-                //parents[6] = new TreeNode(CacheObjType.SerializeClass.ToString(), 9, 10);
-                //parents[7] = new TreeNode(CacheObjType.HtmlFile.ToString(), 9, 10);
-                //this.mcManagment.Items.AddRange(parents);
-
                 foreach (string s in list)
                 {
-                    int icon = Types.ToInt( s.Substring(0, 1),0);
+                    int icon = Types.ToInt(s.Substring(0, 1), 0);
                     string name = s.Substring(2);
                     TreeNode t = new TreeNode(name);
                     t.Tag = s;
@@ -334,120 +414,8 @@ namespace Nistec.Caching.Remote.UI
             {
                 MsgBox.ShowError(ex.Message);
             }
-
         }
-
-        private void RemoveTreeItem(string key)
-        {
-            try
-            {
-                if (mcManagment.TreeView == null || mcManagment.TreeView.Nodes == null)
-                    return;
-
-                TreeNode tn = mcManagment.TreeView.SelectedNode;
-                if (tn.Parent == null)
-                {
-                    return;
-                }
-                tn.Remove();
-               
-                mcManagment.TreeView.Refresh();
-                shouldRefresh = false;
-                LoadUsage();
-            }
-            catch (Exception ex)
-            {
-                MsgBox.ShowError(ex.Message);
-            }
-        }
-
-        //private void RemoveTreeItem(RemoteCacheClient rcc)
-        //{
-        //    try
-        //    {
-
-        //        if (mcManagment.TreeView == null || mcManagment.TreeView.Nodes == null)
-        //            return;
-
-        //        TreeNode tn = mcManagment.TreeView.SelectedNode;
-        //        if (tn.Parent == null)
-        //        {
-        //            if (tn.Nodes == null || tn.Nodes.Count==0)
-        //            {
-        //                return;
-        //            }
-        //            if (MsgBox.ShowQuestionYNC("This will removed all items from Cache section, Continue", "Remove Items") == DialogResult.Yes)
-        //            {
-        //                foreach (TreeNode n in tn.Nodes)
-        //                {
-        //                    rcc.RemoveItem(n.Text);
-        //                }
-        //                tn.Nodes.Clear();
-        //            }
-        //        }
-        //        else
-        //        {
-        //            if (MsgBox.ShowQuestionYNC("This item will removed from Cache, Continue", "Remove Item") == DialogResult.Yes)
-        //            {
-        //                rcc.RemoveItem(tn.Text);
-        //                tn.Remove();
-        //            }
-        //        }
-
-        //        mcManagment.TreeView.Refresh();
-        //        shouldRefresh = false;
-        //        LoadUsage();
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        MsgBox.ShowError(ex.Message);
-        //    }
-        //}
-
-        private void RemoveTreeItem()
-        {
-            try
-            {
-
-                if (mcManagment.TreeView == null || mcManagment.TreeView.Nodes == null)
-                    return;
-
-                TreeNode tn = mcManagment.TreeView.SelectedNode;
-                if (tn.Parent == null)
-                {
-                    if (tn.Nodes == null || tn.Nodes.Count == 0)
-                    {
-                        return;
-                    }
-                    if (MsgBox.ShowQuestionYNC("This will removed all items from Cache section, Continue", "Remove Items") == DialogResult.Yes)
-                    {
-                        foreach (TreeNode n in tn.Nodes)
-                        {
-                            ManagerApi.CacheApi.RemoveItem(n.Text);
-                        }
-                        tn.Nodes.Clear();
-                    }
-                }
-                else
-                {
-                    if (MsgBox.ShowQuestionYNC("This item will removed from Cache, Continue", "Remove Item") == DialogResult.Yes)
-                    {
-                        ManagerApi.CacheApi.RemoveItem(tn.Text);
-                        tn.Remove();
-                    }
-                }
-
-                mcManagment.TreeView.Refresh();
-                shouldRefresh = false;
-                LoadUsage();
-            }
-            catch (Exception ex)
-            {
-                MsgBox.ShowError(ex.Message);
-            }
-        }
-
-
+        */
         private void ShowGridItems()
         {
             string text = GetSelectedItem();
@@ -465,27 +433,30 @@ namespace Nistec.Caching.Remote.UI
 
             try
             {
-                //RemoteCacheClient rcc = new RemoteCacheClient();
-                //CacheItem item = rcc.ViewItem(name);
 
-                Task<CacheEntry> task = new Task<CacheEntry>(() => ManagerApi.CacheApi.ViewItem(name));
+                Task<CacheEntry> task = new Task<CacheEntry>(() => ManagerApi.CacheApi.GetItem(name));
                 task.Start();
                 task.Wait(5000);
                 if (!task.IsCompleted)
                 {
                     return;
                 }
-                CacheEntry item = task.Result;// CacheApi.GetItemView(name);
+                CacheEntry item = task.Result;
 
-
-                if (item==null)//.IsEmpty)
+                if (item == null)
                     return;
-                //object value = null;
 
-                this.mcManagment.SelectedPage = pgImage;
-                this.txtImageHeader.Text = item.PrintHeader();
-                object value = item.GetValue();
-                this.txtBody.Text =item.BodyToBase64();//.BodyToBase64();//.SerializeBodyToBase64();
+                ShowItemJson(item);
+
+                //this.mcManagment.SelectedPage = pgImage;
+                //this.txtImageHeader.Text = item.PrintHeader();
+                //object value = item.GetValue();
+                //this.txtBody.Text = item.GetValueJson();//.BodyToBase64();
+
+                //if (Serialization.SerializeTools.IsPrimitiveOrString(item.BodyType))
+                //    ShowItemValue(item);
+                //else
+                //    ShowItemRef(item);
 
                 /*
                 switch (item.CacheObjType)
@@ -562,7 +533,31 @@ namespace Nistec.Caching.Remote.UI
                         this.vgrid.SetDataBinding(item.Clone(), item.Key);
                         break;
                 }
-                 */ 
+                 */
+            }
+            catch (Exception ex)
+            {
+                MsgBox.ShowError(ex.Message);
+            }
+        }
+#endif
+        private void RemoveTreeItem(string key)
+        {
+            try
+            {
+                if (mcManagment.TreeView == null || mcManagment.TreeView.Nodes == null)
+                    return;
+
+                TreeNode tn = mcManagment.TreeView.SelectedNode;
+                if (tn.Parent == null)
+                {
+                    return;
+                }
+                tn.Remove();
+
+                mcManagment.TreeView.Refresh();
+                shouldRefresh = false;
+                LoadUsage();
             }
             catch (Exception ex)
             {
@@ -570,23 +565,68 @@ namespace Nistec.Caching.Remote.UI
             }
         }
 
+        private void RemoveTreeItem()
+        {
+            try
+            {
+
+                if (mcManagment.TreeView == null || mcManagment.TreeView.Nodes == null)
+                    return;
+
+                TreeNode tn = mcManagment.TreeView.SelectedNode;
+                if (tn.Parent == null)
+                {
+                    if (tn.Nodes == null || tn.Nodes.Count == 0)
+                    {
+                        return;
+                    }
+                    if (MsgBox.ShowQuestionYNC("This will removed all items from Cache section, Continue", "Remove Items") == DialogResult.Yes)
+                    {
+                        foreach (TreeNode n in tn.Nodes)
+                        {
+                            ManagerApi.CacheApi.Remove(n.Text);
+                        }
+                        tn.Nodes.Clear();
+                    }
+                }
+                else
+                {
+                    if (MsgBox.ShowQuestionYNC("This item will removed from Cache, Continue", "Remove Item") == DialogResult.Yes)
+                    {
+                        ManagerApi.CacheApi.Remove(tn.Text);
+                        tn.Remove();
+                    }
+                }
+
+                mcManagment.TreeView.Refresh();
+                shouldRefresh = false;
+                LoadUsage();
+            }
+            catch (Exception ex)
+            {
+                MsgBox.ShowError(ex.Message);
+            }
+        }
+
+        private void ShowItemJson(CacheEntry item)
+        {
+            this.mcManagment.SelectedPage = pgSource;
+            this.txtHeader.Text = item.PrintHeader();
+            this.txtBody.Text = item.ToJson(true);
+        }
 
         private void ShowItemValue(CacheEntry item)
         {
             this.mcManagment.SelectedPage = pgSource;
             this.txtHeader.Text = item.PrintHeader();
-            //value = item.Load();
-            //value = item.Value;
-            object value = item.GetValue();
-            if (value != null)
-                this.txtBody.Text = value.ToString();
+            this.txtBody.Text = item.GetValueJson();// value.ToString();
         }
         private void ShowItemRef(CacheEntry item)
         {
             this.vgrid.Fields.Clear();
             this.mcManagment.SelectedPage = pgClass;
             this.vgrid.CaptionText = item.PrintHeader();
-            this.vgrid.SetDataBinding(item.GetValue(), item.Key);
+            this.vgrid.SetDataBinding(item.GetValue(), item.Id);
         }
 
         #endregion
@@ -598,72 +638,35 @@ namespace Nistec.Caching.Remote.UI
             this.shouldRefresh = shouldRefresh;
             CreateNodeSession();
         }
+        private void CreateNodeSessionGrid()
+        {
+            try
+            {
+                DoClearSelectedItem();
 
-        //private void CreateNodeSession()
-        //{
+                mcManagment.TreeView.Nodes.Clear();
+                mcManagment.ListCaption = "Session Grid";
 
-        //    //if (!shouldRefresh && curAction == Actions.Session)
-        //    //    return;
+                int icon = 1;
+                string name = "Session Grid";
+                TreeNode t = new TreeNode(name);
+                t.Tag = "Session Grid";
+                t.ImageIndex = icon;
+                t.SelectedImageIndex = icon;
 
-        //    try
-        //    {
-        //        DoClearSelectedItem();
-
-        //        mcManagment.TreeView.Nodes.Clear();
-        //        mcManagment.ListCaption = "Cache Session Items";
-
-        //        //SessionManager rs = new SessionManager();
-        //        ICollection<string> sessionList = ManagerApi.GetAllSessionsKeys();// rs.GetAllSessionsKeys();
-        //        //ICollection<SessionItem> sessionItems = rs.GetAllItems();
-        //        if (sessionList == null || sessionList.Count == 0)
-        //            goto Label_Exit;
-
-        //        Dictionary<string, TreeNode> parents = new Dictionary<string, TreeNode>();
-        //        foreach (string item in sessionList)
-        //        {
-        //            TreeNode t = new TreeNode(item, 9, 10);
-        //            t.Tag = "Session";
-        //            parents[item] = t;
-        //        }
-
-        //        //RemoteCacheClient rcc = new RemoteCacheClient();
-
-        //        ICollection<CacheEntry> cloneItems = ManagerApi.CloneItems(CloneType.Session);//rcc.CloneItems(CloneType.Session);
-
-        //        foreach (CacheEntry pair in cloneItems)
-        //        {
-        //            string name = (string)pair.Key;
-        //            TreeNode t = new TreeNode(name, 0, 1);
-        //            t.Tag = pair.GetValue();
-        //            string kv = (string)pair.Id;
-        //            if (parents.ContainsKey(kv))
-        //            {
-        //                parents[kv].Nodes.Add(t);
-        //            }
-        //        }
-        //        TreeNode[] range = new TreeNode[parents.Count];
-        //        parents.Values.CopyTo(range, 0);
-        //        this.mcManagment.Items.AddRange(range);
-
-        //        mcManagment.TreeView.Sort();
-        //        shouldRefresh = false;
-
-        //    Label_Exit:
-        //        curAction = Actions.Session;
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        MsgBox.ShowError(ex.Message);
-        //    }
-        //}
+                this.mcManagment.Items.Add(t);
+                
+                shouldRefresh = false;
+                curAction = Actions.SessionGrid;
+            }
+            catch (Exception ex)
+            {
+                MsgBox.ShowError(ex.Message);
+            }
+        }
 
         private void CreateNodeSession()
         {
-
-
-            //if (!shouldRefresh && curAction == action)
-            //    return;
-
             try
             {
                 DoClearSelectedItem();
@@ -671,9 +674,7 @@ namespace Nistec.Caching.Remote.UI
                 mcManagment.TreeView.Nodes.Clear();
                 mcManagment.ListCaption = "Cache Session Items";
 
-                //SessionManager rs = new SessionManager();
                 ICollection<string> sessionList = ManagerApi.GetAllSessionsKeys();
-                //ICollection<SessionItem> sessionItems = rs.GetAllItems();
 
                 if (sessionList == null || sessionList.Count == 0)
                     goto Label_Exit;
@@ -685,7 +686,7 @@ namespace Nistec.Caching.Remote.UI
                     t.Tag = "Session";
                     parents[item] = t;
 
-                    ICollection<string> items = ManagerApi.GetSessionsItemsKeys(item);//  rs.GetSessionsItemsKeys(item);
+                    ICollection<string> items = ManagerApi.GetSessionsItemsKeys(item);
                     foreach (string s in items)
                     {
                         string name = s;
@@ -699,7 +700,7 @@ namespace Nistec.Caching.Remote.UI
                     }
                 }
 
-              
+
                 TreeNode[] range = new TreeNode[parents.Count];
                 parents.Values.CopyTo(range, 0);
                 this.mcManagment.Items.AddRange(range);
@@ -708,7 +709,7 @@ namespace Nistec.Caching.Remote.UI
                 shouldRefresh = false;
 
             Label_Exit:
-                curAction = Actions.Session;
+                curAction = Actions.SessionTree;// Actions.Session;
             }
             catch (Exception ex)
             {
@@ -719,11 +720,8 @@ namespace Nistec.Caching.Remote.UI
         private void CreateNodeSession(SessionState state)
         {
 
-            Actions action = state == SessionState.Active ? Actions.SessionActive : Actions.SessionIdle;
-
-            //if (!shouldRefresh && curAction == action)
-            //    return;
-
+            //Actions action = state == SessionState.Active ? Actions.SessionActive : Actions.SessionIdle;
+            Actions action = Actions.SessionTree;
             try
             {
                 DoClearSelectedItem();
@@ -731,9 +729,7 @@ namespace Nistec.Caching.Remote.UI
                 mcManagment.TreeView.Nodes.Clear();
                 mcManagment.ListCaption = "Cache Session Items";
 
-                //SessionManager rs = new SessionManager();
-                ICollection<string> sessionList = ManagerApi.GetAllSessionsStateKeys(state);
-                //ICollection<SessionItem> sessionItems = rs.GetAllItems();
+                ICollection<string> sessionList = ManagerApi.GetAllSessionsKeysByState(state);
 
                 if (sessionList == null || sessionList.Count == 0)
                     goto Label_Exit;
@@ -745,7 +741,7 @@ namespace Nistec.Caching.Remote.UI
                     t.Tag = "Session";
                     parents[item] = t;
 
-                    ICollection<string> items = ManagerApi.GetSessionsItemsKeys(item);//  rs.GetSessionsItemsKeys(item);
+                    ICollection<string> items = ManagerApi.GetSessionsItemsKeys(item);
                     foreach (string s in items)
                     {
                         string name = s;
@@ -758,22 +754,6 @@ namespace Nistec.Caching.Remote.UI
                         }
                     }
                 }
-
-                //RemoteCacheClient rcc = new RemoteCacheClient();
-
-                //ICollection<CacheItem> cloneItems = rcc.CloneItems(CloneType.Session);
-
-                //foreach (CacheItem pair in cloneItems)
-                //{
-                //    string name = (string)pair.Key;
-                //    TreeNode t = new TreeNode(name, 0, 1);
-                //    t.Tag = pair.Value;
-                //    string kv = (string)pair.SessionId;
-                //    if (parents.ContainsKey(kv))
-                //    {
-                //        parents[kv].Nodes.Add(t);
-                //    }
-                //}
 
                 TreeNode[] range = new TreeNode[parents.Count];
                 parents.Values.CopyTo(range, 0);
@@ -791,166 +771,138 @@ namespace Nistec.Caching.Remote.UI
             }
         }
 
- 
-        /*
-        private void CreateNodeSessionItems()
+        private void ShowGridTreeSession()
         {
+            string selected = GetSelectedItem();
+            ShowGridTreeSession(selected);
+        }
 
-            if (!shouldRefresh && curAction == Actions.SessionItems)
-                return;
+        private void ShowGridTreeSession(string selected)
+        {
+            //string selected = GetSelectedItem();
+            if (selected != null)
+            {
+                string tag = GetSelectedTag();
+
+                if (tag == "Session")
+                {
+                    ShowSessionItem(selected);
+                }
+                else
+                {
+                    ShowSessionEntry(tag, selected);
+                }
+            }
+        }
+
+        private void ShowGridSessionItems(string selected)
+        {
 
             try
             {
-                mcManagment.TreeView.Nodes.Clear();
-                mcManagment.ListCaption = "Cache Session Items";
+                var reportItem = ManagerApi.Report(CacheManagerCmd.ReportSessionItems);
 
-                RemoteSession rs = new RemoteSession();
-                ICollection<string> sessionList = rs.GetAllSessionsKeys();
-                //ICollection<SessionItem> sessionItems = rs.GetAllItems();
+                if (reportItem == null)
+                    return;
 
-                if (sessionList == null || sessionList.Count == 0)
-                    goto Label_Exit;
-
-                Dictionary<string, TreeNode> parents = new Dictionary<string, TreeNode>();
-                foreach (string item in sessionList)
-                {
-                    TreeNode t = new TreeNode(item, 9, 10);
-                    t.Tag = "Session";
-                    parents[item] = t;
-
-                    ICollection<string> items = rs.GetSessionsItemsKeys(item);
-                    foreach (string s in items)
-                    {
-                        string name = s;
-                        TreeNode titem = new TreeNode(name, 0, 1);
-                        //t.Tag = pair.Value;
-                        string kv = (string)item;
-                        if (parents.ContainsKey(kv))
-                        {
-                            parents[kv].Nodes.Add(t);
-                        }
-                    }
-                }
-
-                
-                TreeNode[] range = new TreeNode[parents.Count];
-                parents.Values.CopyTo(range, 0);
-                this.mcManagment.Items.AddRange(range);
-
-                mcManagment.TreeView.Sort();
-                shouldRefresh = false;
-
-            Label_Exit:
-                curAction = Actions.SessionItems;
+                //this.mcManagment.SelectedPage = pgItems;
+                this.gridItems.CaptionText = reportItem.Caption;
+                this.gridItems.DataSource = reportItem.Data;
             }
             catch (Exception ex)
             {
                 MsgBox.ShowError(ex.Message);
             }
         }
-        */
-        private void ShowGridSession()
+        private void ShowGridSessionItems()
         {
-            string tag= GetSelectedTag();
-            string text = GetSelectedItem();
-            if (text != null)
+
+            try
             {
-              
-                if (tag == "Session")
-                {
-                    ShowSessionItem(text);
-                }
-                //else if (tag == "App")
-                //{
-                //    ShowAppItem(text);
-                //}
-                else
-                {
-                    ShowGridItems(text);
-                }
+                var reportItem = ManagerApi.Report(CacheManagerCmd.ReportSessionItems);
+
+                if (reportItem == null)
+                    return;
+
+                this.mcManagment.SelectedPage = pgItems;
+                this.gridItems.CaptionText = reportItem.Caption;
+                this.gridItems.DataSource = reportItem.Data;
+                WiredGridDropDown(1);
+            }
+            catch (Exception ex)
+            {
+                MsgBox.ShowError(ex.Message);
             }
         }
-
+        private void ShowSessionEntry(string tag, string key)
+        {
+            if (tag == "SessionTree")//(tag == "Session" || tag == "SessionActive" || tag == "SessionIdle")
+                return;
+            var node = GetSelectedNode();
+            var sessionId = node.Parent.Text;
+            var entry = ManagerApi.SessionApi.ViewSessionItem(sessionId, key);
+            ShowPropertyJson(entry, "Session Item", sessionId + ", " + key);
+        }
+            
+    
         private void ShowSessionItem(string sessionId)
         {
-            //RemoteSession rcc = new RemoteSession(sessionId);
-            //SessionItem item =  rcc.GetSession();
-
-            ISessionBagStream item = ManagerApi.SessionApi.GetExistingSession(sessionId);
+            ISessionBagStream item = ManagerApi.SessionApi.ViewExistingSession(sessionId);
             if (item == null)//.IsEmpty)
                 return;
             this.mcManagment.SelectedPage = pgClass;
-            this.vgrid.CaptionText = item.SessionId;
+            this.vgrid.CaptionText = string.Format("Id: {0}, Creation: {1}, LastUsed:{2}", item.SessionId, item.Creation, item.LastUsed);
             this.vgrid.SetDataBinding(item, item.SessionId);
         }
 
-        //private void ShowAppItem(string name)
-        //{
-        //    RemoteApp rcc = new RemoteApp();
-        //    SessionItem item = rcc.GetApp(name);
-        //    if (item == null)//.IsEmpty)
-        //        return;
-        //    this.mcManagment.SelectedPage = pgClass;
-        //    this.vgrid.CaptionText = item.SessionId;
-        //    this.vgrid.SetDataBinding(item, item.SessionId);
-        //}
+
         #endregion
 
-        #region App
-/*
-        private void CreateNodeApp(bool shouldRefresh)
+        #region  Timer Report
+
+        private void CreateNodeTimerItems(bool shouldRefresh)
         {
             this.shouldRefresh = shouldRefresh;
-            CreateNodeApp();
+            CreateNodeTimerItems();
         }
 
-        private void CreateNodeApp()
+        private void CreateNodeTimerItems()
         {
-
-            if (!shouldRefresh && curAction == Actions.App)
+            if (!shouldRefresh && curAction == Actions.TimersReport)
                 return;
 
             try
             {
+                DoClearSelectedItem();
+
                 mcManagment.TreeView.Nodes.Clear();
-                mcManagment.ListCaption = "Cache App Items";
+                mcManagment.ListCaption = "Cache Timer Items";
 
-                RemoteApp rs = new RemoteApp();
-                string[] sessionList = rs.GetAllKeys();
-                IDictionary sessionItems = rs.GetAllItems();
 
-                if (sessionList == null || sessionList.Length == 0)
-                    goto Label_Exit;
+                //case CacheManagerCmd.ReportCacheTimer:
+                //case CacheManagerCmd.ReportSessionTimer:
+                //case CacheManagerCmd.ReportSyncBoxItems:
+                //case CacheManagerCmd.ReportSyncBoxQueue:
+                //case CacheManagerCmd.ReportTimerSyncDispatcher:
 
-                Dictionary<string, TreeNode> parents = new Dictionary<string, TreeNode>();
-                foreach (string item in sessionList)
+
+                string[] list = new string[] { CacheManagerCmd.ReportCacheTimer, CacheManagerCmd.ReportSessionTimer, CacheManagerCmd.ReportDataTimer, CacheManagerCmd.ReportSyncBoxItems, CacheManagerCmd.ReportSyncBoxQueue, CacheManagerCmd.ReportTimerSyncDispatcher };
+
+                foreach (string s in list)
                 {
-                    TreeNode t = new TreeNode(item, 9, 10);
-                    t.Tag = "App";
-                    parents[item] = t;
+                    int icon = 1;
+                    string name = s;
+                    TreeNode t = new TreeNode(name);
+                    t.Tag = s;
+                    t.ImageIndex = icon;
+                    t.SelectedImageIndex = icon;
+                    //parent.Nodes.Add(t);
+                    this.mcManagment.Items.Add(t);
                 }
-
-                foreach (DictionaryEntry  pair in sessionItems)
-                {
-                    string name =(string) pair.Key;
-                    TreeNode t = new TreeNode(name, 0, 1);
-                    t.Tag = pair.Value;
-
-                    string kv = (string)pair.Value;
-                    if (parents.ContainsKey(kv))
-                    {
-                        parents[kv].Nodes.Add(t);
-                    }
-                }
-                TreeNode[] range = new TreeNode[parents.Count];
-                parents.Values.CopyTo(range, 0);
-                this.mcManagment.Items.AddRange(range);
-
                 mcManagment.TreeView.Sort();
                 shouldRefresh = false;
-
-            Label_Exit:
-                curAction = Actions.App;
+                LoadUsage();
+                curAction = Actions.TimersReport;
             }
             catch (Exception ex)
             {
@@ -958,19 +910,225 @@ namespace Nistec.Caching.Remote.UI
             }
         }
 
-        private void ShowGridApp()
+        private void ShowGridTimerItems()
         {
             string text = GetSelectedItem();
             if (text != null)
             {
-                ShowGridItems(text);
+                ShowGridTimerItems(text);
             }
         }
-*/
+
+        private void ShowGridTimerItems(string command)
+        {
+
+            try
+            {
+                var reportItem = ManagerApi.Report(command);
+
+
+                if (reportItem == null)
+                    return;
+
+                this.mcManagment.SelectedPage = pgItems;
+                this.gridItems.CaptionText = reportItem.Caption;
+                this.gridItems.DataSource = reportItem.Data;
+            }
+            catch (Exception ex)
+            {
+                MsgBox.ShowError(ex.Message);
+            }
+        }
+
+
+        #endregion
+
+        #region Grid box
+
+        bool EditBoxFlag = false;
+        private void WiredGridDropDown(int column)
+        {
+            if (EditBoxFlag)
+                UnWiredGridDropDown(column);
+            if (gridItems.Columns.Count > column && gridItems.Columns[column].ColumnType == GridColumnType.MemoColumn)
+            {
+                ((GridMemoColumn)gridItems.Columns[column]).EditBox.DropDown += EditBox_DropDown;
+                ((GridMemoColumn)gridItems.Columns[column]).EditBox.DropUp += EditBox_DropUp;
+                EditBoxFlag = true;
+            }
+        }
+
+        private void UnWiredGridDropDown(int column)
+        {
+            if (EditBoxFlag)
+            {
+                if (gridItems.Columns.Count > column && gridItems.Columns[column].ColumnType== GridColumnType.MemoColumn)
+                {
+                    ((GridMemoColumn)gridItems.Columns[column]).EditBox.DropDown -= EditBox_DropDown;
+                    ((GridMemoColumn)gridItems.Columns[column]).EditBox.DropUp -= EditBox_DropUp;
+                }
+                EditBoxFlag = false;
+            }
+        }
+
+        private void EditBox_DropUp(object sender, EventArgs e)
+        {
+
+        }
+        private void EditBox_DropDown(object sender, EventArgs e)
+        {
+            DropDownColumnBody((GridMemoBox)sender);
+        }
+        private void DropDownColumnUp(GridMemoBox box)
+        {
+
+        }
+        private void DropDownColumnBody(GridMemoBox box)
+        {
+            try
+            {
+
+                DataRowView record = GetCurrentGridRow();
+                if (record == null)
+                {
+                    return;
+                }
+                string key = Types.NZ(record.Row[0], null);
+                if (key == null)
+                {
+                    return;
+                }
+
+                switch (curAction)
+                {
+                    case Actions.RemoteCache:
+                        {
+                            var item = ManagerApi.CacheApi.ViewEntry(key);
+                            if (item == null)
+                            {
+                                return;
+                            }
+                            //var body = item.DecodeBody();
+                            //if (body == null)
+                            //{
+                            //    return;
+                            //}
+                            box.Text = item.GetValueJson(true);
+                        }
+                        break;
+                    case Actions.SyncDb:
+                        {
+                            string name = GetSelectedItem();
+                            //var keyInfo = ComplexKey.Get(name, ComplexKey.SplitKey(key));
+                            //var keyInfo = ComplexKey.Get(name, key);
+                            var item = (GenericRecord)ManagerApi.SyncCacheApi.GetAs(name, key);// typeof(GenericRecord));
+                            if (item == null)
+                            {
+                                return;
+                            }
+                            box.Text = item.ToJson(true);
+                        }
+                        break;
+                    case Actions.SessionGrid:
+                        {
+                            string id = Types.NZ(record.Row[4], null);
+                            key = key.Replace(id + KeySet.Separator, "");
+                            //key.Split(new string[] { "||" }, StringSplitOptions.RemoveEmptyEntries);
+                            var item = ManagerApi.SessionApi.ViewSessionItem(id, key);
+                            if (item == null)
+                            {
+                                return;
+                            }
+                            box.Text = item.BodyToJson(true);
+                        }
+                        break;
+                    case Actions.DataCache:
+                        {
+                            string nameInfo = GetSelectedItem();
+                            var keyInfo = ComplexKey.Parse(nameInfo);
+                            //var keyInfo = ComplexKey.Get(name, key);
+                            var item = (GenericRecord)ManagerApi.DataCacheApi.GetRecord(keyInfo.Prefix, keyInfo.Suffix, key);
+                            if (item == null)
+                            {
+                                return;
+                            }
+                            box.Text = item.ToJson(true);
+                        }
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                MsgBox.ShowError(ex.Message,"Cache Management");
+            }
+        }
+
+        void RefreshGrid()
+        {
+            if (gridItems == null || gridItems.Rows == null || gridItems.Rows.Count == 0)
+            {
+                return;
+            }
+            gridItems.Refresh();
+            
+        }
+        DataRowView GetCurrentGridRow()
+        {
+            if (gridItems == null || gridItems.Rows == null || gridItems.Rows.Count == 0)
+            {
+                return null;
+            }
+            if (gridItems.CurrentRowIndex < 0)
+            {
+                return null;
+            }
+            return gridItems.GetCurrentDataRow();
+        }
+
+        string GetSelectedCacheKey()
+        {
+            DataRowView record = GetCurrentGridRow();
+            if (record == null)
+            {
+                return null;
+            }
+            string key = Types.NZ(record.Row[0], null);
+            return key;
+
+        }
+        string GetSelectedSessionId()
+        {
+            DataRowView record = GetCurrentGridRow();
+            if (record == null)
+            {
+                return null;
+            }
+            string id = Types.NZ(record.Row[4], null);
+            return id;
+
+        }
+        string GetSelectedSessionKey()
+        {
+
+            DataRowView record = GetCurrentGridRow();
+            if (record == null)
+            {
+                return null;
+            }
+            string key = Types.NZ(record.Row[0], null);
+            if (key == null)
+            {
+                return null;
+            }
+
+            string id = Types.NZ(record.Row[4], null);
+            key = key.Replace(id + KeySet.Separator, "");
+            return key;
+        }
+
         #endregion
 
         #region service
-
 
         private void CreateServicesNodeList()
         {
@@ -978,7 +1136,7 @@ namespace Nistec.Caching.Remote.UI
                 return;
 
             RefreshServiceList();
-            ToolBarSettings(Actions.Services); 
+            ToolBarSettings(Actions.Services);
             shouldRefresh = false;
             curAction = Actions.Services;
 
@@ -1001,34 +1159,10 @@ namespace Nistec.Caching.Remote.UI
             t.SelectedImageIndex = 8;
             //t.StateImageIndex = 8;
             this.mcManagment.Items.Add(t);
-   
+
         }
 
-        //private void RefreshServiceList2()
-        //{
-        //    services = ServiceController.GetServices();
-        //    mcManagment.TreeView.Nodes.Clear();
-        //    mcManagment.ListCaption = "Services";
-        //    this.mcManagment.SelectedPage = pageDetails;
-
-        //    foreach (ServiceController s in services)
-        //    {
-        //        if (s.ServiceName.ToLower().StartsWith("mcontrol"))
-        //        {
-        //            TreeNode t = new TreeNode(s.DisplayName);
-        //            t.Tag = s;
-        //            t.ImageIndex = 8;
-        //            t.SelectedImageIndex = 8;
-        //            //t.StateImageIndex = 8;
-        //            this.mcManagment.Items.Add(t);
-        //        }
-        //    }
-        //    mcManagment.TreeView.Sort();
-        //    //listBoxServices.DisplayMember = "DisplayName";
-        //    //listBoxServices.DataSource = services;
-
-        //}
-
+       
         protected string GetServiceTypeName(ServiceType type)
         {
             string serviceType = "";
@@ -1081,18 +1215,18 @@ namespace Nistec.Caching.Remote.UI
                 }
                 SetServiceStatus(controller.Status);
             }
-            
+
         }
         protected void SetServiceStatus(ServiceControllerStatus status)
         {
-           
+
             switch (status)
             {
                 case ServiceControllerStatus.ContinuePending:
                     //textServiceStatus.Text = "Continue Pending";
                     tbPause.Enabled = false;
                     //tbInstall.Enabled = false;
-                   break;
+                    break;
                 case ServiceControllerStatus.Paused:
                     //textServiceStatus.Text = "Paused";
                     tbPause.Enabled = false;
@@ -1114,6 +1248,11 @@ namespace Nistec.Caching.Remote.UI
                     //textServiceStatus.Text = "Running";
                     tbStart.Enabled = false;
                     //tbInstall.Enabled = false;
+
+                    //ToolBarSettings(Actions.RemoteCache);
+                    //CreateServicesNodeList();
+                    //LoadUsage();
+
                     break;
                 case ServiceControllerStatus.Stopped:
                     //textServiceStatus.Text = "Stopped";
@@ -1184,7 +1323,7 @@ namespace Nistec.Caching.Remote.UI
             {
                 return m_controller.Status == ServiceControllerStatus.Running;
             }
-            
+
             return false;
 
             //TreeNode node = mcManagment.TreeView.SelectedNode;
@@ -1226,6 +1365,7 @@ namespace Nistec.Caching.Remote.UI
             item.SubItems.Add(controller.ServiceName);
             item.SubItems.Add(controller.ServiceType.ToString());
             item.SubItems.Add(controller.Status.ToString());
+            this.listView.Items.Add("You need administration permission for service controller!");
             SetServiceStatus(controller);
         }
 
@@ -1282,50 +1422,108 @@ namespace Nistec.Caching.Remote.UI
 
         private void DoRefresh()
         {
-            if (IsPerformanceSubActions)
+            if (curSubAction != SubActions.Default)
             {
-                DoRefreshSubAction(true);
-                return;
+                if (IsPerformanceSubActions)
+                {
+                    DoRefreshSubAction(false);
+                    return;
+                }
+                else if (curSubAction == SubActions.Log)
+                {
+                    DoLog();
+                    return;
+                }
             }
             curSubAction = SubActions.Default;
 
-            if (curAction == Actions.RemoteCache)
+            switch (curAction)
             {
-                CreateNodeItems(true);
-                ShowGridItems();
-                //return;
-            }
-            else if (curAction == Actions.Session)
-            {
-                CreateNodeSession(true);
-            }
-            else if (curAction == Actions.SessionActive)
-            {
-                CreateNodeSession(SessionState.Active);
-            }
-            else if (curAction == Actions.SessionIdle)
-            {
-                CreateNodeSession(SessionState.Idle);
-            }
-            //else if (curAction == Actions.SessionItems)
-            //{
-            //    CreateNodeSessionItems();
-            //}
-            else if (curAction == Actions.DataCache)
-            {
-                CreateNodeDataItems(true);
-                ShowGridDataItems();
-                //return;
-            }
-            else if (curAction == Actions.SyncDb)
-            {
-                CreateNodeSyncItems(true);
-                ShowGridSyncItems();
-                //return;
-            }
-            else if (curAction == Actions.Services)
-            {
-                RefreshServiceList();
+
+                case Actions.RemoteCache:
+                    {
+                        var selected = GetSelectedNode();
+                        if (selected != null)
+                        {
+                            ShowGridItems(selected.Text);
+                            SetSelectTreeView();
+                        }
+                        else
+                        {
+                            CreateNodeItems(true);
+                            ShowGridItems();
+                        }
+                    }
+                    break;
+                case Actions.SessionTree:
+                    {
+                        var selected = GetSelectedNode();
+                        if (selected != null)
+                        {
+                            ShowGridTreeSession(selected.Text);
+                            SetSelectTreeView();
+                        }
+                        else
+                        {
+                            CreateNodeSession(true);
+                        }
+                    }
+                    break;
+                case Actions.SessionGrid:
+                    {
+                        var selected = GetSelectedNode();
+                        if (selected != null)
+                        {
+                            ShowGridSessionItems(selected.Text);
+                            SetSelectTreeView();
+                        }
+                        else
+                        {
+                            CreateNodeSessionGrid();
+                        }
+                    }
+                    break;
+                case Actions.TimersReport:
+                    {
+                        var selected = GetSelectedNode();
+                        if (selected != null)
+                        {
+                            ShowGridTimerItems(selected.Text);
+                            SetSelectTreeView();
+                        }
+                        else
+                        {
+                            CreateNodeTimerItems(true);
+                            ShowGridTimerItems();
+                        }
+                    }
+                    break;
+                case Actions.DataCache:
+                    {
+                        CreateNodeDataItems(true);
+                        ShowGridDataItems();
+                    }
+                    break;
+                case Actions.SyncDb:
+                    {
+                        var selected = GetSelectedItem();
+                        if (selected != null)
+                        {
+                            ShowGridSyncItems(selected);
+                            SetSelectTreeView();
+                        }
+                        else
+                        {
+                            CreateNodeSyncItems(true);
+                            ShowGridSyncItems();
+                        }
+                    }
+                    break;
+                case Actions.Services:
+                    {
+                        RefreshServiceList();
+                    }
+                    break;
             }
         }
 
@@ -1336,20 +1534,20 @@ namespace Nistec.Caching.Remote.UI
             //if (!Settings.IsServiceInstalled())
             //{
 
-                wfrm_Install frm = new wfrm_Install();
-                DialogResult dr = frm.ShowDialog();
-                if (dr == DialogResult.OK)
-                {
-                    frm.Close();
-                }
-                
-                RefreshServiceList();
-                //this.mcManagment.SelectedIndex = 0;
-                //this.mcManagment.SelectNode();
-                ToolBarSettings(Actions.Services);
-                ShowServiceDetails();
+            wfrm_Install frm = new wfrm_Install();
+            DialogResult dr = frm.ShowDialog();
+            if (dr == DialogResult.OK)
+            {
+                frm.Close();
+            }
 
-           // }
+            RefreshServiceList();
+            //this.mcManagment.SelectedIndex = 0;
+            //this.mcManagment.SelectNode();
+            ToolBarSettings(Actions.Services);
+            ShowServiceDetails();
+
+            // }
         }
 
         private void DoPause()
@@ -1358,52 +1556,53 @@ namespace Nistec.Caching.Remote.UI
             {
                 curSubAction = SubActions.Default;
 
-            ServiceController controller = GetServiceController();
-            if (controller == null)
-                return;
-            WaitDlg.RunProgress("Pause...");
-            if (controller.Status == ServiceControllerStatus.Paused || controller.Status == ServiceControllerStatus.PausePending)
-            {
-                controller.Continue();
-                controller.WaitForStatus(ServiceControllerStatus.Running);
+                ServiceController controller = GetServiceController();
+                if (controller == null)
+                    return;
+                WaitDlg.RunProgress("Pause...");
+                if (controller.Status == ServiceControllerStatus.Paused || controller.Status == ServiceControllerStatus.PausePending)
+                {
+                    controller.Continue();
+                    controller.WaitForStatus(ServiceControllerStatus.Running);
+                }
+                else
+                {
+                    controller.Pause();
+                    controller.WaitForStatus(ServiceControllerStatus.Paused);
+                }
+                System.Threading.Thread.Sleep(1000);
+                SetServiceStatus(controller);
+                ShowServiceDetails();
             }
-            else
+            finally
             {
-                controller.Pause();
-                controller.WaitForStatus(ServiceControllerStatus.Paused);
+                WaitDlg.EndProgress();
             }
-            System.Threading.Thread.Sleep(1000);
-            SetServiceStatus(controller);
-            ShowServiceDetails();
         }
-        finally
-        {
-            WaitDlg.EndProgress();
-        }
-    }
         private void DoRestart()
         {
-            try{
+            try
+            {
                 curSubAction = SubActions.Default;
 
-            ServiceController controller = GetServiceController();
-            if (controller == null)
-                return;
-            WaitDlg.RunProgress("Stop...");
-            controller.Stop();
-            controller.WaitForStatus(ServiceControllerStatus.Stopped);
-            System.Threading.Thread.Sleep(1000);
-            WaitDlg.RunProgress("Start...");
-            controller.Start();
-            controller.WaitForStatus(ServiceControllerStatus.Running);
-            System.Threading.Thread.Sleep(1000);
-            SetServiceStatus(controller);
-            ShowServiceDetails();
-        }
-        finally
-        {
-            WaitDlg.EndProgress();
-        }
+                ServiceController controller = GetServiceController();
+                if (controller == null)
+                    return;
+                WaitDlg.RunProgress("Stop...");
+                controller.Stop();
+                controller.WaitForStatus(ServiceControllerStatus.Stopped);
+                System.Threading.Thread.Sleep(1000);
+                WaitDlg.RunProgress("Start...");
+                controller.Start();
+                controller.WaitForStatus(ServiceControllerStatus.Running);
+                System.Threading.Thread.Sleep(1000);
+                SetServiceStatus(controller);
+                ShowServiceDetails();
+            }
+            finally
+            {
+                WaitDlg.EndProgress();
+            }
 
         }
 
@@ -1413,29 +1612,29 @@ namespace Nistec.Caching.Remote.UI
             {
                 curSubAction = SubActions.Default;
 
-            ServiceController controller = GetServiceController();
-            if (controller == null)
-                return;
-            WaitDlg.RunProgress("Start...");
-            controller.Start();
-            controller.WaitForStatus(ServiceControllerStatus.Running);
-            System.Threading.Thread.Sleep(1000);
-            SetServiceStatus(controller);
-            ShowServiceDetails();
+                ServiceController controller = GetServiceController();
+                if (controller == null)
+                    return;
+                WaitDlg.RunProgress("Start...");
+                controller.Start();
+                controller.WaitForStatus(ServiceControllerStatus.Running);
+                System.Threading.Thread.Sleep(1000);
+                SetServiceStatus(controller);
+                ShowServiceDetails();
+            }
+            catch (Exception ex)
+            {
+                MsgBox.ShowError(ex.Message);
+            }
+            finally
+            {
+                WaitDlg.EndProgress();
+            }
         }
-        catch (Exception)
-        {
-            //MsgBox.ShowError(ex.Message);
-        }
-        finally
-        {
-            WaitDlg.EndProgress();
-        }
-    }
 
         private void DoStop()
         {
-            ServiceController controller =null;
+            ServiceController controller = null;
             try
             {
                 curSubAction = SubActions.Default;
@@ -1463,6 +1662,22 @@ namespace Nistec.Caching.Remote.UI
         #endregion
 
         #region tool bar
+
+        private void SetSelectTreeView()
+        {
+            mcManagment.TreeView.Select();
+        }
+
+        private void SetSelectedNode(TreeNode selected)
+        {
+            mcManagment.TreeView.SelectedNode = selected;
+        }
+
+        private TreeNode GetSelectedNode()
+        {
+            TreeNode node = mcManagment.TreeView.SelectedNode;
+            return node;
+        }
         private string GetSelectedItem()
         {
             TreeNode node = mcManagment.TreeView.SelectedNode;
@@ -1477,27 +1692,29 @@ namespace Nistec.Caching.Remote.UI
                 return null;
             return (string)node.Tag;
         }
-       
+
 
         private void ToolBarSettings(Actions mode)
         {
 
+            bool isTimer = (mode == Actions.TimersReport);
             bool isItems = (mode == Actions.RemoteCache || mode == Actions.DataCache || mode == Actions.SyncDb);
-            bool isService =  (mode == Actions.Services);
-            bool isSession = (mode == Actions.Session || mode == Actions.SessionActive || mode == Actions.SessionIdle /*|| mode== Actions.SessionItems*/);
+            bool isService = (mode == Actions.Services);
+            //bool isSession = (mode == Actions.Session || mode == Actions.SessionActive || mode == Actions.SessionIdle );
+            bool isSession = (mode == Actions.SessionTree || mode == Actions.SessionGrid);
 
-
-            tbUsage.Enabled = !isService && !isSession;
+            tbUsage.Enabled = !isService;// && !isSession;
             tbItems.Enabled = !isService;
             tbProperty.Enabled = !isService;
             tbRefreshItem.Enabled = !isService;
 
-            tbStatistic.Enabled = !isService && !isSession;
-            tbAddItem.Enabled = !isService && !isSession;
-            tbDelete.Enabled = !isService;
-            tbSaveXml.Enabled = !isService && !isSession;
-            tbLoadXml.Enabled = !isService && !isSession;
+            tbStatistic.Enabled = !isService;// && !isSession;
+            tbAddItem.Enabled = false;// !isService && !isSession;
+            tbDelete.Enabled = isItems || isSession;// !isService && !isTimer;
+            tbSaveXml.Enabled = false;// !isService && !isSession;
+            tbLoadXml.Enabled = false;// !isService && !isSession;
             tbLog.Enabled = !isService;
+            tbHelp.Enabled= !isService;
             //-tbActions.Enabled =  !isService;
 
             tbRefresh.Enabled = true;
@@ -1509,7 +1726,7 @@ namespace Nistec.Caching.Remote.UI
             bool isServiceRunning = IsServiceControllerRunning();
             if (isService)
             {
-                 if (isServiceRunning)
+                if (isServiceRunning)
                     isServiceInstalled = true;
                 else
                     isServiceInstalled = IsServiceControllerRunning();
@@ -1525,7 +1742,7 @@ namespace Nistec.Caching.Remote.UI
                 //}
             }
 #if(TEST)
-            tbActions.Enabled = true;// isServiceRunning;
+            tbActions.Enabled = true;
 #else
             tbActions.Enabled = isServiceRunning;
 #endif
@@ -1547,6 +1764,7 @@ namespace Nistec.Caching.Remote.UI
                     case "tbActions":
                         {
                             curSubAction = SubActions.Default;
+                            this.txtHeader.ReadOnly = true;
 
                             switch (e.Button.SelectedPopUpItem.Text)
                             {
@@ -1557,7 +1775,7 @@ namespace Nistec.Caching.Remote.UI
                                     RefreshServiceList();
                                     break;
                                 case "RemoteCache":
-                                     ToolBarSettings(Actions.RemoteCache);
+                                    ToolBarSettings(Actions.RemoteCache);
                                     this.mcManagment.SelectedPage = pgItems;
                                     CreateNodeItems();
                                     return;
@@ -1571,34 +1789,36 @@ namespace Nistec.Caching.Remote.UI
                                     this.mcManagment.SelectedPage = pgItems;
                                     CreateNodeSyncItems();
                                     return;
-                                case "Session":
-                                    ToolBarSettings(Actions.Session);
+                                case "SessionTree":
+                                    ToolBarSettings(Actions.SessionTree);
                                     this.mcManagment.SelectedPage = pgItems;
                                     CreateNodeSession();
                                     return;
-                                case "Session-Active":
-                                    ToolBarSettings(Actions.SessionActive);
+                                case "SessionGrid":
+                                    ToolBarSettings(Actions.SessionGrid);
                                     this.mcManagment.SelectedPage = pgItems;
-                                    CreateNodeSession(SessionState.Active);
+                                    CreateNodeSessionGrid();
                                     return;
-                                case "Session-Idle":
-                                    ToolBarSettings(Actions.SessionIdle);
+                                case "TimerReport":
+                                    ToolBarSettings(Actions.TimersReport);
                                     this.mcManagment.SelectedPage = pgItems;
-                                    CreateNodeSession(SessionState.Idle);
+                                    CreateNodeTimerItems();
                                     return;
-                                //case "SessionItems":
-                                //    ToolBarSettings(Actions.SessionItems);
-                                //    this.mcManagment.SelectedPage = pgItems;
-                                //    CreateNodeSessionItems();
-                                //    return;
-
-                                    
-
-                                //case "App":
-                                //    ToolBarSettings(Actions.App);
-                                //    this.mcManagment.SelectedPage = pgItems;
-                                //    CreateNodeApp();
-                                //    return;
+                                    //case "Session":
+                                    //    ToolBarSettings(Actions.Session);
+                                    //    this.mcManagment.SelectedPage = pgItems;
+                                    //    CreateNodeSession();
+                                    //    return;
+                                    //case "Session-Active":
+                                    //    ToolBarSettings(Actions.SessionActive);
+                                    //    this.mcManagment.SelectedPage = pgItems;
+                                    //    CreateNodeSession(SessionState.Active);
+                                    //    return;
+                                    //case "Session-Idle":
+                                    //    ToolBarSettings(Actions.SessionIdle);
+                                    //    this.mcManagment.SelectedPage = pgItems;
+                                    //    CreateNodeSession(SessionState.Idle);
+                                    //    return;
                             }
                         }
                         break;
@@ -1639,9 +1859,14 @@ namespace Nistec.Caching.Remote.UI
                         DoInstall();
                         break;
                     case "tbHelp":
-                        
-
-                        return;
+                        if (curSubAction == SubActions.Log)
+                        {
+                            if (txtHeader.Text == "" || txtHeader.Text == "Cache Log")
+                                DoLog();
+                            else
+                                DoLogFilter(txtHeader.Text);
+                        }
+                        break;
                     case "tbProperty":
                         DoProperty();
                         break;
@@ -1668,6 +1893,10 @@ namespace Nistec.Caching.Remote.UI
                 //mcManagment.TreeView.SelectedNode = mcManagment.TreeView.Nodes[index];
                 //SetServiceStatus(controller);
             }
+            catch (Exception ex)
+            {
+                MsgBox.ShowError(ex.Message, "Cache Management");
+            }
             finally
             {
                 Cursor.Current = Cursors.Default;
@@ -1688,46 +1917,77 @@ namespace Nistec.Caching.Remote.UI
         private void DoLog()
         {
             //RemoteCacheClient rcc = new RemoteCacheClient();
-            curSubAction = SubActions.Default;
+            curSubAction = SubActions.Log;
 
             string log = ManagerApi.CacheLog(); //rcc.CacheLog();
             this.mcManagment.SelectedPage = pgSource;
-            txtHeader.Text = "Cache Log";
+            txtHeader.Text = "";// "Cache Log";
+            this.txtHeader.ReadOnly = false;
             txtBody.Text = log;
+            mcManagment.TreeView.SelectedNode = null;
+        }
+        private void DoLogFilter(string text)
+        {
+            string[] lines = txtBody.Lines;
+
+            //string[] finders = text.Split(new string[] { "+" }, StringSplitOptions.RemoveEmptyEntries);
+            ////string log = ManagerApi.CacheLog();
+            ////txtBody.Text = log;
+            //string[] results = lines;
+            //Array.Copy(lines, results,lines.Length);
+            //int i = 0;
+            //int length = finders.Length;
+            //IEnumerable<string> list = results;
+            //for (i = 0; i < length; i++)
+            //{
+            //    string txt = finders[i].Trim();
+            //    list = list.Where(s => s.IndexOf(txt, StringComparison.CurrentCultureIgnoreCase) >= 0);
+            //}
+
+            var list = lines.Where(s => s.IndexOf(text, StringComparison.CurrentCultureIgnoreCase) >= 0);
+
+            StringBuilder sb = new StringBuilder();
+            foreach (string s in list)
+            {
+                sb.AppendLine(s);
+            }
+            txtBody.Text = sb.ToString();
+            mcManagment.TreeView.SelectedNode = null;
         }
 
         private void DoAddItem()
         {
 
-            if (curAction == Actions.RemoteCache)
-            {
-                int status = AddItemDlg.Open();
-                if (status>0)
-                {
-                    CreateNodeItems(true);
-                }
+            //if (curAction == Actions.RemoteCache)
+            //{
+            //    int status = AddItemDlg.Open();
+            //    if (status>0)
+            //    {
+            //        CreateNodeItems(true);
+            //    }
 
-                //CacheItem item = AddItemDlg.Open();
-                //if (!(item == null))//.IsEmpty)
-                //{
-                //    RemoteCacheClient rcc = new RemoteCacheClient();
-                //    rcc.AddItem(item);
-                //    CreateNodeItems(true);
-                //}
-            }
-            else if (curAction == Actions.DataCache)
-            {
-                bool ok = AddDataItemDlg.Open();
-                if (ok)
-                {
-                    CreateNodeDataItems(true);
-                }
+            //    //CacheItem item = AddItemDlg.Open();
+            //    //if (!(item == null))//.IsEmpty)
+            //    //{
+            //    //    RemoteCacheClient rcc = new RemoteCacheClient();
+            //    //    rcc.AddItem(item);
+            //    //    CreateNodeItems(true);
+            //    //}
+            //}
+            //else if (curAction == Actions.DataCache)
+            //{
+            //    bool ok = AddDataItemDlg.Open();
+            //    if (ok)
+            //    {
+            //        CreateNodeDataItems(true);
+            //    }
 
-            }
+            //}
 
         }
         private void DoRemoveItem()
         {
+
             if (IsPerformanceSubActions)
             {
                 DoRefreshSubAction(true);
@@ -1741,31 +2001,62 @@ namespace Nistec.Caching.Remote.UI
 
             switch (curAction)
             {
-                case Actions.Session:
-                case Actions.SessionActive:
-                case Actions.SessionIdle:
-                    //case Actions.SessionItems:
+                case Actions.SessionGrid:
+                    string sessionId = GetSelectedSessionId();
+                    if (sessionId == null)
+                        return;
+                    if (MsgBox.ShowQuestionYNC("This operation will remove session [" + sessionId + "] include all items in selected session item, Continue", "Remove Item") == DialogResult.Yes)
                     {
-                        if (MsgBox.ShowQuestionYNC("This operation will remove all items in selected session item, Continue", "Remove Item") == DialogResult.Yes)
-                        {
-                            string tag = GetSelectedTag();
-                            if (tag == "Session" || tag == "SessionActive" || tag == "SessionIdle")
-                                ManagerApi.SessionApi.RemoveSession(name, false);//RemoteSession.Instance(name).RemoveSession();
-                            else
-                                ManagerApi.SessionApi.RemoveSession(tag, false);//RemoteSession.Instance(tag).RemoveSession();
+                        ManagerApi.SessionApi.RemoveSession(sessionId);
+                        RefreshGrid();
+                    }
+                    break;
+                case Actions.SessionTree:
+                    //case Actions.Session:
+                    //case Actions.SessionActive:
+                    //case Actions.SessionIdle:
+                    {
 
-                            CreateNodeSession(true);
+                        string tag = GetSelectedTag();
+                        if (tag == "SessionTree")
+                        {
+                            if (name == null)
+                                return;
+                            if (MsgBox.ShowQuestionYNC("This operation will remove session [" + name + "] include all items in selected session item, Continue", "Remove Item") == DialogResult.Yes)
+                            {
+                                ManagerApi.SessionApi.RemoveSession(name);
+                                CreateNodeSession(true);
+                            }
+                        }
+                        else if (tag != null)
+                        {
+                            if (MsgBox.ShowQuestionYNC("This operation will remove session [" + tag + "] include all items in selected session item, Continue", "Remove Item") == DialogResult.Yes)
+                            {
+                                ManagerApi.SessionApi.RemoveSession(tag);
+                                CreateNodeSession(true);
+                            }
                         }
                     }
                     break;
                 case Actions.RemoteCache:
                     {
+                        if (name == null)
+                            return;
                         if (name.Contains("$"))
                         {
                             MsgBox.ShowInfo("This item can not be deleted");
                             return;
                         }
-                        RemoveTreeItem();// (rcc);
+                        string cacheKey = GetSelectedCacheKey();
+                        if (string.IsNullOrEmpty(cacheKey))
+                            return;
+                        if (MsgBox.ShowQuestionYNC("This will remove item [" + cacheKey + "] from Cache, Continue", "Remove Items") == DialogResult.Yes)
+                        {
+                            ManagerApi.CacheApi.Remove(cacheKey);
+                            RefreshGrid();
+                        }
+
+                        //RemoveTreeItem();// (rcc);
 
                         //if (MsgBox.ShowQuestionYNC("This item will removed from Cache, Continue", "Remove Item") == DialogResult.Yes)
                         //{
@@ -1777,31 +2068,34 @@ namespace Nistec.Caching.Remote.UI
                     break;
                 case Actions.DataCache:
                     {
-                        //RemoveTreeItem(rcc);
-
-                        if (MsgBox.ShowQuestionYNC("This item will removed from Cache, Continue", "Remove Item") == DialogResult.Yes)
+                        if (name == null)
+                            return;
+                        if (MsgBox.ShowQuestionYNC("This item will remove table [" + name + "] from Cache, Continue", "Remove Item") == DialogResult.Yes)
                         {
-                            ManagerApi.DataCacheApi.RemoveTable(null, name);// RemoteDataClient.Instance.Remove(name);
+                            var keyInfo = ComplexKey.Parse(name);
+                            ManagerApi.DataCacheApi.RemoveTable(keyInfo.Prefix, keyInfo.Suffix);// RemoteDataClient.Instance.Remove(name);
                             CreateNodeDataItems(true);
                         }
                     }
                     break;
                 case Actions.SyncDb:
                     {
-                        //RemoveTreeItem(rcc);
-
-                        if (MsgBox.ShowQuestionYNC("This item will removed from sync Cache, Continue", "Remove Item") == DialogResult.Yes)
+                        if (name == null)
+                            return;
+                        if (MsgBox.ShowQuestionYNC("This item will remove sync item [" + name + "] from sync Cache, Continue", "Remove Item") == DialogResult.Yes)
                         {
-                            ManagerApi.SyncCacheApi.RemoveItem(name);// RemoteDataClient.Instance.Remove(name);
+                            ManagerApi.SyncCacheApi.Remove(name);
                             CreateNodeDataItems(true);
                         }
                     }
                     break;
+                case Actions.TimersReport:
+                    {
+                        //do nothing
+                    }
+                    break;
             }
-
         }
-
-
         private void DoProperty()
         {
             curSubAction = SubActions.Default;
@@ -1821,20 +2115,257 @@ namespace Nistec.Caching.Remote.UI
                 return;
             }
 
-            
+
             switch (curAction)
             {
                 case Actions.RemoteCache:
                     {
-                        obj = ManagerApi.CacheApi.ViewItem(name);//rcc.ViewItem(name);
-                        itemName = "RemoteItem";
+                        //obj = ManagerApi.CacheApi.GetItem(name);//rcc.ViewItem(name);
+                        //itemName = "RemoteItem";
+
+                        if (gridItems == null || gridItems.Rows == null || gridItems.Rows.Count == 0)
+                        {
+                            return;
+                        }
+                        if (gridItems.CurrentRowIndex < 0)
+                        {
+                            return;
+                        }
+                        DataRowView record = gridItems.GetCurrentDataRow();
+                        if (record == null)
+                        {
+                            return;
+                        }
+                        string key = Types.NZ(record.Row[0], null);
+                        if (key == null)
+                        {
+                            return;
+                        }
+                        var item = ManagerApi.CacheApi.ViewEntry(key);
+                        if (item == null)
+                        {
+                            return;
+                        }
+                        var body = item.DecodeBody();
+                        if (body == null)
+                        {
+                            return;
+                        }
+                        if (SerializeTools.IsSimple(body.GetType()))
+                        {
+                            var gr = new KeyValueItem()
+                            {
+                                Key = key,
+                                Value = body
+                            };// new GenericRecord();
+
+                            obj = gr;
+                        }
+                        else
+                        {
+                            obj = body;
+                        }
+                        itemName = "CacheItem: "+ key;
+
                     }
                     break;
                 case Actions.DataCache:
                     {
-                        obj = ManagerApi.DataCacheApi.GetItemProperties(null, name);// RemoteDataClient.Instance.GetItemProperties(name);
-                        //obj = RemoteCacheClient.RemoteClient.ViewItem(name);
+                        //if (gridItems == null || gridItems.Rows == null || gridItems.Rows.Count == 0)
+                        //{
+                        //    return;
+                        //}
+                        //if (gridItems.CurrentRowIndex < 0)
+                        //{
+                        //    return;
+                        //}
+                        //DataRowView record = (DataRowView)gridItems.Rows[gridItems.CurrentRowIndex];
+                        //if (record == null)
+                        //{
+                        //    return;
+                        //}
+                        //string key = Types.NZ(record.Row[0], null);
+                        //if (key == null)
+                        //{
+                        //    return;
+                        //}
+
+                        //var keyInfo = ComplexKey.Get(name, key);
+                        //GenericRecord ge = (GenericRecord)ManagerApi.DataCacheApi.GetRecord(keyInfo.Prefix, keyInfo.Suffix,key);
+                        //if (ge == null)
+                        //    return;
+                        //obj = ge.ToDataRow();
+
+                        var keyInfo = ComplexKey.Parse(name);
+                        obj = ManagerApi.DataCacheApi.GetItemProperties(keyInfo.Prefix, keyInfo.Suffix);
                         itemName = "RemoteDataItem";
+                    }
+                    break;
+                case Actions.SyncDb:
+                    {
+                        //if (gridItems == null || gridItems.Rows == null || gridItems.Rows.Count == 0)
+                        //{
+                        //    return;
+                        //}
+                        //if (gridItems.CurrentRowIndex < 0)
+                        //{
+                        //    return;
+                        //}
+                        //DataRowView record = (DataRowView)gridItems.Rows[gridItems.CurrentRowIndex];
+                        //if (record == null)
+                        //{
+                        //    return;
+                        //}
+                        //string key = Types.NZ(record.Row[0], null);
+                        //if (key == null)
+                        //{
+                        //    return;
+                        //}
+
+                        //var keyInfo = ComplexKey.Get(name, key);
+                        ////var keyInfo = ComplexKey.Get(name, ComplexKey.SplitKey(key));
+                        //GenericRecord ge = (GenericRecord)ManagerApi.SyncCacheApi.Get(keyInfo, typeof(GenericRecord));
+                        //if (ge == null)
+                        //    return;
+                        //obj = ge.ToDataRow();
+
+                        //var keyInfo = ComplexKey.Parse(name);
+                        obj = ManagerApi.SyncCacheApi.GetItemProperties(name);// keyInfo.Prefix, keyInfo.Suffix);
+                        itemName = "RemoteSyncItem";
+                    }
+                    break;
+                case Actions.SessionGrid:
+                    {
+                        var sessionId = GetSelectedSessionId();
+                        var key = GetSelectedSessionKey();
+                        obj = ManagerApi.SessionApi.ViewSessionItem(sessionId, key);
+                        itemName = "SessionItem";
+                    }
+                    break;
+                case Actions.SessionTree:
+                    //case Actions.Session:
+                    //case Actions.SessionActive:
+                    //case Actions.SessionIdle:
+                    {
+                        string tag = GetSelectedTag();
+                        if (tag == "SessionTree")//(tag == "Session" || tag == "SessionActive" || tag == "SessionIdle")
+                            return;
+                        var node = GetSelectedNode();
+                        var sessionId = node.Parent.Text;
+                        obj = ManagerApi.SessionApi.ViewSessionItem(sessionId, name);//rcc.ViewItem(name);
+                        itemName = "SessionItem";
+                    }
+                    break;
+                case Actions.TimersReport:
+                    obj = null;
+                    break;
+            }
+            ShowProperty(obj, itemName, "Cache Item Property");
+        }
+
+        private void DoRecordInfo()
+        {
+            curSubAction = SubActions.Default;
+
+            string name = GetSelectedItem();
+
+            object obj = null;
+            string itemName = "";
+            //RemoteCacheClient rcc = new RemoteCacheClient();
+            if (string.IsNullOrEmpty(name))
+            {
+                Hashtable h = (Hashtable)ManagerApi.CacheProperties();// rcc.CacheProperties();
+                if (h != null)
+                {
+                    ShowProperty(h, itemName, "Cache Item Property");
+                }
+                return;
+            }
+
+
+            switch (curAction)
+            {
+                case Actions.RemoteCache:
+                    {
+                        //obj = ManagerApi.CacheApi.GetItem(name);//rcc.ViewItem(name);
+                        //itemName = "RemoteItem";
+
+                        if (gridItems == null || gridItems.Rows == null || gridItems.Rows.Count == 0)
+                        {
+                            return;
+                        }
+                        if (gridItems.CurrentRowIndex < 0)
+                        {
+                            return;
+                        }
+                        DataRowView record = gridItems.GetCurrentDataRow();
+                        if (record == null)
+                        {
+                            return;
+                        }
+                        string key = Types.NZ(record.Row[0], null);
+                        if (key == null)
+                        {
+                            return;
+                        }
+                        var item = ManagerApi.CacheApi.ViewEntry(key);
+                        if (item == null)
+                        {
+                            return;
+                        }
+                        var body = item.DecodeBody();
+                        if (body == null)
+                        {
+                            return;
+                        }
+                        if (SerializeTools.IsSimple(body.GetType()))
+                        {
+                            var gr = new KeyValueItem()
+                            {
+                                Key = key,
+                                Value = body
+                            };// new GenericRecord();
+
+                            obj = gr;
+                        }
+                        else
+                        {
+                            obj = body;
+                        }
+                        itemName = "CacheItem: " + key;
+
+                    }
+                    break;
+                case Actions.DataCache:
+                    {
+                        if (gridItems == null || gridItems.Rows == null || gridItems.Rows.Count == 0)
+                        {
+                            return;
+                        }
+                        if (gridItems.CurrentRowIndex < 0)
+                        {
+                            return;
+                        }
+                        DataRowView record = (DataRowView)gridItems.Rows[gridItems.CurrentRowIndex];
+                        if (record == null)
+                        {
+                            return;
+                        }
+                        string key = Types.NZ(record.Row[0], null);
+                        if (key == null)
+                        {
+                            return;
+                        }
+
+                        var keyInfo = ComplexKey.Parse(name);
+                        GenericRecord ge = (GenericRecord)ManagerApi.DataCacheApi.GetRecord(keyInfo.Prefix, keyInfo.Suffix, key);
+                        if (ge == null)
+                            return;
+                        obj = ge.ToDataRow();
+
+                        //var keyInfo = ComplexKey.Parse(name);
+                        //obj = ManagerApi.DataCacheApi.GetItemProperties(keyInfo.Prefix, keyInfo.Suffix);
+                        //itemName = "RemoteDataItem";
                     }
                     break;
                 case Actions.SyncDb:
@@ -1857,32 +2388,64 @@ namespace Nistec.Caching.Remote.UI
                         {
                             return;
                         }
-                        GenericRecord ge = (GenericRecord)ManagerApi.SyncCacheApi.GetItem(CacheKeyInfo.Get(name, CacheKeyInfo.SplitKey(key)), typeof(GenericRecord));
+
+                        var keyInfo = ComplexKey.Get(name, key);
+                        //var keyInfo = ComplexKey.Get(name, ComplexKey.SplitKey(key));
+                        GenericRecord ge = (GenericRecord)ManagerApi.SyncCacheApi.GetAs(name, key);//, typeof(GenericRecord));
                         if (ge == null)
                             return;
                         obj = ge.ToDataRow();
 
-                        //obj = SyncCacheApi.GetEntityItems(name);// RemoteDataClient.Instance.GetItemProperties(name);
-                        //obj = RemoteCacheClient.RemoteClient.ViewItem(name);
-                        itemName = "RemoteSyncItem";
+                        //obj = ManagerApi.SyncCacheApi.GetItemProperties(name);// keyInfo.Prefix, keyInfo.Suffix);
+                        //itemName = "RemoteSyncItem";
                     }
                     break;
-                case Actions.Session:
-                case Actions.SessionActive:
-                case Actions.SessionIdle:
-                    //case Actions.SessionItems:
+                case Actions.SessionGrid:
+                    {
+                        var sessionId = GetSelectedSessionId();
+                        var key = GetSelectedSessionKey();
+                        obj = ManagerApi.SessionApi.ViewSessionItem(sessionId, key);
+                        itemName = "SessionItem";
+                    }
+                    break;
+                case Actions.SessionTree:
+                    //case Actions.Session:
+                    //case Actions.SessionActive:
+                    //case Actions.SessionIdle:
                     {
                         string tag = GetSelectedTag();
-                        if (tag == "Session" || tag == "SessionActive" || tag == "SessionIdle")
+                        if (tag == "SessionTree")//(tag == "Session" || tag == "SessionActive" || tag == "SessionIdle")
                             return;
-                        obj = ManagerApi.CacheApi.ViewItem(name);//rcc.ViewItem(name);
-                        itemName = "RemoteItem";
+                        var node = GetSelectedNode();
+                        if (node.Parent == null)
+                            return;
+                        var sessionId = node.Parent.Text;
+                        obj = ManagerApi.SessionApi.ViewSessionItem(sessionId, name);//rcc.ViewItem(name);
+                        itemName = "SessionItem";
                     }
+                    break;
+                case Actions.TimersReport:
+                    obj = null;
                     break;
             }
             ShowProperty(obj, itemName, "Cache Item Property");
         }
-
+        private void ShowPropertyJson(object obj, string itemName, string text)
+        {
+            try
+            {
+                if (obj != null)
+                {
+                    this.mcManagment.SelectedPage = pgSource;
+                    this.txtHeader.Text = itemName + ", " + text;
+                    this.txtBody.Text = JsonSerializer.Serialize(obj,true);
+                }
+            }
+            catch (Exception ex)
+            {
+                string err = ex.Message;
+            }
+        }
         private void ShowProperty(object obj, string itemName, string text)
         {
             try
@@ -1897,7 +2460,7 @@ namespace Nistec.Caching.Remote.UI
                     dlg.ShowDialog();
                 }
             }
-            catch(Exception ex) 
+            catch (Exception ex)
             {
                 string err = ex.Message;
             }
@@ -1922,7 +2485,7 @@ namespace Nistec.Caching.Remote.UI
                 string err = ex.Message;
             }
         }
-        
+
         private void DoSaveXml()
         {
             try
@@ -2009,7 +2572,8 @@ namespace Nistec.Caching.Remote.UI
                     this.gridItems.DataSource = statistic;//.CacheView;
 
                 }
-                else if (curAction == Actions.Session || curAction == Actions.SessionActive || curAction == Actions.SessionIdle)
+                else if (curAction == Actions.SessionTree || curAction == Actions.SessionGrid)
+                //else if (curAction == Actions.Session || curAction == Actions.SessionActive || curAction == Actions.SessionIdle)
                 {
                     DataTable statistic = ManagerApi.GetStateCounterReport(CacheAgentType.SessionCache);
                     if (statistic == null)
@@ -2085,22 +2649,38 @@ namespace Nistec.Caching.Remote.UI
 
             switch (lastAction)
             {
-                //case Actions.App:
-                case Actions.Session:
-                case Actions.SessionActive:
-                case Actions.SessionIdle:
+                case Actions.SessionGrid:
+                    this.txtImageHeader.Text = "";
+                    this.txtBody.Text = "";
+                    UnWiredGridDropDown(1);
+                    this.gridItems.CaptionText = "";
+                    this.gridItems.DataSource = null;
+                    break;
+                case Actions.SessionTree:
+                    //case Actions.Session:
+                    //case Actions.SessionActive:
+                    //case Actions.SessionIdle:
                     this.txtImageHeader.Text = "";
                     this.txtBody.Text = "";
                     break;
                 case Actions.RemoteCache:
                     this.txtImageHeader.Text = "";
                     this.txtBody.Text = "";
+                    UnWiredGridDropDown(1);
+                    this.gridItems.CaptionText = "";
+                    this.gridItems.DataSource = null;
                     break;
                 case Actions.DataCache:
+                    UnWiredGridDropDown(1);
                     this.gridItems.CaptionText = "";
                     this.gridItems.DataSource = null;
                     break;
                 case Actions.SyncDb:
+                    UnWiredGridDropDown(1);
+                    this.gridItems.CaptionText = "";
+                    this.gridItems.DataSource = null;
+                    break;
+                case Actions.TimersReport:
                     this.gridItems.CaptionText = "";
                     this.gridItems.DataSource = null;
                     break;
@@ -2113,12 +2693,25 @@ namespace Nistec.Caching.Remote.UI
 
         private void DoRefreshItem()
         {
-
-            if (IsPerformanceSubActions)
+            if (curSubAction != SubActions.Default)
             {
-                DoRefreshSubAction(false);
-                return;
+                if (IsPerformanceSubActions)
+                {
+                    DoRefreshSubAction(true);
+                    return;
+                }
+                else if (curSubAction == SubActions.Log)
+                {
+                    DoLog();
+                    return;
+                }
             }
+
+            //if (IsPerformanceSubActions)
+            //{
+            //    DoRefreshSubAction(false);
+            //    return;
+            //}
             curSubAction = SubActions.Default;
 
             DoClearSelectedItem();
@@ -2127,12 +2720,11 @@ namespace Nistec.Caching.Remote.UI
 
             switch (curAction)
             {
-                //case Actions.App:
-                case Actions.Session:
-                case Actions.SessionActive:
-                case Actions.SessionIdle:
-                    //case Actions.SessionItems:
-                    ShowGridSession();
+                case Actions.SessionGrid:
+                    ShowGridSessionItems();
+                    break;
+                case Actions.SessionTree:
+                    ShowGridTreeSession();
                     break;
                 case Actions.RemoteCache:
                     ShowGridItems();
@@ -2143,18 +2735,28 @@ namespace Nistec.Caching.Remote.UI
                 case Actions.SyncDb:
                     ShowGridSyncItems();
                     break;
+                case Actions.TimersReport:
+                    ShowGridTimerItems();
+                    break;
                 case Actions.Services:
                     ShowServiceDetails();
                     break;
             }
         }
-  
+
         private void mcManagment_SelectionNodeChanged(object sender, TreeViewEventArgs e)
         {
             curSubAction = SubActions.Default;
-            DoRefreshItem();
+            try
+            {
+                DoRefreshItem();
+            }
+            catch (Exception ex)
+            {
+                MsgBox.ShowError(ex.Message, "Cache Management");
+            }
         }
-  
+
         private void tbOffset_SelectedItemClick(object sender, Nistec.WinForms.SelectedPopUpItemEvent e)
         {
             //float offset = Types.ToFloat(e.Item.Text, 0F);
@@ -2178,7 +2780,7 @@ namespace Nistec.Caching.Remote.UI
         //const int maxCapcity = 100000;
         private int maxUsage = 0;
         private int interval = 1000;
-        private int tickInterval =1;// 5;
+        private int tickInterval = 1;// 5;
         private bool refreshStatistic = false;
         private bool isActivated = true;
         private int intervalCount = 0;
@@ -2215,36 +2817,40 @@ namespace Nistec.Caching.Remote.UI
             return ManagerApi.GetAgentPerformanceReport(agentType);
         }
 
-        //private void SetStatistic()
-        //{
-        //    string name = curAction.ToString();// GetSelectedItem();
-        //    if (string.IsNullOrEmpty(name))
-        //        return;
-        //    //queueCount = RemoteManager.QueueList.Length;
-        //    //if (queueCount <= 0)
-        //    //    queueCount = 1;
-        //    //RemoteQueue client = new RemoteQueue(name);
+        private void SetStatistic()
+        {
+            string name = curAction.ToString();// GetSelectedItem();
+            if (string.IsNullOrEmpty(name))
+                return;
+            //queueCount = RemoteManager.QueueList.Length;
+            //if (queueCount <= 0)
+            //    queueCount = 1;
+            //RemoteQueue client = new RemoteQueue(name);
 
 
-        //    //CachePerformanceReport report = GetPerformanceReport(name);
-        //    //avgCount = report.AvgHitPerMinute;
-        //    //curUsage = report.AvgHitPerMinute;
-        //    //maxUsage = report.MaxHitPerMinute;
-        //    //if (maxUsage <= 0)
-        //    //    maxUsage = 1;// / queueCount;
-        //}
+            ICachePerformanceReport report = GetPerformanceReport(name);
+            if (report != null)
+            {
+                avgCount = report.AvgHitPerMinute;
+                curUsage = report.AvgHitPerMinute;
+                maxUsage = report.MaxHitPerMinute;
+            }
+            if (maxUsage <= 0)
+                maxUsage = 1;// / queueCount;
+        }
 
         void FillPerformanceControl()
         {
             if (curAction == Actions.Services)
                 return;
-           
-            //if (mcManagment.SelectedPage != pgChart)
-            //{
-            //    timer1.Stop();
-            //    timer1.Enabled = false;
-            //    return;
-            //}
+
+            if (mcManagment.SelectedPage != pgChart)
+            {
+                timer1.Stop();
+                timer1.Enabled = false;
+                return;
+            }
+
             if (DateTime.Now.Subtract(lastCounterTime).TotalSeconds < intervalSecond)
                 return;
 
@@ -2270,7 +2876,7 @@ namespace Nistec.Caching.Remote.UI
             if (curUsage <= 0)
                 curUsage = 1;
 
-          
+
             this.mcUsage1.Maximum = maxUsage;
             this.mcUsage1.Value1 = (int)curUsage;
             this.mcUsage1.Value2 = (int)lastUsage;
@@ -2303,8 +2909,8 @@ namespace Nistec.Caching.Remote.UI
                 foreach (var report in reports)
                 {
                     string name = report.CounterName;
-                    int memoSize = (int)report.MemoSize;// / 1024;
-                    string sizeDesc = string.Format("{0} KB", memoSize);
+                    int memoSize = (int)report.MemoSize / 1024;
+                    string sizeDesc = string.Format("{0} Kb", memoSize);
                     var item = new PieChartItem(memoSize, GetColor(i), name, name + ": " + memoSize.ToString(), 0);
                     item.Weight = (double)memoSize;
                     item.ToolTipText = name + ":" + sizeDesc;
@@ -2323,8 +2929,6 @@ namespace Nistec.Caching.Remote.UI
             }
 
             lastUsageTime = DateTime.Now;
-
-            
         }
 
         delegate void SetLabelTextCallback(McLabel labl, string text);
@@ -2337,7 +2941,7 @@ namespace Nistec.Caching.Remote.UI
             if (labl.InvokeRequired)
             {
                 SetLabelTextCallback d = new SetLabelTextCallback(SetSafeText);
-                this.Invoke(d, new object[] { labl,text });
+                this.Invoke(d, new object[] { labl, text });
             }
             else
             {
@@ -2357,7 +2961,7 @@ namespace Nistec.Caching.Remote.UI
             {
                 if (this.timer1.Enabled)
                     return;
-               // SetStatistic();
+                SetStatistic();
             }
             catch (Exception ex)
             {
@@ -2389,7 +2993,7 @@ namespace Nistec.Caching.Remote.UI
         }
 
         //protected virtual void OnAsyncCancelExecuting(EventArgs e);
-        protected virtual void OnAsyncCompleted(Extension.Nistec.Threading.AsyncCallEventArgs e)
+        protected override void OnAsyncCompleted(Extension.Nistec.Threading.AsyncCallEventArgs e)
         {
             base.OnAsyncCompleted(e);
 
@@ -2430,7 +3034,7 @@ namespace Nistec.Caching.Remote.UI
         //    }
         //    catch { }
         //}
-                                
+
         //protected override void OnAsyncCompleted(Nistec.Threading.AsyncCallEventArgs e)//Nistec.Threading.AsyncCallEventArgs e)
         //{
         //    base.OnAsyncCompleted(e);
@@ -2465,7 +3069,7 @@ namespace Nistec.Caching.Remote.UI
                     }
                     else
                     {
-                        Task.Factory.StartNew(() =>  FillPerformanceControl());
+                        Task.Factory.StartNew(() => FillPerformanceControl());
 
                     }
                 }
@@ -2478,90 +3082,90 @@ namespace Nistec.Caching.Remote.UI
 
         //private void FillUsageControls()
         //{
-           
-            //if (maxUsage <= 0)
-            //{
-            //    CachePerformanceReport report = ManagerApi.GetPerformanceReport();
-            //    avgCount = report.AvgHitPerMinute;
-            //    maxUsage = report.MaxHitPerMinute;
 
-            //    if (avgCount <= 0)
-            //        avgCount = 1;
-            //    if (maxUsage <= 0)
-            //        maxUsage = avgCount;
+        //if (maxUsage <= 0)
+        //{
+        //    CachePerformanceReport report = ManagerApi.GetPerformanceReport();
+        //    avgCount = report.AvgHitPerMinute;
+        //    maxUsage = report.MaxHitPerMinute;
 
-            //}
+        //    if (avgCount <= 0)
+        //        avgCount = 1;
+        //    if (maxUsage <= 0)
+        //        maxUsage = avgCount;
 
-            //avgCount = PerformanceReport.AvgHitPerMinute;
-            //maxUsage = PerformanceReport.MaxHitPerMinute;
-            //lastUsage = curUsage;
-            //curUsage = avgCount;
+        //}
 
-            //if (maxUsage <= 0)
-            //    maxUsage = 1;
-            //if (curUsage <= 0)
-            //    curUsage = 1;
+        //avgCount = PerformanceReport.AvgHitPerMinute;
+        //maxUsage = PerformanceReport.MaxHitPerMinute;
+        //lastUsage = curUsage;
+        //curUsage = avgCount;
 
-            //this.mcUsage1.Maximum = maxUsage;
-            //this.mcUsage1.Value1 = (int)curUsage;
-            //this.mcUsage1.Value2 = (int)lastUsage;
+        //if (maxUsage <= 0)
+        //    maxUsage = 1;
+        //if (curUsage <= 0)
+        //    curUsage = 1;
 
-            //this.mcUsageHistory1.Maximum = maxUsage;
-            //this.mcUsageHistory1.AddValues((int)curUsage, (int)lastUsage);
-            //this.lblUsage.Text = curUsage.ToString();
+        //this.mcUsage1.Maximum = maxUsage;
+        //this.mcUsage1.Value1 = (int)curUsage;
+        //this.mcUsage1.Value2 = (int)lastUsage;
+
+        //this.mcUsageHistory1.Maximum = maxUsage;
+        //this.mcUsageHistory1.AddValues((int)curUsage, (int)lastUsage);
+        //this.lblUsage.Text = curUsage.ToString();
 
         //}
 
         //private void FillControls()
         //{
 
-            //if (Statistic == null)
-            //    return;
+        //if (Statistic == null)
+        //    return;
 
-            //this.ctlLedAll.ScaleValue = QueueItemTotalCount;
-            //if (curAction == Actions.Services)
-            //    return;
+        //this.ctlLedAll.ScaleValue = QueueItemTotalCount;
+        //if (curAction == Actions.Services)
+        //    return;
 
-            //FillPerformanceControl();
+        //FillPerformanceControl();
 
-            //if (!chartIntialized)
-            //{
-            //    InitChart();
-            //}
-            //else
-            //{
-            //    FillChartControl();
-            //}
+        //if (!chartIntialized)
+        //{
+        //    InitChart();
+        //}
+        //else
+        //{
+        //    FillChartControl();
+        //}
 
-            //int count = this.mcManagment.Items.Count;
-            //if (count <= 0)
-            //    return;
-            //if (ctlPieChart1.Items.Count != count)
-            //{
-            //    InitChart();
-            //}
+        //int count = this.mcManagment.Items.Count;
+        //if (count <= 0)
+        //    return;
+        //if (ctlPieChart1.Items.Count != count)
+        //{
+        //    InitChart();
+        //}
 
-            //for (int i = 0; i < count; i++)
-            //{
-            //    string name = this.mcManagment.Items[i].Text;
-            //    var agentType = ActionToCacheAgent(name);
-            //    CachePerformanceReport report = ManagerApi.GetAgentPerformanceReport(agentType);
-            //    if (report == null)
-            //        continue;
-            //    int requestCount = report.AvgHitPerSecond;
-            //    //ctlPieChart1.Items.Add(new PieChartItem((double)queueCount, GetColor(i), name, name + ": " + queueCount.ToString(), 0));
-            //    ctlPieChart1.Items[i].Weight = (double)requestCount;
-            //    ctlPieChart1.Items[i].ToolTipText = name + ":" + requestCount.ToString();
-            //    ctlPieChart1.Items[i].PanelText = name + ":" + requestCount.ToString();
+        //for (int i = 0; i < count; i++)
+        //{
+        //    string name = this.mcManagment.Items[i].Text;
+        //    var agentType = ActionToCacheAgent(name);
+        //    CachePerformanceReport report = ManagerApi.GetAgentPerformanceReport(agentType);
+        //    if (report == null)
+        //        continue;
+        //    int requestCount = report.AvgHitPerSecond;
+        //    //ctlPieChart1.Items.Add(new PieChartItem((double)queueCount, GetColor(i), name, name + ": " + queueCount.ToString(), 0));
+        //    ctlPieChart1.Items[i].Weight = (double)requestCount;
+        //    ctlPieChart1.Items[i].ToolTipText = name + ":" + requestCount.ToString();
+        //    ctlPieChart1.Items[i].PanelText = name + ":" + requestCount.ToString();
 
-            //}
+        //}
 
-            //ctlPieChart1.AddChartDescription();
+        //ctlPieChart1.AddChartDescription();
         //}
 
         CacheAgentType ActionToCacheAgent(string name)
         {
-            switch(name)
+            switch (name)
             {
                 //case "Services":
                 case "RemoteCache":
@@ -2571,8 +3175,8 @@ namespace Nistec.Caching.Remote.UI
                 case "SyncDb":
                     return CacheAgentType.SyncCache;
                 case "Session":
-                case "SessionActive":
-                case "SessionIdle":
+                case "SessionTree":
+                case "SessionGrid":
                     return CacheAgentType.SessionCache;
                 default:
                     return CacheAgentType.Cache;
@@ -2586,7 +3190,7 @@ namespace Nistec.Caching.Remote.UI
         //        return;
 
         //    lastUsageTime = DateTime.Now;
-            
+
         //    ctlPieChart1.Items.Clear();
 
         //    int i = 0;
@@ -2632,7 +3236,7 @@ namespace Nistec.Caching.Remote.UI
             //    ctlPieChart1.Items.Add(new PieChartItem(requestCount, GetColor(i), name, name + ": " + requestCount.ToString(), 0));
             //}
 
-             //FillPerformanceControl();
+            //FillPerformanceControl();
 
             //ctlPieChart1.Items.Add(new PieChartItem(0, Color.Blue, "Usage", "Usage: " + curItemsUsage.ToString(), 0));
 
@@ -2648,6 +3252,45 @@ namespace Nistec.Caching.Remote.UI
             chartIntialized = true;
         }
 
+        /*
+        
+        private bool chartinits = false;
+
+        int curDataUsage = 0;
+        int curItemsUsage = 0;
+        //long curUsage = 0;
+        long curFreeSize = 0;
+        private void InitChart()
+        {
+            //if (useChannels)
+            //{
+            //    this.useChannels = !string.IsNullOrEmpty(sqlChannels);
+            //}
+
+            if (chartinits)
+                return;
+            ctlPieChart1.Items.Clear();
+            //if (Statistic == null)
+            //    return;
+
+            ctlPieChart1.Items.Add(new PieChartItem(0, Color.Blue, "Usage", "Usage: " + curItemsUsage.ToString(), 0));
+            ctlPieChart1.Items.Add(new PieChartItem(0, Color.Gold, "DataUsage", "DataUsage: " + curDataUsage.ToString(), 0));
+            ctlPieChart1.Items.Add(new PieChartItem(0, Color.Green, "FreeSize", "Free: " + curFreeSize.ToString(), 0));
+            //ctlPieChart1.Items.Add(new PieChartItem(0, Color.Green, QueueName3, "Queue: " + QueueName3, 0));
+            //ctlPieChart1.Items.Add(new PieChartItem(0, Color.Red, QueueName4, "Queue: " + QueueName4, 0));
+
+            this.ctlPieChart1.Padding = new System.Windows.Forms.Padding(60, 0, 0, 0);
+            this.ctlPieChart1.ItemStyle.SurfaceTransparency = 0.75F;
+            this.ctlPieChart1.FocusedItemStyle.SurfaceTransparency = 0.75F;
+            this.ctlPieChart1.FocusedItemStyle.SurfaceBrightness = 0.3F;
+            this.ctlPieChart1.AddChartDescription();
+            this.ctlPieChart1.Leaning = (float)(40 * Math.PI / 180);
+            this.ctlPieChart1.Depth = 50;
+            this.ctlPieChart1.Radius = 90F;
+
+            chartinits = true;
+        }
+        */
         private Color GetColor(int index)
         {
 

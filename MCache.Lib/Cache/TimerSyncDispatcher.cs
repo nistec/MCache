@@ -32,6 +32,7 @@ using System.Threading.Tasks;
 using System.Threading;
 using Nistec.Caching.Data;
 using Nistec.Caching.Config;
+using System.Data;
 
 namespace Nistec.Caching
 {
@@ -141,6 +142,8 @@ namespace Nistec.Caching
                 this.SyncStarted(this, e);
             }
 
+            //Console.WriteLine("Debuger-TimerSyncDispatcher.OnSyncStarted...");
+
             this.OnSyncTimer();
 
             //SyncBox.Instance.DoSyncAll();
@@ -165,6 +168,7 @@ namespace Nistec.Caching
 
         public void Add(SyncTask item)
         {
+           //~Console.WriteLine("Debuger-TimerSyncDispatcher.Add: " + item.ItemName);
             if (item == null)
             {
                 return;
@@ -199,24 +203,27 @@ namespace Nistec.Caching
 
         public SyncTask[] GetTimedItems()
         {
-            List<SyncTask> list = new List<SyncTask>();
 
-            var dt = DateTime.Now;
+            return m_SyncItems.Values.Where(item => DateTime.Now > item.GetNextTime() && item.ShouldRun()).ToArray();
 
-            KeyValuePair<string, SyncTask>[] items = m_SyncItems.Where(dic => dt > dic.Value.GetNextTime()).ToArray();
+            //List<SyncTask> list = new List<SyncTask>();
 
-            foreach (var item in items)
-            {
-                SyncTask syncItem = item.Value;
+            //var dt = DateTime.Now;
+
+            //KeyValuePair<string, SyncTask>[] items = m_SyncItems.Where(dic => dt > dic.Value.GetNextTime()).ToArray();
+
+            //foreach (var item in items)
+            //{
+            //    SyncTask syncItem = item.Value;
                 
-                if (syncItem.ShouldRun())
-                {
-                    list.Add(syncItem);
-                    m_SyncItems[item.Key] = syncItem;
-                }
-            }
-
-            return list.ToArray();
+            //    if (syncItem.ShouldRun())
+            //    {
+            //        list.Add(syncItem);
+            //        //m_SyncItems[item.Key] = syncItem;
+            //    }
+            //}
+            //Console.WriteLine("Debuger-TimerSyncDispatcher.GetTimedItems :" + list.Count.ToString());
+            //return list.ToArray();
         }
 
 
@@ -289,40 +296,56 @@ namespace Nistec.Caching
         {
             try
             {
-
-                var syncBox = SyncBox.Instance;
+               //~Console.WriteLine("Debuger-TimerSyncDispatcher.OnSyncTimer start");
+               var syncBox = SyncBox.Instance;
 
                 //0 indicates that the method is not in use.
                 if (0 == Interlocked.Exchange(ref synchronized, 1))
                 {
-                    bool enabletrigger=CacheSettings.EnableSyncTypeEventTrigger;
+                    //bool enabletrigger=CacheSettings.EnableSyncTypeEventTrigger;
+                    bool enableSyncEvents = CacheSettings.EnableSyncTypeEvent;
+                    
 
                     SyncTask[] list = GetTimedItems();
                     if (list != null && list.Length > 0)
                     {
                         foreach (SyncTask e in list)
                         {
-                            if (e.Item.IsDisposed)
-                            {
-                                Remove(e);
-                                this.LogAction(CacheAction.SyncTime, CacheActionState.Failed, "OnSyncTimer RenderTask error, Item is Disposed and removed from TimerSync.");
-                            }
-                            else
-                            {
+                            this.LogAction(CacheAction.SyncTime, CacheActionState.Debug, "OnSyncTimer Render Item :"+e.ItemName);
 
-                                if (e.Entity == null)
-                                {
-                                    if (enabletrigger)
-                                        syncBox.Add(new SyncBoxTask(e.Item, e.ItemName));
-                                }
-                                else
+
+                            //if (e.Item.IsDisposed)
+                            //{
+                            //    Remove(e);
+                            //    this.LogAction(CacheAction.SyncTime, CacheActionState.Failed, "OnSyncTimer RenderTask error, Item is Disposed and removed from TimerSync.");
+                            //}
+                            //else
+                            //{
+                                if (e.Entity != null)
                                 {
                                     syncBox.Add(new SyncBoxTask(e.Entity, e.Owner));
                                 }
+                                //else if (enableSyncEvents)
+                                //{
+                                //    syncBox.Add(new SyncBoxTask(e.Item, e.ItemName));
+                                //}
 
-                            }
+
+                                //if (e.Entity == null)
+                                //{
+                                //    if (enabletrigger)
+                                //        syncBox.Add(new SyncBoxTask(e.Item, e.ItemName));
+                                //}
+                                //else
+                                //{
+                                //    syncBox.Add(new SyncBoxTask(e.Entity, e.Owner));
+                                //}
+
+                            //}
                             Thread.Sleep(10);
                         }
+
+                       //~Console.WriteLine("Debuger-TimerSyncDispatcher.OnSyncTimer syncBox.Count: " + syncBox.Count.ToString());
                     }
 
                 }
@@ -361,5 +384,53 @@ namespace Nistec.Caching
         }
         #endregion
 
+        #region Report
+
+  
+        internal static DataTable ReportSchema()
+        {
+            DataTable dt = new DataTable("SyncTask");
+            dt.Columns.Add("ItemName", typeof(string));
+            dt.Columns.Add("SyncType", typeof(string));
+            dt.Columns.Add("Interval", typeof(string));
+            dt.Columns.Add("LastSync", typeof(string));
+            dt.Columns.Add("SourceName", typeof(string));
+            dt.Columns.Add("ClientId", typeof(string));
+
+            return dt.Clone();
+        }
+
+        internal CacheItemReport GetReport()
+        {
+            var data = SyncTimerReport();
+            if (data == null)
+                return null;
+            return new CacheItemReport() { Count = data.Rows.Count, Data = data, Name = "Sync Timer Report", Size = 0 };
+        }
+
+
+        public DataTable SyncTimerReport()
+        {
+            DataTable table;
+            try
+            {
+                ICollection<SyncTask> items = this.m_SyncItems.Values.ToArray();
+                if ((items == null) || (items.Count == 0))
+                {
+                    return null;
+                }
+                table = ReportSchema();
+                foreach (var t in items)
+                {
+                    table.Rows.Add(t.ToDataRow());
+                }
+            }
+            catch (Exception exception)
+            {
+                throw exception;
+            }
+            return table;
+        }
+        #endregion
     }
 }

@@ -28,17 +28,18 @@ using Nistec.Data.Entities.Cache;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using System.Threading;
+using Nistec.Channels;
 
 namespace Nistec.Caching.Sync.Embed
 {
 
     /// <summary>
-    /// Represents a Sync <see cref="ISyncItem"/> items resource for local sync cache.
+    /// Represents a Sync <see cref="ISyncTable"/> items resource for local sync cache.
     /// It is usefull to ensure that each item will stay synchronized
     /// in run time without any interruption in process.
     /// When problem was occured during the sync process , the item, will stay as the original item.    
     /// </summary>
-    public class SyncBag :  ISyncEx, ISyncEx<ISyncItem>
+    public class SyncBag :  ISyncEx, ISyncEx<ISyncTable>, ISyncBag
     {
         /// <summary>
         /// Reload current <see cref="SyncBag"/> from a new copy.
@@ -52,7 +53,7 @@ namespace Nistec.Caching.Sync.Embed
             //}
         }
 
-        ConcurrentDictionary<string, ISyncItem> m_data;
+        ConcurrentDictionary<string, ISyncTable> m_data;
 
         ///// <summary>
         ///// Gets an object that can be used to synchronize access to the System.Collections.ICollection.
@@ -66,9 +67,9 @@ namespace Nistec.Caching.Sync.Embed
         /// Get all items from sync bag.
         /// </summary>
         /// <returns></returns>
-        public ISyncItem[] GetItems()
+        public ISyncTable[] GetTables()
         {
-            ISyncItem[] items = null;
+            ISyncTable[] items = null;
 
             //lock (SyncRoot)
             //{
@@ -91,15 +92,18 @@ namespace Nistec.Caching.Sync.Embed
             return items;
         }
 
+        SyncCache Owner;
+
         #region ctor
 
         /// <summary>
         /// Initilaize new instance of <see cref="SyncCache"/>
         /// </summary>
-        /// <param name="cacheName"></param>
-        public SyncBag(string cacheName)
+        /// <param name="owner"></param>
+        public SyncBag(SyncCache owner)
         {
-            m_data = new ConcurrentDictionary<string, ISyncItem>();
+            Owner= owner;
+            m_data = new ConcurrentDictionary<string, ISyncTable>();
         }
 
        
@@ -140,7 +144,7 @@ namespace Nistec.Caching.Sync.Embed
             }
         }
 
-        IDictionary<string, ISyncItem> ISyncEx<ISyncItem>.Items
+        IDictionary<string, ISyncTable> ISyncEx<ISyncTable>.Items
         {
             get { return m_data; }
         }
@@ -151,15 +155,15 @@ namespace Nistec.Caching.Sync.Embed
         }
 
         /// <summary>
-        /// Get if cache contains spesific item by <see cref="CacheKeyInfo"/>
+        /// Get if cache contains spesific item by <see cref="ComplexKey"/>
         /// </summary>
         /// <param name="info"></param>
         /// <returns></returns>
-        public bool Contains(CacheKeyInfo info)
+        public bool Contains(ComplexKey info)
         {
             //lock (this.SyncRoot)
             //{
-                return m_data.ContainsKey(info.CacheKey);
+                return m_data.ContainsKey(info.Suffix);
             //}
         }
         /// <summary>
@@ -170,15 +174,16 @@ namespace Nistec.Caching.Sync.Embed
         /// <returns></returns>
         public bool Contains(string name, string[] keys)
         {
-            return Contains(CacheKeyInfo.Get(name, keys));
+            return Contains(ComplexArgs.Get(name, keys));
         }
         /// <summary>
         /// Set item into sync bag.
         /// </summary>
         /// <param name="item"></param>
-        public void Set(ISyncItem item)
+        public CacheState Set(ISyncTable item)
         {
-            Set(item.Info.ItemName, item);
+            return Set(item.EntityName, item);
+            //return Set(item.Info.Prefix, item);
         }
         /// <summary>
         /// Set item into sync bag.
@@ -186,15 +191,16 @@ namespace Nistec.Caching.Sync.Embed
         /// <typeparam name="T"></typeparam>
         /// <param name="key"></param>
         /// <param name="value"></param>
-        public void Set<T>(string key, SyncItem<T> value)
+        public CacheState Set<T>(string key, SyncTable<T> value)
         {
             if (key == null || value == null)
             {
-                return;
+                return CacheState.ArgumentsError;
             }
             //lock (this.SyncRoot)
             //{
-                m_data[key] = value;
+            m_data[key] = value;
+            return CacheState.ItemAdded;
             //}
         }
 
@@ -203,7 +209,7 @@ namespace Nistec.Caching.Sync.Embed
         ///// </summary>
         ///// <param name="info"></param>
         ///// <param name="value"></param>
-        //public void Set(CacheKeyInfo info, ISyncItem value)
+        //public void Set(ComplexKey info, ISyncTable value)
         //{
         //    if (info == null || value == null)
         //    {
@@ -220,15 +226,16 @@ namespace Nistec.Caching.Sync.Embed
         /// </summary>
         /// <param name="key"></param>
         /// <param name="value"></param>
-        public void Set(string key, ISyncItem value)
+        public CacheState Set(string key, ISyncTable value)
         {
             if (key == null || value == null)
             {
-                return;
+                return CacheState.ArgumentsError;
             }
             //lock (this.SyncRoot)
             //{
-                m_data[key] = value;
+            m_data[key] = value;
+            return CacheState.ItemAdded;
             //}
         }
 
@@ -238,33 +245,33 @@ namespace Nistec.Caching.Sync.Embed
         ///// <typeparam name="T"></typeparam>
         ///// <param name="info"></param>
         ///// <returns></returns>
-        //public SyncItem<T> Get<T>(CacheKeyInfo info) //where T : IEntityItem
+        //public SyncTable<T> Get<T>(ComplexKey info) //where T : IEntityItem
         //{
-        //    ISyncItem item = null;
+        //    ISyncTable item = null;
         //    //lock (this.SyncRoot)
         //    //{
         //        if (m_data.TryGetValue(info.ItemName, out item))
         //        {
-        //            return (SyncItem<T>)item;
+        //            return (SyncTable<T>)item;
         //        }
         //    //}
         //    return null;
         //}
 
         /// <summary>
-        /// Get spesific value from cache using <see cref="CacheKeyInfo"/>, if item not found return null
+        /// Get spesific value from cache using <see cref="ComplexKey"/>, if item not found return null
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="name"></param>
         /// <returns></returns>
-        public SyncItem<T> Get<T>(string name) //where T : IEntityItem
+        public SyncTable<T> GetTable<T>(string name) //where T : IEntityItem
         {
-            ISyncItem item = null;
+            ISyncTable item = null;
             //lock (this.SyncRoot)
             //{
                 if (m_data.TryGetValue(name, out item))
                 {
-                    return (SyncItem<T>)item;
+                    return (SyncTable<T>)item;
                 }
             //}
             return null;
@@ -278,10 +285,10 @@ namespace Nistec.Caching.Sync.Embed
         /// <returns></returns>
         public IEnumerable<T> ArrayItems<T>(string name) //where T : IEntityItem
         {
-            ISyncItem item = null;
+            ISyncTable item = null;
             if (m_data.TryGetValue(name, out item))
             {
-                return ((SyncItem<T>)item).Items.Values;
+                return ((SyncTable<T>)item).Items.Values;
             }
             return null;
         }
@@ -293,7 +300,7 @@ namespace Nistec.Caching.Sync.Embed
         ///// <returns></returns>
         //public IEnumerable ArrayItems(string name)
         //{
-        //    ISyncItem item = null;
+        //    ISyncTable item = null;
         //    if (m_data.TryGetValue(name, out item))
         //    {
         //        return item.Values;
@@ -308,18 +315,18 @@ namespace Nistec.Caching.Sync.Embed
         ///// <param name="name"></param>
         ///// <param name="keys"></param>
         ///// <returns></returns>
-        //public SyncItem<T> Get<T>(string name, string[] keys) //where T : IEntityItem
+        //public SyncTable<T> Get<T>(string name, string[] keys) //where T : IEntityItem
         //{
-        //    return Get<T>(CacheKeyInfo.Get(name, keys));
+        //    return Get<T>(ComplexKey.Get(name, keys));
         //}
         ///// <summary>
-        ///// Get spesific value from cache using <see cref="CacheKeyInfo"/>, if item not found return null
+        ///// Get spesific value from cache using <see cref="ComplexKey"/>, if item not found return null
         ///// </summary>
         ///// <param name="info"></param>
         ///// <returns></returns>
-        //public ISyncItem Get(CacheKeyInfo info)
+        //public ISyncTable Get(ComplexKey info)
         //{
-        //    ISyncItem item = null;
+        //    ISyncTable item = null;
         //    //lock (this.SyncRoot)
         //    //{
         //        m_data.TryGetValue(info.ItemName, out item);
@@ -328,13 +335,13 @@ namespace Nistec.Caching.Sync.Embed
         //}
 
         /// <summary>
-        /// Get spesific value from cache using <see cref="CacheKeyInfo"/>, if item not found return null
+        /// Get spesific value from cache using <see cref="ComplexKey"/>, if item not found return null
         /// </summary>
         /// <param name="name"></param>
         /// <returns></returns>
-        public ISyncItem Get(string name)
+        public ISyncTable GetTable(string name)
         {
-             ISyncItem item = null;
+             ISyncTable item = null;
             //lock (this.SyncRoot)
             //{
                 m_data.TryGetValue(name, out item);
@@ -348,13 +355,13 @@ namespace Nistec.Caching.Sync.Embed
         /// Remove item from sync bag.
         /// </summary>
         /// <param name="syncName"></param>
-        public bool RemoveItem(string syncName)
+        public bool RemoveTable(string syncName)
         {
             if (string.IsNullOrEmpty(syncName))
             {
                 return false;
             }
-            ISyncItem val;
+            ISyncTable val;
             return m_data.TryRemove(syncName,out val);
             //lock (SyncRoot)
             //{
@@ -367,7 +374,7 @@ namespace Nistec.Caching.Sync.Embed
         }
 
         /// <summary>
-        /// Refresh <see cref="ISyncItem"/>
+        /// Refresh <see cref="ISyncTable"/>
         /// </summary>
         /// <param name="syncName"></param>
         public void Refresh(string syncName)
@@ -380,7 +387,7 @@ namespace Nistec.Caching.Sync.Embed
             }
 
             CacheLogger.Debug("SyncBag Refresh : " + syncName);
-            ISyncItem syncitem = null;
+            ISyncTable syncitem = null;
 
             //lock (this.SyncRoot)
             //{
@@ -394,9 +401,10 @@ namespace Nistec.Caching.Sync.Embed
             if (syncitem != null)
             {
 
-                //Lazy<ISyncItem> lazysync = new Lazy<ISyncItem>(LazyThreadSafetyMode.ExecutionAndPublication);
+                //Lazy<ISyncTable> lazysync = new Lazy<ISyncTable>(LazyThreadSafetyMode.ExecutionAndPublication);
                 //Task.Factory.StartNew(() => lazysync.Value.Refresh(null));
 
+                //syncitem.Refresh(null);
                 Task.Factory.StartNew(()=> syncitem.Refresh(null));
             }
         }

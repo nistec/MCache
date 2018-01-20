@@ -29,7 +29,7 @@ using System.Collections;
 using Nistec.Runtime;
 using Nistec.Data.Entities;
 using System.IO.Pipes;
-using Nistec.Caching.Channels;
+//using Nistec.Caching.Channels;
 using Nistec.IO;
 using Nistec.Caching.Config;
 using Nistec.Serialization;
@@ -47,36 +47,261 @@ namespace Nistec.Caching.Remote
         /// Get cache api.
         /// </summary>
         /// <param name="protocol"></param>
+        /// <param name="expiration"></param>
         /// <returns></returns>
-        public static CacheApi Get(NetProtocol protocol= NetProtocol.Tcp)
+        public static CacheApi Get(NetProtocol protocol= NetProtocol.Tcp, int expiration = CacheDefaults.DefaultCacheExpiration)
         {
             if (protocol == NetProtocol.NA)
             {
                 protocol = CacheApiSettings.Protocol;
             }
-            return new CacheApi() {Protocol=protocol };
+            return new CacheApi() {Protocol=protocol, CacheExpiration = expiration };
         }
+
 
         private CacheApi()
         {
-            RemoteHostName = CacheApiSettings.RemoteCacheHostName;
+            RemoteHostName = CacheDefaults.DefaultBundleHostName;
             EnableRemoteException = CacheApiSettings.EnableRemoteException;
         }
 
+        protected void OnFault(string message)
+        {
+            Console.WriteLine("CacheApi Fault: " + message);
+        }
 
+        
+
+        int _CacheExpiration;
+        public int CacheExpiration
+        {
+            get { return _CacheExpiration;}
+            set { _CacheExpiration = (value < 0) ? CacheDefaults.DefaultCacheExpiration : value; }
+        }
+
+        #region do custom
+        public object DoCustom(string command, string key, string groupId, string label = null, object value = null, int expiration = 0)
+        {
+            switch ("cach_" + command)
+            {
+                case CacheCmd.Add:
+                    return Add(key, value, expiration);
+                case CacheCmd.CopyTo:
+                    return CopyTo(label, key, expiration);
+                case CacheCmd.CutTo:
+                    return CutTo(label, key, expiration);
+                case CacheCmd.Fetch:
+                    return Fetch(key);
+                case CacheCmd.Get:
+                    return Get(key);
+                case CacheCmd.GetEntry:
+                    return GetEntry(key);
+                case CacheCmd.GetRecord:
+                    return GetRecord(key);
+                case CacheCmd.KeepAliveItem:
+                    KeepAliveItem(key);
+                    return CacheState.Ok;
+                //case CacheCmd.LoadData:
+                //    return LoadData();
+                case CacheCmd.Remove:
+                    return Remove(key);
+                case CacheCmd.RemoveAsync:
+                    RemoveAsync(key);
+                    return CacheState.Ok;
+                case CacheCmd.RemoveItemsBySession:
+                    return RemoveItemsBySession(key);
+                case CacheCmd.Reply:
+                    return Reply(key);
+                case CacheCmd.Set:
+                    return Set(key, value, expiration);
+                case CacheCmd.ViewEntry:
+                    return ViewEntry(key);
+                default:
+                    throw new ArgumentException("Unknown command " + command);
+            }
+        }
+
+        public string DoHttpJson(string command, string key, string groupId=null, string label=null, object value = null, int expiration = 0, bool pretty=false)
+        {
+            string cmd = "cach_" + command.ToLower();
+            switch (cmd)
+            {
+                case CacheCmd.Add:
+                    //return Add(key, value, expiration);
+                    {
+                        if (string.IsNullOrWhiteSpace(key))
+                        {
+                            throw new ArgumentNullException("key is required");
+                        }
+                        var msg = new CacheMessage() { Command = cmd, Id = key, GroupId = groupId, Expiration = expiration };
+                        msg.SetBody(value);
+                        return SendHttpJsonDuplex(msg, pretty);
+                    }
+                case CacheCmd.CopyTo:
+                    //return CopyTo(key, detail, expiration);
+                case CacheCmd.CutTo:
+                    //return CutTo(key, detail, expiration);
+                    {
+                        if (string.IsNullOrWhiteSpace(key))
+                        {
+                            throw new ArgumentNullException("key is required");
+                        }
+                        var msg = new CacheMessage() { Command = cmd, Id = key, GroupId= groupId, Expiration=expiration };
+                        msg.SetBody(value);
+                        msg.Args = MessageStream.CreateArgs(KnowsArgs.Source, label, KnowsArgs.Destination, key);
+                        return SendHttpJsonDuplex(msg, pretty);
+                    }
+                case CacheCmd.Fetch:
+                case CacheCmd.Get:
+                case CacheCmd.GetEntry:
+                case CacheCmd.GetRecord:
+                case CacheCmd.RemoveItemsBySession:
+                case CacheCmd.Reply:
+                case CacheCmd.Remove:
+                case CacheCmd.ViewEntry:
+                    {
+                        if (string.IsNullOrWhiteSpace(key))
+                        {
+                            throw new ArgumentNullException("key is required");
+                        }
+                        return SendHttpJsonDuplex(new CacheMessage() {Command=cmd,Id=key }, pretty);
+                    }
+                case CacheCmd.KeepAliveItem:
+                case CacheCmd.RemoveAsync:
+                    {
+                        if (string.IsNullOrWhiteSpace(key))
+                        {
+                            throw new ArgumentNullException("key is required");
+                        }
+                        SendHttpJsonOut(new CacheMessage() { Command = cmd, Id = key });
+                        return CacheState.Ok.ToString();
+                    }
+
+                //case CacheCmd.LoadData:
+                //    return LoadData();
+                case CacheCmd.Set:
+                    //return Set(key, value, expiration);
+                    {
+                        if (string.IsNullOrWhiteSpace(key))
+                        {
+                            throw new ArgumentNullException("key is required");
+                        }
+
+                        if (value == null)
+                        {
+                            throw new ArgumentNullException("value is required");
+                        }
+                        var message = new CacheMessage(cmd, key, value, expiration);
+                        return SendHttpJsonDuplex(message, pretty);
+                    }
+                default:
+                    throw new ArgumentException("Unknown command " + command);
+            }
+        }
+        #endregion
+
+        /// <summary>
+        /// Get or Set cache value by key.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        public object this[string key]
+        {
+            get { return Get(key); }
+            set { Set(key, value, CacheExpiration); }
+        }
+
+        /// <summary>
+        /// Get item value from cache.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        public T Get<T>(string key)
+        {
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                throw new ArgumentNullException("key is required");
+            }
+            var message = new CacheMessage() { Command = CacheCmd.Get, Id = key };
+            return SendDuplexStream<T>(message, OnFault);
+
+        }
+
+        /// <summary>
+        /// Get item value from cache.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="key"></param>
+        /// <param name="defaultValue"></param>
+        /// <returns></returns>
+        public T Get<T>(string key, T defaultValue)
+        {
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                throw new ArgumentNullException("key is required");
+            }
+            var message = new CacheMessage() { Command = CacheCmd.Get, Id = key};
+            var ts = SendDuplexStream(message);
+            if (ts == null)
+                return defaultValue;
+            return TransReader.ReadValue<T>(ts.GetStream(), defaultValue);
+        }
+
+        /// <summary>
+        /// Get item value from cache.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        public object Get(string key)
+        {
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                throw new ArgumentNullException("key is required");
+            }
+            var message = new CacheMessage() { Command = CacheCmd.Get, Id = key };
+            var ts = SendDuplexStream(message);
+            if (ts == null)
+            {
+                OnFault("Get: " + key + " return null!");
+            }
+            return ts.ReadValue(OnFault);
+        }
+
+        /// <summary>
+        /// Get item value as dictionary from cache.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        public IDictionary<string, object> GetRecord(string key)
+        {
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                throw new ArgumentNullException("key is required");
+            }
+            var message = new CacheMessage() { Command = CacheCmd.GetRecord, Id = key };
+            var ts = SendDuplexStream(message);
+            if (ts == null)
+            {
+                return null;
+            }
+            return ts.ReadValue<IDictionary<string,object>>(OnFault);
+
+        }
         /// <summary>
         /// Get item value from cache as json.
         /// </summary>
-        /// <param name="cacheKey"></param>
+        /// <param name="key"></param>
         /// <param name="format"></param>
         /// <returns></returns>
-        public string GetJson(string cacheKey, JsonFormat format)
+        public string GetJson(string key, JsonFormat format)
         {
-            var obj = GetValue(cacheKey);
+            var obj = Get(key);
             if (obj == null)
                 return null;
             return JsonSerializer.Serialize(obj, null, format);
         }
+
 
 
         #region items
@@ -90,7 +315,8 @@ namespace Nistec.Caching.Remote
             {
                 throw new ArgumentNullException("text is required");
             }
-            return SendDuplex<string>(CacheCmd.Reply, text);
+            var message = new CacheMessage() { Command = CacheCmd.Reply ,Id = text };
+            return SendDuplexStream<string>(message,OnFault);
         }
         
        
@@ -109,26 +335,33 @@ namespace Nistec.Caching.Remote
         ///}
         /// </code>
         /// </example>
-        public CacheState RemoveItem(string cacheKey)
+        public CacheState Remove(string cacheKey)
         {
             if (string.IsNullOrWhiteSpace(cacheKey))
             {
                 throw new ArgumentNullException("cacheKey is required");
             }
-            return (CacheState)SendDuplex<int>(CacheCmd.RemoveItem, cacheKey);
+            var message = new CacheMessage() { Command = CacheCmd.Remove, Id = cacheKey };
+            var ts = SendDuplexStream(message);
+            if(ts==null)
+            {
+                return CacheState.UnKnown;
+            }
+            return (CacheState)ts.ReadState();
         }
 
         /// <summary>
         /// Remove item from cache asynchronizly
         /// </summary>
         /// <param name="cacheKey"></param>
-        public void RemoveItemAsync(string cacheKey)
+        public void RemoveAsync(string cacheKey)
         {
             if (string.IsNullOrWhiteSpace(cacheKey))
             {
                 throw new ArgumentNullException("cacheKey is required");
             }
-            SendOut(CacheCmd.RemoveItemAsync, cacheKey);
+            var message = new CacheMessage() { Command = CacheCmd.RemoveAsync, Id = cacheKey };
+            SendOut(message);
         }
 
         /// <summary>
@@ -154,48 +387,13 @@ namespace Nistec.Caching.Remote
                 throw new ArgumentNullException("cacheKey is required");
             }
 
-            return SendDuplex<NetStream>(CacheCmd.GetValue, cacheKey);
-        }
-        /// <summary>
-        /// Get value from cache
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="cacheKey"></param>
-        /// <returns></returns>
-        /// <example>
-        /// <code>
-        /// //Get item value from cache.
-        ///public void GetValue()
-        ///{
-        ///    string key = "item key 1";
-        ///    <![CDATA[var item = CacheApi.GetValue<EntitySample>(key);]]>
-        ///    Print(item, key);
-        ///}
-        /// </code>
-        /// </example>
-        public T GetValue<T>(string cacheKey)
-        {
-            if (string.IsNullOrWhiteSpace(cacheKey))
+            var message = new CacheMessage() { Command = CacheCmd.Get, Id = cacheKey };
+            var ts = SendDuplexStream(message);
+            if (ts == null)
             {
-                throw new ArgumentNullException("cacheKey is required");
+                return null;
             }
-
-            return SendDuplex<T>(CacheCmd.GetValue, cacheKey);
-        }
-
-        /// <summary>
-        /// Get value from cache.
-        /// </summary>
-        /// <param name="cacheKey"></param>
-        /// <returns></returns>
-        public object GetValue(string cacheKey)
-        {
-            if (string.IsNullOrWhiteSpace(cacheKey))
-            {
-                throw new ArgumentNullException("cacheKey is required");
-            }
-
-            return SendDuplex(CacheCmd.GetValue, cacheKey,typeof(object).FullName);
+            return (NetStream)ts.GetStream();
         }
 
         /// <summary>
@@ -215,15 +413,27 @@ namespace Nistec.Caching.Remote
         ///}
         /// </code>
         /// </example>
-        public T FetchValue<T>(string cacheKey)
+        public T Fetch<T>(string cacheKey)
         {
             if (string.IsNullOrWhiteSpace(cacheKey))
             {
                 throw new ArgumentNullException("cacheKey is required");
             }
 
-            return SendDuplex<T>(CacheCmd.FetchValue, cacheKey);
+            var message = new CacheMessage() { Command = CacheCmd.Fetch, Id = cacheKey};
+            return SendDuplexStream<T>(message, OnFault);
         }
+
+        public object Fetch(string cacheKey)
+        {
+            if (string.IsNullOrWhiteSpace(cacheKey))
+            {
+                throw new ArgumentNullException("cacheKey is required");
+            }
+            var message = new CacheMessage() { Command = CacheCmd.Fetch, Id = cacheKey };
+            return SendDuplexStreamValue(message, OnFault);
+        }
+
         /// <summary>
         /// Load data from db to cache or get it if exists.
         /// </summary>
@@ -243,70 +453,92 @@ namespace Nistec.Caching.Remote
                 return default(T);
             using (var message = new CacheMessage(CacheCmd.LoadData, item.CreateKey(), item, expiration))
             {
-                return SendDuplex<T>(message);
+                return SendDuplexStream<T>(message, OnFault);
             }
         }
-       
-        /// <summary>
-        /// Add new item to cache
-        /// </summary>
-        /// <param name="item"></param>
-        /// <returns>return <see cref="CacheState"/></returns>
-        public CacheState AddItem(CacheEntry item)
-        {
 
-            if (item == null || item.IsEmpty)
-                return CacheState.ArgumentsError;
-            using (var message = new CacheMessage() { Command = CacheCmd.AddItem, Key = item.Key, BodyStream = item.BodyStream })
-            {
-                return (CacheState)SendDuplex<int>(message);
-            }
-        }
         /// <summary>
-        /// Add new item to cache
+        /// Set a new item to the cache, if this item is exists override it with the new one.
         /// </summary>
         /// <param name="cacheKey"></param>
         /// <param name="value"></param>
         /// <param name="expiration"></param>
         /// <returns>return <see cref="CacheState"/></returns>
-        /// <example>
-        /// <code>
-        /// //Add items to remote cache.
-        ///public void AddItems()
-        ///{
-        ///    int timeout = 30;
-        ///    CacheApi.AddItem("item key 1", new EntitySample() { Id = 123, Name = "entity sample 1", Creation = DateTime.Now, Value = "entity item one" }, timeout);
-        ///    CacheApi.AddItem("item key 2", new EntitySample() { Id = 124, Name = "entity sample 2", Creation = DateTime.Now, Value = "entity item second" }, timeout);
-        ///    CacheApi.AddItem("item key 3", new EntitySample() { Id = 125, Name = "entity sample 3", Creation = DateTime.Now, Value = "entity item minute" }, timeout);
-        ///}
-        /// </code>
-        /// </example>
-        public CacheState AddItem(string cacheKey, object value, int expiration)
+        public CacheState Set(string cacheKey, object value, int expiration)
         {
             if (value == null)
                 return CacheState.ArgumentsError;
 
-            using (var message = new CacheMessage(CacheCmd.AddItem, cacheKey, value, expiration))
+            using (var message = new CacheMessage(CacheCmd.Set, cacheKey, value, expiration))
             {
-                return (CacheState)SendDuplex<int>(message);
+                return SendDuplexState(message);
             }
         }
         /// <summary>
-        /// Add new item to cache
+        /// Set a new item to the cache, if this item is exists override it with the new one.
         /// </summary>
         /// <param name="cacheKey"></param>
         /// <param name="value"></param>
         /// <param name="sessionId"></param>
         /// <param name="expiration"></param>
         /// <returns>return <see cref="CacheState"/></returns>
-        public CacheState AddItem(string cacheKey, object value, string sessionId, int expiration)
+        public CacheState Set(string cacheKey, object value, string sessionId, int expiration)
         {
             if (value == null)
                 return CacheState.ArgumentsError;
 
-            using (var message = new CacheMessage(CacheCmd.AddItem, cacheKey, value, expiration, sessionId))
+            using (var message = new CacheMessage() {
+                Command= CacheCmd.Set,
+                Id= cacheKey,
+                GroupId=sessionId,
+                Expiration=expiration
+
+            })
             {
-                return (CacheState)SendDuplex<int>(message);
+                message.SetBody(value);
+                return SendDuplexState(message);
+            }
+        }
+        /// <summary>
+        /// Add a new item to the cache, only if this item not exists.
+        /// </summary>
+        /// <param name="cacheKey"></param>
+        /// <param name="value"></param>
+        /// <param name="expiration"></param>
+        /// <returns>return <see cref="CacheState"/></returns>
+        public CacheState Add(string cacheKey, object value, int expiration)
+        {
+            if (value == null)
+                return CacheState.ArgumentsError;
+
+            using (var message = new CacheMessage(CacheCmd.Add, cacheKey, value, expiration))
+            {
+                return SendDuplexState(message);
+            }
+        }
+        /// <summary>
+        /// Add a new item to the cache, only if this item not exists.
+        /// </summary>
+        /// <param name="cacheKey"></param>
+        /// <param name="value"></param>
+        /// <param name="sessionId"></param>
+        /// <param name="expiration"></param>
+        /// <returns>return <see cref="CacheState"/></returns>
+        public CacheState Add(string cacheKey, object value, string sessionId, int expiration)
+        {
+            if (value == null)
+                return CacheState.ArgumentsError;
+
+            using (var message = new CacheMessage() {
+                    Command = CacheCmd.Set,
+                    Id = cacheKey,
+                    GroupId = sessionId,
+                    Expiration = expiration
+
+            }) //CacheCmd.Add, cacheKey, value, expiration, sessionId))
+            {
+                message.SetBody(value);
+                return SendDuplexState(message);
             }
         }
 
@@ -315,14 +547,35 @@ namespace Nistec.Caching.Remote
         /// </summary>
         /// <param name="cacheKey"></param>
         /// <returns>return <see cref="CacheEntry"/></returns>
-        public CacheEntry ViewItem(string cacheKey)
+        public CacheEntry GetEntry(string cacheKey)
         {
             if (string.IsNullOrWhiteSpace(cacheKey))
             {
                 throw new ArgumentNullException("cacheKey is required");
             }
 
-            return SendDuplex<CacheEntry>(CacheCmd.ViewItem, cacheKey);
+            using (var message = new CacheMessage() { Command = CacheCmd.GetEntry, Id = cacheKey })
+            {
+                return SendDuplexStream<CacheEntry>(message, OnFault);
+            }
+        }
+
+        /// <summary>
+        /// Get item copy from cache
+        /// </summary>
+        /// <param name="cacheKey"></param>
+        /// <returns>return <see cref="CacheEntry"/></returns>
+        public CacheEntry ViewEntry(string cacheKey)
+        {
+            if (string.IsNullOrWhiteSpace(cacheKey))
+            {
+                throw new ArgumentNullException("cacheKey is required");
+            }
+
+            using (var message = new CacheMessage() { Command = CacheCmd.ViewEntry, Id = cacheKey})
+            {
+                return SendDuplexStream<CacheEntry>(message,OnFault);
+            }
         }
 
         #endregion
@@ -347,18 +600,18 @@ namespace Nistec.Caching.Remote
         ///}
         /// </code>
         /// </example>
-        public CacheState CopyItem(string source, string dest, int expiration)
+        public CacheState CopyTo(string source, string dest, int expiration)
         {
             using (var message = new CacheMessage()
             {
-                Command = CacheCmd.CopyItem,
+                Command = CacheCmd.CopyTo,
                 Args = MessageStream.CreateArgs(KnowsArgs.Source, source, KnowsArgs.Destination, dest),
                 Expiration = expiration,
                 IsDuplex = false,
-                Key = dest
+                Id = dest
             })
             {
-                return (CacheState)SendDuplex<int>(message);
+                return SendDuplexState(message);
             }
         }
         /// <summary>
@@ -380,22 +633,22 @@ namespace Nistec.Caching.Remote
         ///}
         /// </code>
         /// </example>
-        public CacheState CutItem(string source, string dest, int expiration)
+        public CacheState CutTo(string source, string dest, int expiration)
         {
 
             using (var message = new CacheMessage()
             {
-                Command = CacheCmd.CutItem,
+                Command = CacheCmd.CutTo,
                 Args = MessageStream.CreateArgs(KnowsArgs.Source, source, KnowsArgs.Destination, dest),
                 Expiration = expiration,
                 IsDuplex = false,
-                Key = dest
+                Id = dest
             })
             {
-                return (CacheState)SendDuplex<int>(message);
+                return SendDuplexState(message);
             }
         }
-    
+
         #endregion
 
         /// <summary>
@@ -403,15 +656,16 @@ namespace Nistec.Caching.Remote
         /// </summary>
         /// <param name="sessionId"></param>
         /// <returns>return number of items removed from cache.</returns>
-        public int RemoveCacheSessionItems(string sessionId)
+        public CacheState RemoveItemsBySession(string sessionId)
         {
             if (sessionId == null)
-                return -1;
-            using (var message = new CacheMessage() { Command = CacheCmd.RemoveCacheSessionItems, Key = sessionId })
+                return CacheState.ArgumentsError;
+            using (var message = new CacheMessage() { Command = CacheCmd.RemoveItemsBySession, Label = sessionId })
             {
-                return SendDuplex<int>(message);
+                return SendDuplexState(message);
             }
         }
+
         /// <summary>
         /// Keep Alive Cache Item.
         /// </summary>
@@ -420,7 +674,7 @@ namespace Nistec.Caching.Remote
         {
             if (cacheKey == null)
                 return;
-            using (var message = new CacheMessage() { Command = CacheCmd.KeepAliveItem, Key = cacheKey })
+            using (var message = new CacheMessage() { Command = CacheCmd.KeepAliveItem, Id = cacheKey })
             {
                 SendOut(message);
             }

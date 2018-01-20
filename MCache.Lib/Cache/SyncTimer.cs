@@ -177,6 +177,17 @@ namespace Nistec.Caching
         {
             return (obj.Interval == _timeSpan);
         }
+
+        public bool IsEquals(SyncTimer st)
+        {
+            if (st == null)
+                return false;
+
+            return (this.Interval == st.Interval &&
+                this.SyncType == st.SyncType);
+        }
+
+
         /// <summary>
         /// GetHashCode
         /// </summary>
@@ -226,7 +237,7 @@ namespace Nistec.Caching
             }
             else //if (SyncType == SyncType.ByInterval)
             {
-               nextDate= d.AddHours(_timeSpan.Hours).AddMinutes(_timeSpan.Minutes);
+               nextDate= d.AddHours(_timeSpan.Hours).AddMinutes(_timeSpan.Minutes).AddSeconds(_timeSpan.Seconds);
             }
             return nextDate;
         }

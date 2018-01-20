@@ -117,7 +117,9 @@ namespace Nistec.Caching.Remote.UI
             // 
             // StyleGuideBase
             // 
-            this.StyleGuideBase.BorderColor = System.Drawing.Color.SlateGray;
+            this.StyleGuideBase.BorderColor = System.Drawing.Color.DarkGray;// SlateGray;
+            this.StyleGuideBase.StylePlan = WinForms.Styles.SteelBlue;
+            //this.gridItems.LayoutManager.Layout.StylePlan = WinForms.Styles.SteelBlue;
             // 
             // ctlLabel2
             // 
@@ -226,12 +228,12 @@ namespace Nistec.Caching.Remote.UI
             this.tbHelp.ButtonStyle = Nistec.WinForms.ToolButtonStyle.Button;
             this.tbHelp.DialogResult = System.Windows.Forms.DialogResult.None;
             this.tbHelp.Dock = System.Windows.Forms.DockStyle.Left;
-            this.tbHelp.Image = global::Nistec.Caching.UI.Properties.Resources.Help;
+            this.tbHelp.Image = global::Nistec.Caching.UI.Properties.Resources.search;
             this.tbHelp.Location = new System.Drawing.Point(587, 3);
             this.tbHelp.Name = "tbHelp";
             this.tbHelp.Size = new System.Drawing.Size(22, 20);
             this.tbHelp.TabIndex = 7;
-            this.tbHelp.ToolTipText = "Help";
+            this.tbHelp.ToolTipText = "Search";
             // 
             // sp6
             // 
@@ -526,17 +528,17 @@ namespace Nistec.Caching.Remote.UI
             // pSession
             // 
             this.pSession.Image = ((System.Drawing.Image)(resources.GetObject("pSession.Image")));
-            this.pSession.Text = "Session";
+            this.pSession.Text = "SessionTree";
             // 
             // pSessionActive
             // 
             this.pSessionActive.Image = ((System.Drawing.Image)(resources.GetObject("pSessionActive.Image")));
-            this.pSessionActive.Text = "Session-Active";
+            this.pSessionActive.Text = "SessionGrid";// -Active";
             // 
             // pSessionIdle
             // 
             this.pSessionIdle.Image = ((System.Drawing.Image)(resources.GetObject("pSessionIdle.Image")));
-            this.pSessionIdle.Text = "Session-Idle";
+            this.pSessionIdle.Text = "TimerReport";
             // 
             // sp1
             // 
@@ -649,6 +651,7 @@ namespace Nistec.Caching.Remote.UI
             this.gridItems.ReadOnly = true;
             this.gridItems.Size = new System.Drawing.Size(660, 464);
             this.gridItems.TabIndex = 15;
+            this.gridItems.DoubleClick += GridItems_DoubleClick;
             // 
             // pgSource
             // 
@@ -953,6 +956,11 @@ namespace Nistec.Caching.Remote.UI
             this.pnlUsage.ResumeLayout(false);
             this.ResumeLayout(false);
 
+        }
+
+        private void GridItems_DoubleClick(object sender, System.EventArgs e)
+        {
+            DoProperty();
         }
 
         #endregion

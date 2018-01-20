@@ -13,29 +13,61 @@ namespace Nistec.Caching.Demo.Remote
     {
         int timeout = 30;
         NetProtocol Protocol;
-        public static void TestAll(NetProtocol protocol)
+        public static void TestAll(NetProtocol protocol, bool enableRemove = true)
         {
-            CacheTest test = new CacheTest() { Protocol = protocol };
+            CacheTest test = new CacheTest() { Protocol = protocol, api=CacheApi.Get(protocol) };
 
             test.AddItems();
             test.GetValue();
             test.FetchValue();
-            test.RemoveItem();
+            if (enableRemove)
+                test.RemoveItem();
             test.CopyItem();
             test.CutItem();
-            test.GetItemView();
+            test.ViewEntry();
+            test.DoAll();
+            test.LoadData();
+
             //test.MergeNewItem();
             //test.MergeExistingItem();
             //test.GetMergeValue();
-         }
+        }
+
+        static void GoOn()
+        {
+            string entry = Console.ReadLine();
+            if (entry == "q")
+            {
+                Environment.Exit(1);
+            }
+        }
+
+        CacheApi api;
+
 
         //Add items to remote cache.
         public void AddItems()
         {
-            var api = CacheApi.Get(Protocol);
-            api.AddItem("item key 1", new EntitySample() { Id = 123, Name = "entity sample 1", Creation = DateTime.Now, Value = "entity item one" }, timeout);
-            api.AddItem("item key 2", new EntitySample() { Id = 124, Name = "entity sample 2", Creation = DateTime.Now, Value = "entity item second" }, timeout);
-            api.AddItem("item key 3", new EntitySample() { Id = 125, Name = "entity sample 3", Creation = DateTime.Now, Value = "entity item minute" }, timeout);
+            CacheState state = CacheState.UnKnown;
+            var dt = ContactEntityContext.GetList();
+            for (int i=0;i<1000;i++)
+            {
+                state = api.Add("auto item key "+ i.ToString(), new EntitySample() { Id = i, Name = "entity sample "+i.ToString(), Creation = DateTime.Now, Value = dt }, timeout);
+                Console.WriteLine("cache.Add: " + state.ToString());
+            }
+
+
+            state = api.Add("item key 1", new EntitySample() { Id = 123, Name = "entity sample 1", Creation = DateTime.Now, Value = "entity item one" }, timeout);
+            Console.WriteLine("cache.Add: " + state.ToString());
+            state = api.Add("item key 2", new EntitySample() { Id = 124, Name = "entity sample 2", Creation = DateTime.Now, Value = "entity item second" }, timeout);
+            Console.WriteLine("cache.Add: " + state.ToString());
+            state = api.Add("item key 3", new EntitySample() { Id = 125, Name = "entity sample 3", Creation = DateTime.Now, Value = "entity item minute" }, timeout);
+            Console.WriteLine("cache.Add: " + state.ToString());
+            state = api.Add("item key 4", new EntitySample() { Id = 126, Name = "entity sample 4", Creation = DateTime.Now, Value = "entity item minute" }, timeout);
+            Console.WriteLine("cache.Add: " + state.ToString());
+            state = api.Add("item key 5", new EntitySample() { Id = 127, Name = "entity sample 5", Creation = DateTime.Now, Value = "entity item minute" }, timeout);
+            Console.WriteLine("cache.Add: " + state.ToString());
+            GoOn();
         }
 
         //Print item to console
@@ -46,28 +78,83 @@ namespace Nistec.Caching.Demo.Remote
             else
                 Console.WriteLine(item.Name);
         }
-        
+
+        void Print(object item, string key, string command)
+        {
+            Console.WriteLine("command: " + command + ", Key: " + key);
+
+            if (item == null)
+                Console.WriteLine("item not found " + key);
+            else if(item.GetType()==typeof(string))
+                Console.WriteLine(item.ToString());
+            else
+                Console.WriteLine(api.ToJson(item, true));
+        }
+
         //Get item value from cache.
         public void GetValue()
         {
             string key = "item key 1";
-            var item = CacheApi.Get(Protocol).GetValue<EntitySample>(key);
+            var api = CacheApi.Get(Protocol);
+            var item = api.Get<EntitySample>(key);
             Print(item, key);
+
+            var o = api.Get(key);
+            Print(item, key);
+
+            var entry = api.GetEntry(key);
+            Print(entry, key, "GetEntry");
+
+            var record = api.GetRecord(key);
+            Print(record, key, "GetRecord");
+
+            var stream = api.GetStream(key);
+            Print(stream, key, "GetStream");
+
+            var json = api.GetJson(key, Serialization.JsonFormat.Indented);
+            Print(json, key, "GetJson");
+
+            GoOn();
         }
         
+        public void LoadData()
+        {
+
+
+        }
+        public void DoAll()
+        {
+            string key = "item key 1";
+
+            api.KeepAliveItem(key);
+            Print("done", key, "KeepAliveItem");
+
+
+        }
+
         //Fetch item value from cache.
         public void FetchValue()
         {
             string key = "item key 2";
-            var item = CacheApi.Get(Protocol).FetchValue<EntitySample>(key);
+            var item = CacheApi.Get(Protocol).Fetch<EntitySample>(key);
             Print(item, key);
+            GoOn();
         }
         
         //Remove item from cache.
         public void RemoveItem()
         {
-            var state = CacheApi.Get(Protocol).RemoveItem("item key 3");
-            Console.WriteLine(state);
+            string key = "item key 3";
+            var state = api.Remove(key);
+            Console.WriteLine("cache.RemoveItem: " + state.ToString());
+
+
+            key = "item key 4";
+            state = api.RemoveItemsBySession(key);
+            Print(state.ToString(), key, "RemoveItemsBySession");
+
+
+            GoOn();
         }
         
         //Duplicate existing item from cache to a new destination.
@@ -75,8 +162,9 @@ namespace Nistec.Caching.Demo.Remote
         {
             string source = "item key 1";
             string dest = "item key 2";
-            var state = CacheApi.Get(Protocol).CopyItem(source, dest, timeout);
-            Console.WriteLine(state);
+            var state = api.CopyTo(source, dest, timeout);
+            Console.WriteLine("cache.CopyItem: " + state.ToString());
+            GoOn();
         }
         
         //Duplicate existing item from cache to a new destination and remove the old one.
@@ -84,19 +172,21 @@ namespace Nistec.Caching.Demo.Remote
         {
             string source = "item key 2";
             string dest = "item key 3";
-            var state = CacheApi.Get(Protocol).CutItem(source, dest, timeout);
-            Console.WriteLine(state);
+            var state = api.CutTo(source, dest, timeout);
+            Console.WriteLine("cache.CutItem: " + state.ToString());
+            GoOn();
         }
 
         //Get properties for existing item in cache.
-        public void GetItemView()
+        public void ViewEntry()
         {
             string key = "item key 1";
-            var item = CacheApi.Get(Protocol).ViewItem(key);
+            var item = api.ViewEntry(key);
             if (item == null)
                 Console.WriteLine("item not found " + key);
             else
                 Console.WriteLine(item.PrintHeader());
+            GoOn();
         }
 
         //Merge collection items to a new item in cache.
@@ -106,7 +196,7 @@ namespace Nistec.Caching.Demo.Remote
             items.Add(new EntitySample() { Id=1234, Name="entity merge 1" });
             items.Add(new EntitySample() { Id = 2345, Name = "entity merge 2" });
             items.Add(new EntitySample() { Id = 3456, Name = "entity merge 3" });
-
+            
             //CacheApi.Get().MergeItem("Entities merge sample", items, timeout);
         }
         //Merge collection items to exsisting items in cache.
@@ -126,7 +216,7 @@ namespace Nistec.Caching.Demo.Remote
         public void GetMergeValue()
         {
             string key = "entity merge key";
-            var item = CacheApi.Get(Protocol).GetValue<List<EntitySample>>(key);
+            var item = api.Get<List<EntitySample>>(key);
 
             if (item == null)
                 Console.WriteLine("item not found " + key);

@@ -28,6 +28,7 @@ using Nistec.Serialization;
 using System.IO;
 using Nistec.IO;
 using Nistec.Caching.Config;
+using Nistec.Generic;
 
 namespace Nistec.Caching.Session
 {
@@ -46,7 +47,7 @@ namespace Nistec.Caching.Session
         /// <summary>
         /// Get Session items.
         /// </summary>
-        [EntitySerialize]
+        [Serialize]
         public Dictionary<string, SessionEntry> SessionItems
         {
             get { return m_SessionItems; }
@@ -77,7 +78,7 @@ namespace Nistec.Caching.Session
             this.UserId = bag.UserId;
             foreach (var entry in bag.ItemsValues())
             {
-                m_SessionItems.Add(entry.Key, entry);
+                m_SessionItems.Add(entry.Id, entry.Copy());
             }
 
         }
@@ -139,13 +140,15 @@ namespace Nistec.Caching.Session
         /// <returns></returns>
         public static int GetValidTimeout(int timeout)
         {
-            if (timeout == 0)
-                return CacheDefaults.MaxSessionTimeout;
-            if (timeout < 0)
-                return CacheDefaults.SessionTimeout;
-            if (timeout > CacheDefaults.MaxSessionTimeout)
-                return CacheDefaults.MaxSessionTimeout;
-            return timeout;
+            return CacheSettings.GetValidSessionTimeout(timeout);
+
+            //if (timeout == 0)
+            //    return CacheDefaults.MaxSessionTimeout;
+            //if (timeout < 0)
+            //    return CacheDefaults.GetValidSessionTimeout(CacheSettings.SessionTimeout);
+            //if (timeout > CacheDefaults.MaxSessionTimeout)
+            //    return CacheDefaults.MaxSessionTimeout;
+            //return timeout;
         }
 
         /// <summary>
@@ -153,7 +156,8 @@ namespace Nistec.Caching.Session
         /// </summary>
         public bool IsTimeOut
         {
-            get { return /*AllowExpired &&*/ TimeSpan.FromMinutes(Timeout) < DateTime.Now.Subtract(LastUsed); }
+            get { return DateTime.Now.Subtract(LastUsed).TotalMinutes > Timeout; }
+            //get { return /*AllowExpired &&*/ TimeSpan.FromMinutes(Timeout) < DateTime.Now.Subtract(LastUsed); }
         }
 
         /// <summary>
@@ -163,12 +167,17 @@ namespace Nistec.Caching.Session
         {
             get 
             {
-
-                if (CacheDefaults.MaxSessionTimeout >= Timeout && TimeSpan.FromMinutes(Timeout) < DateTime.Now.Subtract(LastUsed))
-                    return SessionState.Idle;
-                if (TimeSpan.FromMinutes(Timeout) < DateTime.Now.Subtract(LastUsed))
+                if (DateTime.Now.Subtract(LastUsed).TotalMinutes < Timeout && LastUsed > Creation)
+                    return SessionState.Active;
+                if (DateTime.Now.Subtract(LastUsed).TotalMinutes > Timeout)
                     return SessionState.Timedout;
-                return  SessionState.Active; 
+                return SessionState.Idle;
+
+                //if (CacheDefaults.MaxSessionTimeout >= Timeout && TimeSpan.FromMinutes(Timeout) < DateTime.Now.Subtract(LastUsed))
+                //    return SessionState.Idle;
+                //if (TimeSpan.FromMinutes(Timeout) < DateTime.Now.Subtract(LastUsed))
+                //    return SessionState.Timedout;
+                //return  SessionState.Active; 
             }
         }
 
@@ -177,7 +186,7 @@ namespace Nistec.Caching.Session
         /// Gets a collection containing the keys in the <see cref="SessionBag"/>.
         /// </summary>
         /// <returns></returns>
-        public ICollection<string> ItemsKeys()
+        ICollection<string> ItemsKeys()
         {
             return m_SessionItems.Keys; 
         }
@@ -185,7 +194,7 @@ namespace Nistec.Caching.Session
         /// Gets a collection containing the values in the <see cref="SessionBag"/>.
         /// </summary>
         /// <returns></returns>
-        public ICollection<SessionEntry> ItemsValues()
+        ICollection<SessionEntry> ItemsValues()
         {
             return m_SessionItems.Values; 
         }
@@ -208,7 +217,7 @@ namespace Nistec.Caching.Session
         {
             foreach (var entry in entries)
             {
-                m_SessionItems[entry.Key] = entry;
+                m_SessionItems[entry.Id] = entry.Copy();
             }
         }
 
@@ -282,8 +291,13 @@ namespace Nistec.Caching.Session
         {
             return string.Format("SessionId:{0},Size:{1},State:{2},UserId:{3},Timeout:{4},ItemsCount:{5}", SessionId, Size,State, UserId, Timeout, m_SessionItems.Count);
         }
-       
+
         #endregion
+
+        public IDictionary<string, object> ToDictionary()
+        {
+            return DictionaryUtil.ToDictionary(this, "");
+        }
 
     }
 

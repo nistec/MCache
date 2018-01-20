@@ -26,22 +26,23 @@ using Nistec.Caching.Data;
 using System.Threading;
 using System.Threading.Tasks;
 
+
 namespace Nistec.Caching.Sync
 {
-    /// <summary>
-    /// Represent synchronization task interface.
-    /// </summary>
-    public interface ITaskSync
-    {
-        /// <summary>
-        /// Do synchronization action.
-        /// </summary>
-        void DoSynchronize();
-        /// <summary>
-        /// Get indicate whether the item is disposed.
-        /// </summary>
-        bool IsDisposed { get; }
-    }
+    ///// <summary>
+    ///// Represent synchronization task interface.
+    ///// </summary>
+    //public interface ITaskSync
+    //{
+    //    /// <summary>
+    //    /// Do synchronization action.
+    //    /// </summary>
+    //    void DoSynchronize();
+    //    /// <summary>
+    //    /// Get indicate whether the item is disposed.
+    //    /// </summary>
+    //    bool IsDisposed { get; }
+    //}
 
     /// <summary>
     /// Sync item type
@@ -83,17 +84,20 @@ namespace Nistec.Caching.Sync
     internal class SyncBoxTask
     {
 
-        /// <summary>
-        /// Initialize a new instance of sync box for PreSync.
-        /// </summary>
-        /// <param name="TaskItem"></param>
-        /// <param name="ItemName"></param>
-        public SyncBoxTask(ITaskSync TaskItem, string ItemName)
-        {
-            this.TaskItem = TaskItem;
-            this.ItemName = ItemName;
-            TaskMode = SyncBoxTaskMode.PreSync;
-        }
+        ///// <summary>
+        ///// Initialize a new instance of sync box for PreSync.
+        ///// </summary>
+        ///// <param name="TaskItem"></param>
+        ///// <param name="ItemName"></param>
+        //public SyncBoxTask(ITaskSync TaskItem, string ItemName)
+        //{
+        //    this.TaskItem = TaskItem;
+        //    this.ItemName = ItemName;
+        //    TaskMode = SyncBoxTaskMode.PreSync;
+        //    Created = DateTime.Now;
+        //    //~Console.WriteLine("Debuger-SyncBoxTask.New: " + ItemName);
+        //}
+
         /// <summary>
         /// Initialize a new instance of sync box for DataSync.
         /// </summary>
@@ -105,6 +109,8 @@ namespace Nistec.Caching.Sync
             this.Owner = Owner;
             this.ItemName = Entity.EntityName;
             TaskMode = SyncBoxTaskMode.DataSync;
+            Created = DateTime.Now;
+            //~Console.WriteLine("Debuger-SyncBoxTask.New: " + Entity.EntityName);
         }
 
         ///// <summary>
@@ -123,16 +129,16 @@ namespace Nistec.Caching.Sync
         //}
 
         //ISyncStream SyncOwner;
-
+        public DateTime Created { get; private set; }
         /// <summary>
         /// Get the task mode
         /// </summary>
         public SyncBoxTaskMode TaskMode { get; private set; }
 
-        /// <summary>
-        /// Get item <see cref="ITaskSync"/>.
-        /// </summary>
-        public ITaskSync TaskItem { get; private set; }
+        ///// <summary>
+        ///// Get item <see cref="ITaskSync"/>.
+        ///// </summary>
+        //public ITaskSync TaskItem { get; private set; }
         /// <summary>
         /// Get item name.
         /// </summary>
@@ -203,27 +209,61 @@ namespace Nistec.Caching.Sync
 
         }
         */
-        public void DoAsync()
+        public void DoAsyncTask()
         {
+            //~Console.WriteLine("Debuger-SyncTask.DoAsync...");
 
-            if (this.TaskMode == SyncBoxTaskMode.PreSync)
-            {
-                Task task = Task.Factory.StartNew(() => this.TaskItem.DoSynchronize());
-                //CacheLogger.Debug("SyncBoxTask PreSync : " + this.ItemName);
-            }
-            else
-            {
-                DataSyncEntity o = this.Entity;
-                if (o != null)
+            //if (this.TaskMode == SyncBoxTaskMode.PreSync)
+            //{
+            //    Task task = Task.Factory.StartNew(() => this.TaskItem.DoSynchronize());
+            //    //CacheLogger.Debug("SyncBoxTask PreSync : " + this.ItemName);
+            //}
+            //else
+            //{
+                if (Owner == null)
                 {
-                    Task task = Task.Factory.StartNew(() => o.SyncAndStore(this.Owner));
-                    //CacheLogger.Info("SyncBoxTask Start DataSync : " + o.ViewName);
+                    throw new ArgumentException("SyncBoxTask Owner is null");
+                }
+
+                if (this.Entity == null)
+                {
+                    throw new ArgumentException("SyncBoxTask Entity is null");
+                }
+
+
+                if (Owner is DbSet)//DataCache)
+                {
+                    Task task = Task.Factory.StartNew(() => Entity.SyncAndStore(this.Owner));
+                }
+                else if (Owner is SyncDb)
+                {
+                    if (Owner.Parent == null)
+                    {
+                        throw new ArgumentException("SyncBoxTask Owner.Parent is null");
+                    }
+                    Task task = Task.Factory.StartNew(() => Owner.Parent.Refresh(Entity.EntityName));
                 }
                 else
                 {
-                    CacheLogger.Debug("SyncBoxTask DoRefresh DataSyncEntitiy not found!");
+                    throw new NotSupportedException("Owner not supported " + Owner.ToString());
                 }
-            }
+                //Task task = Task.Factory.StartNew(() => o.Refresh(Owner));
+
+
+                //CacheLogger.Info("SyncBoxTask Start DataSync : " + o.ViewName);
+                //else
+                //{
+                //    CacheLogger.Debug("SyncBoxTask DoRefresh DataSyncEntitiy not found!");
+                //}
+            //}
+        }
+
+        internal object[] ToDataRow()
+        {
+            if(this.Entity!=null)
+                return new object[] { ItemName, TaskMode.ToString(), Created, Entity.LastSync, Entity.SourceName, Owner.ClientId };
+            else
+                return new object[] { ItemName, TaskMode.ToString(), Created, "", Owner.ConnectionKey, Owner.ClientId };
         }
     }
 
@@ -242,10 +282,10 @@ namespace Nistec.Caching.Sync
         /// </summary>
         public DataSyncEntity Entity { get; internal set; }
 
-        /// <summary>
-        /// Get or Set item <see cref="ITaskSync"/>.
-        /// </summary>
-        public ITaskSync Item {get;set;}
+        ///// <summary>
+        ///// Get or Set item <see cref="ITaskSync"/>.
+        ///// </summary>
+        //public ITaskSync Item {get;set;}
         /// <summary>
         /// Get or Set item name.
         /// </summary>
@@ -272,6 +312,16 @@ namespace Nistec.Caching.Sync
             //    return false
             return Timer.HasTimeToRun();
         }
+
+        internal object[] ToDataRow()
+        {
+
+            if (Entity == null)
+                return new object[] { ItemName, Timer.SyncType.ToString(), Timer.Interval.ToString(), Timer.GetLastTime().ToString("s"), Owner.ConnectionKey, Owner.ClientId };
+            else
+                return new object[] { ItemName, Timer.SyncType.ToString(), Timer.Interval.ToString(), Entity.LastSync, Entity.ViewName, Owner.ClientId };
+        }
+
 
         /*
         /// <summary>
@@ -303,6 +353,8 @@ namespace Nistec.Caching.Sync
             return NextTime;
         }
         */
+
+
     }
 
 }

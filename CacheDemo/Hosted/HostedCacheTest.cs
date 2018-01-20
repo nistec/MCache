@@ -39,9 +39,9 @@ namespace Nistec.Caching.Demo.Hosted
         //Add items to remote cache.
         public void AddItems()
         {
-            MemoCache.AddItem("item key 1", new EntitySample() { Id = 123, Name = "entity sample 1", Creation = DateTime.Now, Value = "entity item one" }, timeout);
-            MemoCache.AddItem("item key 2", new EntitySample() { Id = 124, Name = "entity sample 2", Creation = DateTime.Now, Value = "entity item second" }, timeout);
-            MemoCache.AddItem("item key 3", new EntitySample() { Id = 125, Name = "entity sample 3", Creation = DateTime.Now, Value = "entity item minute" }, timeout);
+            MemoCache.Add("item key 1", new EntitySample() { Id = 123, Name = "entity sample 1", Creation = DateTime.Now, Value = "entity item one" }, timeout);
+            MemoCache.Add("item key 2", new EntitySample() { Id = 124, Name = "entity sample 2", Creation = DateTime.Now, Value = "entity item second" }, timeout);
+            MemoCache.Add("item key 3", new EntitySample() { Id = 125, Name = "entity sample 3", Creation = DateTime.Now, Value = "entity item minute" }, timeout);
         }
         //Print item to console
         void Print(EntitySample item, string key)
@@ -55,20 +55,20 @@ namespace Nistec.Caching.Demo.Hosted
         public void GetValue()
         {
             string key = "item key 1";
-            var item = MemoCache.GetValue<EntitySample>(key);
+            var item = MemoCache.Get<EntitySample>(key);
             Print(item, key);
         }
         //Fetch item value from cache.
         public void FetchValue()
         {
             string key = "item key 2";
-            var item = MemoCache.FetchValue<EntitySample>(key);
+            var item = MemoCache.Fetch<EntitySample>(key);
             Print(item, key);
         }
         //Remove item from cache.
         public void RemoveItem()
         {
-            var state = MemoCache.RemoveItem("item key 3");
+            var state = MemoCache.Remove("item key 3");
             Console.WriteLine(state);
         }
         //Duplicate existing item from cache to a new destination.
@@ -76,7 +76,7 @@ namespace Nistec.Caching.Demo.Hosted
         {
             string source = "item key 1";
             string dest = "item key 2";
-            var state = MemoCache.CopyItem(source, dest, timeout);
+            var state = MemoCache.CopyTo(source, dest, timeout);
             Console.WriteLine(state);
         }
         //Duplicate existing item from cache to a new destination and remove the old one.
@@ -84,7 +84,7 @@ namespace Nistec.Caching.Demo.Hosted
         {
             string source = "item key 2";
             string dest = "item key 3";
-            var state = MemoCache.CutItem(source, dest, timeout);
+            var state = MemoCache.CutTo(source, dest, timeout);
             Console.WriteLine(state);
         }
         //Get properties for existing item in cache.
@@ -123,7 +123,7 @@ namespace Nistec.Caching.Demo.Hosted
         public void GetMergeValue()
         {
             string key = "entity merge key";
-            var item = MemoCache.GetValue<List<EntitySample>>(key);
+            var item = MemoCache.Get<List<EntitySample>>(key);
 
             if (item == null)
                 Console.WriteLine("item not found " + key);

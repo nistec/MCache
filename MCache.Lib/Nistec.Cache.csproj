@@ -59,6 +59,7 @@
     <AssemblyOriginatorKeyFile>MControl.pfx</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Microsoft.CSharp" />
     <Reference Include="System" />
     <Reference Include="System.configuration" />
     <Reference Include="System.Core">
@@ -73,9 +74,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Cache\CacheItemReport.cs" />
-    <Compile Include="Channels\PipeClientCache.cs" />
-    <Compile Include="Channels\HttpClientCache.cs" />
-    <Compile Include="Channels\TcpClientCache.cs" />
+    <Compile Include="Cache\ISyncLoader.cs" />
+    <Compile Include="Cache\SyncLoaderStream.cs" />
     <Compile Include="Config\ConfigFileWatcher.cs" />
     <Compile Include="Config\CacheConfigServer.cs" />
     <Compile Include="Cache\CacheException.cs" />
@@ -91,8 +91,16 @@
     </Compile>
     <Compile Include="Config\CacheDefaults.cs" />
     <Compile Include="Config\CacheApiSettings.cs" />
+    <Compile Include="Data\DbCache.cs" />
+    <Compile Include="Data\DataCacheQuery.cs" />
+    <Compile Include="Data\DbSet.cs" />
+    <Compile Include="Data\DbTable.cs" />
     <Compile Include="Data\IDataSyncEntity.cs" />
     <Compile Include="Data\IDataCache.cs" />
+    <Compile Include="Data\DataCache.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Data\DataCacheDb.cs" />
     <Compile Include="Remote\CacheApi.cs" />
     <Compile Include="Remote\DataCacheApi.cs" />
     <Compile Include="Remote\ManagerApi.cs" />
@@ -101,20 +109,19 @@
     <Compile Include="Remote\SyncCacheApi.cs" />
     <Compile Include="Server\AgentManager.cs" />
     <Compile Include="Server\CacheAgent.cs" />
-    <Compile Include="Server\DbCacheAgent.cs" />
+    <Compile Include="Server\DataCacheAgent.cs" />
+    <Compile Include="Server\Http\HttpJsonServer.cs" />
     <Compile Include="Server\Http\HttpBundleServer.cs" />
+    <Compile Include="Server\Pipe\PipeJsonServer.cs" />
     <Compile Include="Server\Pipe\PipeBundleServer.cs" />
     <Compile Include="Server\SessionAgent.cs" />
     <Compile Include="Server\SyncCacheAgent.cs" />
     <Compile Include="Cache\AsyncFinder.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Server\Tcp\TcpJsonServer.cs" />
     <Compile Include="Server\Tcp\TcpBundleServer.cs" />
-    <Compile Include="Server\Tcp\TcpCacheServer.cs" />
-    <Compile Include="Server\Tcp\TcpDataServer.cs" />
     <Compile Include="Server\Tcp\TcpManagerServer.cs" />
-    <Compile Include="Server\Tcp\TcpSessionServer.cs" />
-    <Compile Include="Server\Tcp\TcpSyncServer.cs" />
     <Compile Include="Session\ISessionCache.cs" />
     <Compile Include="Session\SessionBagStream.cs" />
     <Compile Include="Session\SessionEntry.cs">
@@ -128,17 +135,13 @@
     <Compile Include="Data\DataCacheUtil.cs" />
     <Compile Include="Config\CacheSettings.cs" />
     <Compile Include="Cache\Packet.cs" />
-    <Compile Include="Server\Pipe\PipeCacheServer.cs" />
-    <Compile Include="Server\Pipe\PipeDataServer.cs" />
     <Compile Include="Server\Pipe\PipeManagerServer.cs" />
-    <Compile Include="Server\Pipe\PipeSessionServer.cs" />
-    <Compile Include="Server\Pipe\PipeSyncServer.cs" />
-    <Compile Include="Session\SessionUtil.cs" />
-    <Compile Include="SyncCache\CacheSynchronizer.cs" />
+    <Compile Include="SyncCache\DataSynchronizer.cs" />
     <Compile Include="SyncCache\Embed\SyncCache.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="SyncCache\SyncItemBase.cs" />
+    <Compile Include="SyncCache\SyncConfig.cs" />
+    <Compile Include="SyncCache\SyncTableBase.cs" />
     <Compile Include="SyncCache\SyncCacheBase.cs" />
     <Compile Include="SyncCache\ISyncEx.cs" />
     <Compile Include="SyncCache\SyncEntity.cs" />
@@ -148,19 +151,15 @@
     <Compile Include="SyncCache\Remote\SyncCacheStream.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="SyncCache\Remote\SyncItemStream.cs">
+    <Compile Include="SyncCache\Remote\SyncTableStream.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Data\DataCacheSettings.cs" />
-    <Compile Include="Data\DataCacheItem.cs" />
-    <Compile Include="Data\DataCache.cs">
-      <SubType>Component</SubType>
-    </Compile>
+    <Compile Include="Data\CacheItemProperties.cs" />
     <Compile Include="Config\CacheProperties.cs" />
     <Compile Include="Cache\CacheUtil.cs" />
     <Compile Include="Cache\CacheLogger.cs" />
     <Compile Include="Remote\CacheCmd.cs" />
-    <Compile Include="Data\DbCache.cs" />
     <Compile Include="Data\DataSyncList.cs" />
     <Compile Include="Session\Enums.cs" />
     <Compile Include="Session\SessionCache.cs" />
@@ -181,10 +180,12 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Cache\CacheEvents.cs" />
     <Compile Include="Cache\Enums.cs" />
-    <Compile Include="SyncCache\ISyncItem.cs" />
-    <Compile Include="SyncCache\Embed\SyncItem.cs" />
+    <Compile Include="SyncCache\ISyncTable.cs" />
+    <Compile Include="SyncCache\Embed\SyncTable.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="Channels\" />
+    <Folder Include="Loader\" />
     <Folder Include="Remote\ex\" />
     <Folder Include="_Obsolete\" />
   </ItemGroup>

@@ -20,6 +20,9 @@
 //licHeader|
 using Nistec.Caching.Remote;
 using Nistec.Channels;
+using Nistec.IO;
+using Nistec.Runtime;
+using Nistec.Serialization;
 using System;
 using System.Collections.Generic;
 using System.IO.Pipes;
@@ -36,6 +39,44 @@ namespace Nistec.Caching.Channels
 
         #region static send methods with enableException
 
+        /// <summary>
+        /// Send Duplex message with return value.
+        /// </summary>
+        /// <param name="request"></param>
+        /// <param name="PipeName"></param>
+        /// <param name="enableException"></param>
+        /// <param name="option"></param>
+        /// <returns></returns>
+        public static string SendJsonDuplex(string request, string PipeName, bool enableException = false, PipeOptions option = PipeOptions.None)
+        {
+            CacheMessage msg = new CacheMessage();
+            msg.EntityRead(request, null);
+            using (PipeClientCache client = new PipeClientCache(PipeName, true, option))
+            {
+                client.PipeDirection = PipeDirection.InOut;
+                var o= client.Execute(msg, enableException);
+                if (o == null)
+                    return null;
+                return JsonSerializer.Serialize(o);
+            }
+        }
+        /// <summary>
+        /// Send Out message with no return value.
+        /// </summary>
+        /// <param name="request"></param>
+        /// <param name="PipeName"></param>
+        /// <param name="enableException"></param>
+        /// <param name="option"></param>
+        public static void SendJsonOut(string request, string PipeName, bool enableException = false, PipeOptions option = PipeOptions.None)
+        {
+            CacheMessage msg = new CacheMessage();
+            msg.EntityRead(request, null);
+            using (PipeClientCache client = new PipeClientCache(PipeName, false, option))
+            {
+                client.PipeDirection = PipeDirection.Out;
+                client.Execute(msg, enableException);
+            }
+        }
 
         /// <summary>
         /// Send Duplex message with return value.
@@ -43,18 +84,36 @@ namespace Nistec.Caching.Channels
         /// <param name="request"></param>
         /// <param name="PipeName"></param>
         /// <param name="enableException"></param>
-        /// <param name="IsAsync"></param>
+        /// <param name="option"></param>
         /// <returns></returns>
-        public static object SendDuplex(CacheMessage request, string PipeName, bool enableException = false, bool IsAsync = false)
+        public static object SendDuplex(CacheMessage request, string PipeName, bool enableException = false, PipeOptions option = PipeOptions.None)
         {
-            Type type = request.BodyType;
+            //Type type = request.BodyType;
             request.IsDuplex = true;
             PipeDirection direction = request.IsDuplex ? PipeDirection.InOut : PipeDirection.Out;
-            using (PipeClientCache client = new PipeClientCache(PipeName, true, IsAsync))
+            using (PipeClientCache client = new PipeClientCache(PipeName, true, option))
             {
-                return client.Execute(request, type, enableException);
+                return client.Execute(request, enableException);
             }
         }
+        /// <summary>
+        /// Send Duplex message with return value.
+        /// </summary>
+        /// <param name="request"></param>
+        /// <param name="PipeName"></param>
+        /// <param name="enableException"></param>
+        /// <param name="option"></param>
+        /// <returns></returns>
+        public static TransStream SendDuplexStream(CacheMessage request, string PipeName, bool enableException = false, PipeOptions option = PipeOptions.None)
+        {
+            request.IsDuplex = true;
+            //request.TransformType = TransformType.Stream;
+            using (PipeClientCache client = new PipeClientCache(PipeName, true, option))
+            {
+                return client.Execute<TransStream>(request, enableException);
+            }
+        }
+
         /// <summary>
         /// Send Duplex message with return value.
         /// </summary>
@@ -62,12 +121,12 @@ namespace Nistec.Caching.Channels
         /// <param name="request"></param>
         /// <param name="PipeName"></param>
         /// <param name="enableException"></param>
-        /// <param name="IsAsync"></param>
+        /// <param name="option"></param>
         /// <returns></returns>
-        public static T SendDuplex<T>(CacheMessage request, string PipeName, bool enableException = false, bool IsAsync = false)
+        public static T SendDuplex<T>(CacheMessage request, string PipeName, bool enableException = false, PipeOptions option = PipeOptions.None)
         {
             request.IsDuplex = true;
-            using (PipeClientCache client = new PipeClientCache(PipeName, true, IsAsync))
+            using (PipeClientCache client = new PipeClientCache(PipeName, true, option))
             {
                 return client.Execute<T>(request, enableException);
             }
@@ -78,11 +137,11 @@ namespace Nistec.Caching.Channels
         /// <param name="request"></param>
         /// <param name="PipeName"></param>
         /// <param name="enableException"></param>
-        /// <param name="IsAsync"></param>
-        public static void SendOut(CacheMessage request, string PipeName, bool enableException = false, bool IsAsync = false)
+        /// <param name="option"></param>
+        public static void SendOut(CacheMessage request, string PipeName, bool enableException = false, PipeOptions option = PipeOptions.None)
         {
             request.IsDuplex = false;
-            using (PipeClientCache client = new PipeClientCache(PipeName, false, IsAsync))
+            using (PipeClientCache client = new PipeClientCache(PipeName, false, option))
             {
                 client.Execute(request, enableException);
             }
@@ -93,11 +152,11 @@ namespace Nistec.Caching.Channels
         /// <param name="request"></param>
         /// <param name="PipeName"></param>
         /// <param name="enableException"></param>
-        /// <param name="IsAsync"></param>
-        public static void SendIn(CacheMessage request, string PipeName, bool enableException = false, bool IsAsync = false)
+        /// <param name="option"></param>
+        public static void SendIn(CacheMessage request, string PipeName, bool enableException = false, PipeOptions option = PipeOptions.None)
         {
             request.IsDuplex = false;
-            using (PipeClientCache client = new PipeClientCache(PipeName, false, IsAsync))
+            using (PipeClientCache client = new PipeClientCache(PipeName, false, option))
             {
                 client.PipeDirection = PipeDirection.In;
                 client.Execute(request, enableException);
@@ -112,9 +171,9 @@ namespace Nistec.Caching.Channels
         /// </summary>
         /// <param name="pipeName"></param>
         /// <param name="isDuplex"></param>
-        /// <param name="isAsync"></param>
-        public PipeClientCache(string pipeName, bool isDuplex, bool isAsync)
-            : base(pipeName, isDuplex, isAsync)
+        /// <param name="option"></param>
+        public PipeClientCache(string pipeName, bool isDuplex, PipeOptions option= PipeOptions.None)
+            : base(pipeName, isDuplex, option)
         {
 
         }
@@ -126,9 +185,9 @@ namespace Nistec.Caching.Channels
         /// <param name="inBufferSize"></param>
         /// <param name="outBufferSize"></param>
         /// <param name="isDuplex"></param>
-        /// <param name="isAsync"></param>
-        public PipeClientCache(string pipeName, int inBufferSize, int outBufferSize, bool isDuplex, bool isAsync)
-            : base(pipeName, inBufferSize, outBufferSize, isDuplex, isAsync)
+        /// <param name="option"></param>
+        public PipeClientCache(string pipeName, int inBufferSize, int outBufferSize, bool isDuplex, PipeOptions option = PipeOptions.None)
+            : base(pipeName, inBufferSize, outBufferSize, isDuplex, option)
         {
 
         }
@@ -167,13 +226,19 @@ namespace Nistec.Caching.Channels
         #endregion
 
         #region override
+
+        protected override void ExecuteOneWay(CacheMessage message)
+        {
+            // Send a request from client to server
+            message.EntityWrite(pipeClientStream, null);
+        }
+
         /// <summary>
         /// Execute Message
         /// </summary>
         /// <param name="message"></param>
-        /// <param name="type"></param>
         /// <returns></returns>
-        protected override object ExecuteMessage(CacheMessage message, Type type)
+        protected override object ExecuteMessage(CacheMessage message)//, Type type)
         {
             object response = null;
 
@@ -189,7 +254,7 @@ namespace Nistec.Caching.Channels
             }
 
             // Receive a response from server.
-            response = message.ReadResponse(pipeClientStream, type, Settings.InBufferSize);
+            response = message.ReadResponse(pipeClientStream, Settings.ReceiveBufferSize, message.TransformType, false);
 
             return response;
         }
@@ -215,18 +280,39 @@ namespace Nistec.Caching.Channels
             }
 
             // Receive a response from server.
-            response = message.ReadResponse<TResponse>(pipeClientStream, Settings.InBufferSize);
+            response = message.ReadResponse<TResponse>(pipeClientStream, Settings.ReceiveBufferSize);
 
             return response;
         }
+        //protected override TransStream ExecuteMessageStream(CacheMessage message)
+        //{
+        //    TransStream response = null;
 
-        /// <summary>
-        /// connect to the named pipe and execute request.
-        /// </summary>
-        public MessageAck Execute(CacheMessage message, bool enableException = false)
-        {
-            return Execute<MessageAck>(message, enableException);
-        }
+        //    if (PipeDirection != System.IO.Pipes.PipeDirection.In)
+        //    {
+        //        // Send a request from client to server
+        //        message.EntityWrite(pipeClientStream, null);
+        //    }
+
+        //    if (PipeDirection == System.IO.Pipes.PipeDirection.Out)
+        //    {
+        //        return response;
+        //    }
+
+        //    // Receive a response from server.
+        //    response = new TransStream(pipeClientStream, message.TransformType, Settings.ReceiveBufferSize);// message.ReadAck(pipeClientStream, message.TransformType, Settings.ReceiveBufferSize);
+
+        //    return response;
+        //}
+    
+
+        ///// <summary>
+        ///// connect to the named pipe and execute request.
+        ///// </summary>
+        //public MessageAck Execute(CacheMessage message, bool enableException = false)
+        //{
+        //    return Execute<MessageAck>(message, enableException);
+        //}
 
 
 

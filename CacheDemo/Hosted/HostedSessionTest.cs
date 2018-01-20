@@ -22,7 +22,7 @@ namespace Nistec.Caching.Demo.Hosted
             test.GetOrCreateSession();
             test.GetItem();
             test.CopyTo();
-            test.FetchTo();
+            test.CutTo();
             test.RemoveItem();
             test.RemoveSession();
         }
@@ -39,7 +39,7 @@ namespace Nistec.Caching.Demo.Hosted
         //Create new session.
         public void AddSession()
         {
-            SessionCache.AddSession(sessionId, userId, timeout, null);
+            SessionCache.CreateSession(sessionId, userId, timeout, null);
         }
 
         //Add items to current session.
@@ -75,17 +75,17 @@ namespace Nistec.Caching.Demo.Hosted
             SessionCache.CopyTo(sessionId, key, key, timeout, true);
         }
         //Fetch item from current session to cache.
-        public void FetchTo()
+        public void CutTo()
         {
             string key = "item key 2";
-            SessionCache.FetchTo(sessionId, key, key, timeout, true);
+            SessionCache.CutTo(sessionId, key, key, timeout, true);
         }
 
         //Remove item from current session
         public void RemoveItem()
         {
             string key = "item key 3";
-            bool ok = SessionCache.RemoveItem(sessionId, key);
+            bool ok = SessionCache.RemoveItem(sessionId, key)== CacheState.Ok;
 
             Console.WriteLine(ok);
         }
@@ -93,7 +93,7 @@ namespace Nistec.Caching.Demo.Hosted
         //Get or create session.
         public void RemoveSession()
         {
-            SessionCache.Remove(sessionId);
+            SessionCache.RemoveSession(sessionId);
         }
     }
 

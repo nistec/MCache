@@ -11,7 +11,7 @@ using Nistec.Generic;
 using Nistec.Caching.Demo.Entities;
 using Nistec.Data.Entities;
 using Nistec.Serialization;
-
+using Nistec.Caching.Remote;
 
 namespace Nistec.Caching.Demo.RemoteApi
 {
@@ -24,7 +24,7 @@ namespace Nistec.Caching.Demo.RemoteApi
 
         const string entityName = "contactEntity";
         const string entityKey = "1";
-
+        SyncCacheApi api;
 
         public static void TestValues(NetProtocol protocol, int count)
         {
@@ -53,7 +53,7 @@ namespace Nistec.Caching.Demo.RemoteApi
 
         public static void TestAll(NetProtocol protocol)
         {
-            RemoteCacheSyncTest test = new RemoteCacheSyncTest() { Protocol = protocol };
+            RemoteCacheSyncTest test = new RemoteCacheSyncTest() { Protocol = protocol , api= SyncCacheApi.Get(protocol) };
 
             test.GetAllEntityNames();
             test.GetValue("1");
@@ -70,17 +70,27 @@ namespace Nistec.Caching.Demo.RemoteApi
         {
             try
             {
-                var item = SyncCacheApi.Get(Protocol).Get<GenericRecord>(entityName, new string[] { key });
+                var value = api.Get<string>(entityName, new string[] { key },"FirstName");
+                if (value == null)
+                    Console.WriteLine("item not found " + key);
+                else
+                {
+                    Console.WriteLine(value);
+                }
+
+                var item = api.GetEntity<ContactEntity>(entityName, new string[] { key });
                 if (item == null)
                     Console.WriteLine("item not found " + key);
                 else
                 {
-                    Console.WriteLine(item["FirstName"]);
+                    Console.WriteLine(item);
 
                     //convert to entity
                     ContactEntity entity = new EntityContext<ContactEntity>(item).Entity;
                     Console.WriteLine(entity.FirstName);
                 }
+
+
             }
             catch (Exception ex)
             {
@@ -94,7 +104,7 @@ namespace Nistec.Caching.Demo.RemoteApi
         {
             try
             {
-                var item = SyncCacheApi.Get(Protocol).GetRecord(entityName, new string[] { key });
+                var item = api.GetRecord(entityName, new string[] { key });
                 if (item == null)
                     Console.WriteLine("item not found " + key);
                 else
@@ -111,7 +121,7 @@ namespace Nistec.Caching.Demo.RemoteApi
         {
             try
             {
-                var item = SyncCacheApi.Get(Protocol).GetEntity<ContactEntity>(entityName, new string[] { key });
+                var item = api.GetEntity<ContactEntity>(entityName, new string[] { key });
                 if (item == null)
                     Console.WriteLine("item not found " + key);
                 else
@@ -130,7 +140,7 @@ namespace Nistec.Caching.Demo.RemoteApi
             try
             {
                 //get item as ContactEntity
-                var item = SyncCacheApi.Get(Protocol).GetAs(entityName, new string[] { key });
+                var item = api.GetAs(entityName, new string[] { key });
                 if (item == null)
                     Console.WriteLine("item not found " + key);
                 else
@@ -154,7 +164,7 @@ namespace Nistec.Caching.Demo.RemoteApi
         {
             try
             {
-                SyncCacheApi.Get(Protocol).RemoveItem(itemName);
+                api.Remove(itemName);
             }
             catch (Exception ex)
             {
@@ -168,7 +178,7 @@ namespace Nistec.Caching.Demo.RemoteApi
         {
             try
             {
-                SyncCacheApi.Get(Protocol).Refresh("contactGeneric");
+                api.Refresh("contactGeneric");
             }
             catch (Exception ex)
             {
@@ -182,7 +192,7 @@ namespace Nistec.Caching.Demo.RemoteApi
         {
             try
             {
-                var keys = SyncCacheApi.Get(Protocol).GetAllEntityNames();
+                var keys = api.GetAllEntityNames();
                 if (keys == null)
                     Console.WriteLine("GetAllEntityNames not found ");
 
@@ -202,7 +212,7 @@ namespace Nistec.Caching.Demo.RemoteApi
         {
             try
             {
-                var keys = SyncCacheApi.Get(Protocol).GetEntityKeys(key);
+                var keys = api.GetEntityKeys(key);
                 foreach (string s in keys)
                 {
                     Console.WriteLine(s);

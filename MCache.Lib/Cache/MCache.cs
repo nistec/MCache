@@ -70,7 +70,7 @@ namespace Nistec.Caching
         /// </summary>
         /// <param name="cacheName"></param>
         public MCache(string cacheName)
-            : this(new CacheProperties(cacheName, 1000000L))
+            : this(new CacheProperties(cacheName, CacheSettings.MaxSize))
         {
         }
        
@@ -86,30 +86,23 @@ namespace Nistec.Caching
         #endregion
 
         #region Add item
+
         /// <summary>
         /// Add new item to cache using <see cref="MessageStream"/> argument.
         /// </summary>
         /// <param name="message"></param>
         /// <returns></returns>
-        internal CacheState AddItem(MessageStream message)
+        internal CacheState Add(MessageStream message)
         {
-            return this.AddItem(new CacheEntry(message));
+            return this.Add(new CacheEntry(message));
         }
-
-        internal AckStream AddItemWithAck(MessageStream message)
-        {
-            var state = this.AddItem(new CacheEntry(message));
-            return CacheEntry.GetAckStream(state, message.Command);
-        }
-
-        
 
         /// <summary>
         /// Add new item to cache using <see cref="SessionEntry"/> argument.
         /// </summary>
         /// <param name="item"></param>
         /// <returns></returns>
-        public virtual CacheState AddItem(SessionEntry item)
+        public virtual CacheState Add(SessionEntry item)
         {
             if (this._disposed)
             {
@@ -123,7 +116,43 @@ namespace Nistec.Caching
 
             CacheEntry entry = new CacheEntry(item, this.m_IsRemoteCache);
 
-            return AddItem(entry);
+            return Add(entry);
+        }
+
+        #endregion
+
+        #region Set item
+        /// <summary>
+        /// Add new item to cache using <see cref="MessageStream"/> argument.
+        /// </summary>
+        /// <param name="message"></param>
+        /// <returns></returns>
+        internal CacheState Set(MessageStream message)
+        {
+            return this.Set(new CacheEntry(message));
+        }
+
+      
+        /// <summary>
+        /// Add new item to cache using <see cref="SessionEntry"/> argument.
+        /// </summary>
+        /// <param name="item"></param>
+        /// <returns></returns>
+        public virtual CacheState Set(SessionEntry item)
+        {
+            if (this._disposed)
+            {
+                return CacheState.CacheNotReady;
+            }
+
+            if (item == null)
+            {
+                return CacheState.InvalidItem;
+            }
+
+            CacheEntry entry = new CacheEntry(item, this.m_IsRemoteCache);
+
+            return Set(entry);
         }
 
         #endregion
@@ -131,91 +160,108 @@ namespace Nistec.Caching
         #region Get item
 
         /// <summary>
+        /// Get value from cache and return it as <see cref="IDictionary"/> stream.
+        /// </summary>
+        /// <param name="message"></param>
+        /// <returns></returns>
+        public IDictionary<string,object> GetRecord(MessageStream message)
+        {
+            CacheEntry item = GetItem(message.Id);
+            if (item == null)
+            {
+                return null;
+            }
+            return item.ToDictionary();
+        }
+
+        /// <summary>
         /// Get value from cache and return it as <see cref="NetStream"/> stream.
         /// </summary>
-        /// <param name="cacheKey"></param>
+        /// <param name="message"></param>
         /// <returns></returns>
-        public AckStream GetValueStream(string cacheKey)
+        public NetStream GetValueStream(MessageStream message)
         {
-            CacheEntry item = GetItem(cacheKey);
-            if (item == null)// || item.IsStreamHasState())
+            CacheEntry item = GetItem(message.Id);
+            if (item == null)
             {
-                return CacheEntry.GetAckNotFound("GetValueStream", cacheKey);
+                return null;
             }
-            return item.GetAckStream();//.BodyStream;
+            return item.GetStream();
         }
         /// <summary>
         /// Fetch value from cache and return it as <see cref="NetStream"/> stream.
         /// </summary>
-        /// <param name="cacheKey"></param>
+        /// <param name="message"></param>
         /// <returns></returns>
-        public AckStream FetchValueStream(string cacheKey)
+        public NetStream FetchValueStream(MessageStream message)
         {
-            CacheEntry item = FetchItem(cacheKey);
-            if (item == null)// || item.IsStreamHasState())
-            {
-                return CacheEntry.GetAckNotFound("FetchValueStream", cacheKey);
-            }
-            return item.GetAckStream();//item.BodyStream;
-        }
-
-        /// <summary>
-        /// Get item properies from cache and return it as <see cref="NetStream"/> stream.
-        /// </summary>
-        /// <param name="cacheKey"></param>
-        /// <returns></returns>
-        public AckStream ViewItemStream(string cacheKey)
-        {
-            CacheEntry item = ViewItem(cacheKey);
-            if (item == null)// || item.IsStreamHasState())
-            {
-                return CacheEntry.GetAckNotFound("ViewItemStream", cacheKey);
-            }
-            return new AckStream(item);
-        }
-
-        /// <summary>
-        /// Get properties and value from cache and return it as <see cref="NetStream"/> stream.
-        /// </summary>
-        /// <param name="cacheKey"></param>
-        /// <returns></returns>
-        public AckStream GetItemStream(string cacheKey)
-        {
-            CacheEntry item = GetItem(cacheKey);
+            CacheEntry item = FetchItem(message.Id);
             if (item == null)
             {
-                return CacheEntry.GetAckNotFound("GetItemStream", cacheKey);
+                return null;
             }
-            return new AckStream(item);
+            return item.GetStream();
         }
-        /// <summary>
-        /// Fetch properties and value from cache and return it as <see cref="NetStream"/> stream.
-        /// </summary>
-        /// <param name="cacheKey"></param>
-        /// <returns></returns>
-        public AckStream FetchItemStream(string cacheKey)
-        {
-            CacheEntry item = FetchItem(cacheKey);
-            if (item == null)// || item.IsStreamHasState())
-            {
-                return CacheEntry.GetAckNotFound("FetchItemStream", cacheKey);
-            }
-            return new AckStream(item);
-        }
-        /// <summary>
-        /// Read item <see cref="CacheEntry"/> properties from cache to stream.
-        /// </summary>
-        /// <param name="stream"></param>
-        /// <param name="cacheKey"></param>
-        public void ReadItemView(Stream stream, string cacheKey)
-        {
-            byte[] b = ViewItemStream(cacheKey).ToArray();
-            if (b == null)
-                return;
-            stream.Write(b, 0, b.Length);
-        }
-        
-      
+
+        ///// <summary>
+        ///// Get item properies from cache and return it as <see cref="NetStream"/> stream.
+        ///// </summary>
+        ///// <param name="message"></param>
+        ///// <returns></returns>
+        //public TransStream ViewItemStream(MessageStream message)
+        //{
+        //    CacheEntry item = ViewItem(message.Id);
+        //    if (item == null)
+        //    {
+        //        return new TransStream(CacheState.NotFound.ToString(), TransType.Error);
+        //    }
+        //    return new TransStream(item, TransStream.ToTransType(message.TransformType));
+        //}
+
+        ///// <summary>
+        ///// Get properties and value from cache and return it as <see cref="NetStream"/> stream.
+        ///// </summary>
+        ///// <param name="message"></param>
+        ///// <returns></returns>
+        //public TransStream GetItemStream(MessageStream message)
+        //{
+        //    CacheEntry item = GetItem(message.Id);
+        //    if (item == null)
+        //    {
+        //        return null;// new TransStream(CacheState.NotFound.ToString(), TransType.Error);
+        //    }
+        //    return new TransStream(item, TransStream.ToTransType(message.TransformType));
+        //}
+
+        ///// <summary>
+        ///// Fetch properties and value from cache and return it as <see cref="NetStream"/> stream.
+        ///// </summary>
+        ///// <param name="message"></param>
+        ///// <returns></returns>
+        //public TransStream FetchItemStream(MessageStream message)
+        //{
+        //    CacheEntry item = FetchItem(message.Id);
+        //    if (item == null)
+        //    {
+        //        return new TransStream(CacheState.NotFound.ToString(), TransType.Error);
+        //    }
+        //    return new TransStream(item, TransStream.ToTransType(message.TransformType));
+        //}
+
+        ///// <summary>
+        ///// Read item <see cref="CacheEntry"/> properties from cache to stream.
+        ///// </summary>
+        ///// <param name="stream"></param>
+        ///// <param name="message"></param>
+        //public void ReadItemView(Stream stream, MessageStream message)
+        //{
+        //    byte[] b = ViewItemStream(message).ToArray();
+        //    if (b == null)
+        //        return;
+        //    stream.Write(b, 0, b.Length);
+        //}
+
+
         #endregion
 
         #region Merge 
@@ -225,24 +271,34 @@ namespace Nistec.Caching
         /// </summary>
         /// <param name="message"></param>
         /// <returns></returns>
-        internal AckStream RemoveItem(MessageStream message)
+        internal CacheState RemoveItemAsync(MessageStream message)
         {
-            bool ok = RemoveItem(message.Key);
-            //CacheState state = ok ? CacheState.ItemRemoved : CacheState.RemoveItemFailed;
-            //return MessageAck.DoAck<int>((int)state);
-            return CacheEntry.GetAckStream(ok, "RemoveItem");
+            bool ok = RemoveAsync(message.Id);
+            return ok ? CacheState.ItemRemoved : CacheState.RemoveItemFailed;
+            //return new TransStream((int)state, TransType.State);
+        }
+
+        /// <summary>
+        /// Remove item from cache and return <see cref="CacheState"/> as stream.
+        /// </summary>
+        /// <param name="message"></param>
+        /// <returns></returns>
+        internal CacheState RemoveItem(MessageStream message)
+        {
+            bool ok = Remove(message.Id);
+            return ok ? CacheState.ItemRemoved : CacheState.RemoveItemFailed;
+            //return new TransStream((int)state, TransType.State);
         }
         /// <summary>
         /// Merge item with a new collection items, this feature is valid only for items implements <see cref="System.Collections.ICollection"/> or <see cref="System.ComponentModel.IListSource"/> and return <see cref="CacheState"/> as stream.
         /// </summary>
         /// <param name="message"></param>
         /// <returns></returns>
-        internal AckStream MergeItem(MessageStream message)
+        internal TransStream MergeItem(MessageStream message)
         {
             object val = message.DecodeBody();
-            CacheState res= MergeItem(message.Key, val);
-            //return MessageAck.DoAck<int>(res);
-            return CacheEntry.GetAckStream(res, "MergeItem");
+            CacheState state= MergeItem(message.Id, val);
+            return TransStream.Write((int)state, TransType.State);
         }
 
         /// <summary>
@@ -250,36 +306,37 @@ namespace Nistec.Caching
         /// </summary>
         /// <param name="message"></param>
         /// <returns></returns>
-        internal AckStream MergeRemoveItem(MessageStream message)
+        internal TransStream MergeRemoveItem(MessageStream message)
         {
             object val = message.DecodeBody();
-            CacheState res = MergeRemoveItem(message.Key, val);
-            return CacheEntry.GetAckStream(res == CacheState.ItemChanged, "MergeRemoveItem");
+            CacheState state = MergeRemoveItem(message.Id, val);
+            return TransStream.Write((int)state, TransType.State);
         }
 
         #endregion
 
         #region Load item
-        public AckStream LoadData(MessageStream message)
+
+        public object LoadData(MessageStream message)
         {
             object result = null;
-            CommandContext command = new CommandContext(message.BodyStream);
+            CommandContext command = new CommandContext(message.GetStream());
             string key = command.CreateKey(true);
-            result = this.GetValue(key);
+            result = this.GetValueStream(message);
 
             if (result == null)
             {
-                string sessionId=message.Id;
+                string sessionId=message.GroupId;
                 int expiration = message.Expiration;
 
                 result = command.Exec();
-                AddItem(key, result, CacheObjType.RemotingData, sessionId, expiration);
+                Set(key, result, sessionId, expiration);
             }
 
-            if (result == null)
-                return AckStream.GetAckStream(false, "LoadData.CommandText: " + command.CommandText);
+            //if (result == null)
+            //    return TransStream.GetAckStream("LoadData.CommandText: " + command.CommandText, false);//AckStream.GetAckStream(false, "LoadData.CommandText: " + command.CommandText);
 
-            return new AckStream(result);
+            return result;// new TransStream(result, TransType.Object);
 
         }
 
@@ -287,27 +344,18 @@ namespace Nistec.Caching
 
         #region Session methods
 
-        /// <summary>
-        /// Remove all items from cache that belong to specified session.
-        /// </summary>
-        /// <param name="message"></param>
-        /// <returns></returns>
-        internal virtual AckStream RemoveCacheSessionItemsAsync(MessageStream message)
-        {
-            int res= RemoveCacheSessionItems(message.Key);
-            return CacheEntry.GetAckStream(res >= 0, "RemoveCacheSessionItems");
-        }
+      
         /// <summary>
         /// Remove all items from cache that belong to specified sessionId.
         /// </summary>
         /// <param name="sessionId"></param>
         /// <returns></returns>
-        public virtual int RemoveCacheSessionItemsAsync(string sessionId)
+        public virtual CacheState RemoveCacheSessionItemsAsync(string sessionId)
         {
-            return ExecuteTask<int>(() => RemoveCacheSessionItems(sessionId));
+            return ExecuteTask<CacheState>(() => RemoveCacheSessionItems(sessionId));
         }
 
-        int RemoveCacheSessionItems(string sessionId)
+        CacheState RemoveCacheSessionItems(string sessionId)
         {
             int count = 0;
             try
@@ -317,7 +365,7 @@ namespace Nistec.Caching
                     return 0;
                 foreach (string item in items)
                 {
-                    RemoveItemAsync(item);
+                    RemoveAsync(item);
                     count++;
                 }
                 
@@ -329,8 +377,9 @@ namespace Nistec.Caching
             {
                 count = -1;
                 this.LogAction(CacheAction.CacheException, CacheActionState.Error, "Error RemoveSession:{0}", ex.Message);
+                return CacheState.UnexpectedError;
             }
-            return count;
+            return count > 0 ? CacheState.ItemRemoved : CacheState.RemoveItemFailed; 
         }
 
         string[] GetCacheSessionKeys(string sessionId)
@@ -338,7 +387,7 @@ namespace Nistec.Caching
             string[] keys = null;
             if (this.m_cacheList != null)
             {
-                 IEnumerable<string> k = from n in m_cacheList.Values.Cast<CacheEntry>() where n.Id == sessionId select n.Key;
+                 IEnumerable<string> k = from n in m_cacheList.Values.Cast<CacheEntry>() where n.GroupId == sessionId select n.Id;
                 if (k != null)
                 {
                     keys = k.ToArray();
@@ -383,7 +432,7 @@ namespace Nistec.Caching
         #endregion
 
         #region size exchange
-
+        /*
         /// <summary>
         /// Validate if the new size is not exceeds the CacheMaxSize property.
         /// </summary>
@@ -415,6 +464,8 @@ namespace Nistec.Caching
         {
             base.SizeRefresh();
         }
+        */
+
         /// <summary>
         /// Get memory usage.
         /// </summary>
@@ -426,6 +477,48 @@ namespace Nistec.Caching
 
         #endregion
 
+        #region Report
+
+        /// <summary>
+        /// Save all cache item to <see cref="DataSet"/>.
+        /// </summary>
+        /// <returns></returns>
+        public DataTable CacheReport(bool noBody)
+        {
+            DataTable table;
+            this.LogAction(CacheAction.General, CacheActionState.None, "CacheReport");
+            try
+            {
+                ICollection<CacheEntry> items = this.Items;
+                if ((items == null) || (items.Count == 0))
+                {
+                    return null;
+                }
+                table = CacheEntry.CacheItemSchema();
+                foreach (CacheEntry item in items)
+                {
+                    table.Rows.Add(item.ToDataRow(noBody));
+                }
+            }
+            catch (Exception exception)
+            {
+                throw exception;
+            }
+            return table;
+        }
+        internal CacheItemReport GetReport()
+        {
+            var data = CacheReport(true);
+            if (data == null)
+                return null;
+            return new CacheItemReport() { Count = data.Rows.Count, Data = data, Name = "Cache Report", Size = 0 };
+        }
+
+        internal CacheItemReport GetTimerReport()
+        {
+            return m_Timer.GetReport("Cache");
+        }
+        #endregion
     }
 }
  

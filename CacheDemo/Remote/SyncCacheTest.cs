@@ -28,10 +28,11 @@ namespace Nistec.Caching.Demo.Remote
 
         bool keepAlive = false;
         NetProtocol Protocol;
-        public static void TestAll(NetProtocol protocol)
+        SyncCacheApi api;
+        public static void TestAll(NetProtocol protocol, bool enableRemove = true)
         {
-            SyncCacheTest test = new SyncCacheTest() { Protocol = protocol };
-            test.GetAllEntityNames();
+            SyncCacheTest test = new SyncCacheTest() { Protocol = protocol, api = SyncCacheApi.Get(protocol) };
+            //test.GetAllEntityNames();
             //test.AddItems();
             test.GetValue(entityKey);
             test.GetRecord(entityKey);
@@ -39,10 +40,33 @@ namespace Nistec.Caching.Demo.Remote
             test.GetAs(entityName, entityKey);
             test.GetEntityKeys(entityName);
             test.GetEntityItems();
-            test.RemoveItem("contactGeneric");
+            if (enableRemove)
+                test.RemoveItem("contactGeneric");
             test.RefreshItem();
         }
 
+        static void GoOn()
+        {
+            string entry = Console.ReadLine();
+            if (entry == "q")
+            {
+                Environment.Exit(1);
+            }
+        }
+
+        void Print(object item, string key, string command)
+        {
+            Console.WriteLine("command: " + command + ", Key: " + key);
+
+            if (item == null)
+                Console.WriteLine("item not found " + key);
+            else if (item.GetType() == typeof(string))
+                Console.WriteLine(item.ToString());
+            else
+                Console.WriteLine(api.ToJson(item, true));
+        }
+
+       
         //Add items to remote cache.
         public void AddItems()
         {
@@ -50,7 +74,7 @@ namespace Nistec.Caching.Demo.Remote
             {
                 var api = SyncCacheApi.Get(Protocol);
 
-                api.AddItem("AdventureWorks",
+                api.AddSyncItem("AdventureWorks",
                     "contactGeneric",
                     "Person.Contact",
                     new string[] { "Person.Contact" },
@@ -59,7 +83,9 @@ namespace Nistec.Caching.Demo.Remote
                     EntitySourceType.Table,
                     new string[] { "ContactID" });
 
-                api.AddItem("AdventureWorks",
+                Print(CacheState.ItemAdded.ToString(), "contactGeneric", "AddSyncItem");
+
+                api.AddSyncItem("AdventureWorks",
                    "contactEntity",
                    "Person.Contact",
                    new string[] { "Person.Contact" },
@@ -67,11 +93,37 @@ namespace Nistec.Caching.Demo.Remote
                    TimeSpan.FromMinutes(10),
                    EntitySourceType.Table,
                    new string[] { "ContactID" });
+
+                Print(CacheState.ItemAdded.ToString(), "contactEntity", "AddSyncItem");
             }
             catch (Exception ex)
             {
                 Console.WriteLine("AddItems error " + ex.Message);
             }
+
+            GoOn();
+        }
+
+        //Get item value from sync cache.
+        public void GetEntity(string key)
+        {
+            try
+            {
+                var item = api.GetEntity<GenericRecord>(ComplexArgs.Get(entityName, new string[] { key }));
+                Print(item, key, "GetEntity");
+
+                if (item != null)
+                {
+                    //convert to entity
+                    //ContactEntity entity = EntityContext.Get<ContactEntity>(item);
+                    Print(item["FirstName"], key, "GetValue by EntityContext");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("GetValue error " + ex.Message);
+            }
+            GoOn();
         }
 
         //Get item value from sync cache.
@@ -79,39 +131,30 @@ namespace Nistec.Caching.Demo.Remote
         {
             try
             {
-                var item = SyncCacheApi.Get(Protocol).GetItem<GenericRecord>(CacheKeyInfo.Get(entityName, new string[] { key }));
-                if (item == null)
-                    Console.WriteLine("item not found " + key);
-                else
-                {
-                    Console.WriteLine(item["FirstName"]);
-
-                    //convert to entity
-                    ContactEntity entity = EntityContext.Get<ContactEntity>(item);
-                    Console.WriteLine(entity.FirstName);
-                }
+                //var item = api.Get<GenericRecord>(ComplexArgs.Get(entityName, new string[] { key }));
+                var value = api.Get<string>(ComplexArgs.Get(entityName, new string[] { key }),"FirstName");
+                Print(value, key, "GetValue");
             }
             catch (Exception ex)
             {
                 Console.WriteLine("GetValue error " + ex.Message);
             }
+            GoOn();
         }
 
         //Get item value from sync cache as Dictionary.
-        public void GetRecord(CacheKeyInfo keyInfo)
+        public void GetRecord(ComplexKey keyInfo)
         {
             try
             {
-                var item = SyncCacheApi.Get(Protocol).GetRecord(keyInfo);
-                if (item == null)
-                    Console.WriteLine("item not found " + keyInfo.CacheKey);
-                else
-                    Console.WriteLine(item["FirstName"]);
+                var item = api.GetRecord(keyInfo);
+                Print(item, keyInfo.ToString(), "GetRecord");
             }
             catch (Exception ex)
             {
                 Console.WriteLine("GetRecord error " + ex.Message);
             }
+            GoOn();
         }
 
         //Get item value from sync cache as Dictionary.
@@ -119,34 +162,32 @@ namespace Nistec.Caching.Demo.Remote
         {
             try
             {
-                var item = SyncCacheApi.Get(Protocol).GetRecord(CacheKeyInfo.Get(entityName, new string[] { key }));
-                if (item == null)
-                    Console.WriteLine("item not found " + key);
-                else
-                    Console.WriteLine(item["FirstName"]);
+                var item = api.GetRecord(ComplexArgs.Get(entityName, new string[] { key }));
+
+                Print(item, key, "GetRecord");
             }
             catch (Exception ex)
             {
                 Console.WriteLine("GetRecord error " + ex.Message);
             }
+            GoOn();
         }
 
-        //Get item value from sync cache as Entity.
-        public void GetEntity(string key)
-        {
-            try
-            {
-                var item = SyncCacheApi.Get(Protocol).GetEntity<ContactEntity>(CacheKeyInfo.Get(entityName, new string[] { key }));
-                if (item == null)
-                    Console.WriteLine("item not found " + key);
-                else
-                    Console.WriteLine(item.FirstName);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("GetEntity error " + ex.Message);
-            }
-        }
+        ////Get item value from sync cache as Entity.
+        //public void GetEntity(string key)
+        //{
+        //    try
+        //    {
+        //        var item = api.GetEntity<ContactEntity>(ComplexArgs.Get(entityName, new string[] { key }));
+
+        //        Print(item, key, "GetEntity");
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.WriteLine("GetEntity error " + ex.Message);
+        //    }
+        //    GoOn();
+        //}
 
         //Get item copy from sync cache as converted.
         public void GetAs(string entityName, string key)
@@ -155,7 +196,8 @@ namespace Nistec.Caching.Demo.Remote
             {
 
                 //get item as stream
-                var stream = SyncCacheApi.Get(Protocol).GetAs(CacheKeyInfo.Get(entityName, new string[] { key }), CacheEntityTypes.EntityContext);
+                var stream = api.GetAs(ComplexArgs.Get(entityName, new string[] { key }));//, CacheEntityTypes.EntityContext);
+
                 if (stream == null)
                     Console.WriteLine("item not found " + key);
                 else
@@ -173,6 +215,7 @@ namespace Nistec.Caching.Demo.Remote
             {
                 Console.WriteLine("GetAs error " + ex.Message);
             }
+            GoOn();
         }
 
         //Remove item from sync cache.
@@ -180,12 +223,14 @@ namespace Nistec.Caching.Demo.Remote
         {
             try
             {
-                SyncCacheApi.Get(Protocol).RemoveItem(itemName);
+                api.Remove(itemName);
+                Print(CacheState.ItemRemoved.ToString(), itemName, "RemoveItem");
             }
             catch (Exception ex)
             {
                 Console.WriteLine("RemoveItem error " + ex.Message);
             }
+            GoOn();
         }
 
         //Refresh sync item which mean reload sync item from Db.
@@ -193,7 +238,9 @@ namespace Nistec.Caching.Demo.Remote
         {
             try
             {
-                SyncCacheApi.Get(Protocol).Refresh("contactGeneric");
+                string syncName = "contactGeneric";
+                api.Refresh(syncName);
+                Print("item Refreshed", syncName, "RefreshItem");
             }
             catch (Exception ex)
             {
@@ -206,16 +253,14 @@ namespace Nistec.Caching.Demo.Remote
         {
             try
             {
-                var items = SyncCacheApi.Get(Protocol).GetEntityItems(entityName);
-                if (items == null)
-                    Console.WriteLine("item not found " + entityName);
-                else
-                    Console.WriteLine(items.Count);
+                var items = api.GetEntityItems(entityName);
+                Print(items, entityName, "GetEntityItems");
             }
             catch (Exception ex)
             {
                 Console.WriteLine("GetEntityItems error " + ex.Message);
             }
+            GoOn();
         }
 
         //get all sync names.
@@ -223,16 +268,19 @@ namespace Nistec.Caching.Demo.Remote
         {
             try
             {
-                var keys = SyncCacheApi.Get(Protocol).GetAllEntityNames();
-                foreach (string s in keys)
-                {
-                    Console.WriteLine(s);
-                }
+                var keys = api.GetAllEntityNames();
+                Print(keys, "All", "GetAllEntityNames");
+
+                //foreach (string s in keys)
+                //{
+                //    Console.WriteLine(s);
+                //}
             }
             catch (Exception ex)
             {
                 Console.WriteLine("GetAllEntityNames error " + ex.Message);
             }
+            GoOn();
         }
 
 
@@ -241,16 +289,19 @@ namespace Nistec.Caching.Demo.Remote
         {
             try
             {
-                var keys = SyncCacheApi.Get(Protocol).GetEntityKeys(entityName);
-                foreach (string s in keys)
-                {
-                    Console.WriteLine(s);
-                }
+                var keys = api.GetEntityKeys(entityName);
+                Print(keys, entityName, "GetEntityKeys");
+
+                //foreach (string s in keys)
+                //{
+                //    Console.WriteLine(s);
+                //}
             }
             catch (Exception ex)
             {
                 Console.WriteLine("GetEntityKeys error " + ex.Message);
             }
+            GoOn();
         }
 
     }

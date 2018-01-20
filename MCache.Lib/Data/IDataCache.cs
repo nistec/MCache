@@ -27,15 +27,28 @@ using System.Data;
 
 namespace Nistec.Caching.Data
 {
-    /// <summary>
-    /// Represent an interface who implements sync db cache.
-    /// </summary>
+
+    ///// <summary>
+    ///// Represent an interface who implements sync db cache.
+    ///// </summary>
+    //public interface IDbCache : IDisposable
+    //{
+    //    IDataCache GetIDb(string ConnectionKe);
+    //}
+
+        /// <summary>
+        /// Represent an interface who implements sync db cache.
+        /// </summary>
     public interface IDataCache:IDisposable
     {
+        ISyncronizer Parent { get;}
+
+        IDataCache Copy();
+
         /// <summary>
         /// Get cache name.
         /// </summary>
-        string CacheName { get; }
+        string Name { get; }
         /// <summary>
         /// Get the connection key from config file..
         /// </summary>
@@ -73,7 +86,10 @@ namespace Nistec.Caching.Data
         /// Get indicate if Store trigger for each table in DataSource 
         /// </summary>
         bool EnableTrigger { get; }
-
+        /// <summary>
+        /// Get indicate if allow sync by event. 
+        /// </summary>
+        bool EnableSyncEvent { get; }
         /// <summary>
         /// Get <see cref="CacheSyncState"/> the sync state.
         /// </summary>
@@ -85,19 +101,39 @@ namespace Nistec.Caching.Data
         /// <param name="timeout">timeout in milliseconds</param>
         void WaitForReadySyncState(int timeout);
 
-       
+
+        ///// <summary>
+        ///// Refresh specific item in sync cache.
+        ///// </summary>
+        ///// <param name="name"></param>
+        //void Refresh(string name);
 
         /// <summary>
-        /// Stor data to data cache.
+        /// Stor WithKey data to data cache.
         /// </summary>
         /// <param name="dt"></param>
+        /// <param name="mappingName">maooing name in database</param>
         /// <param name="tableName"></param>
-        void Store(DataTable dt, string tableName);
+        void Store(DataTable dt, string mappingName, string tableName);
         /// <summary>
         /// Raise exception event.
         /// </summary>
         /// <param name="msg"></param>
         /// <param name="err"></param>
         void RaiseException(string msg, DataCacheError err);
+
+        bool IsEqual(IDataCache dc);
+    }
+
+    internal interface IDbSet
+    {
+        /// <summary>
+        /// Get the connection key from config file..
+        /// </summary>
+        string ConnectionKey { get; }
+
+        DbCache Owner { get; }
+
+        void ChangeSizeInternal(int size);
     }
 }

@@ -24,6 +24,8 @@
     <SccProvider>
     </SccProvider>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <TargetFrameworkProfile />
     <PublishUrl>publish\</PublishUrl>
     <Install>true</Install>
     <InstallFrom>Disk</InstallFrom>
@@ -36,10 +38,8 @@
     <MapFileExtensions>true</MapFileExtensions>
     <ApplicationRevision>0</ApplicationRevision>
     <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
-    <IsWebBootstrapper>false</IsWebBootstrapper>
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
-    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -70,6 +70,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DelayWorker.cs" />
+    <Compile Include="Hosted\RemoteSyncTest.cs" />
     <Compile Include="Mass\CacheRemoteMass.cs" />
     <Compile Include="Mass\SyncCacheRemoteMass.cs" />
     <Compile Include="RemoteApi\RemoteCacheTest.cs" />
@@ -111,7 +113,7 @@
     <None Include="app.config">
       <SubType>Designer</SubType>
     </None>
-    <None Include="Config\mcSyncCache.xsync" />
+    <Content Include="Config\mcSyncCache.xml" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Nistec.Channels\Nistec.Channels\Nistec.Channels.csproj">
