@@ -199,7 +199,7 @@ namespace Nistec.Caching
                 initialCapacity = 101;
 
             this.m_cacheList = new ConcurrentDictionary<string, CacheEntry>(concurrencyLevel, initialCapacity);
-            m_Timer = new TimerDispatcher(prop.SyncIntervalSeconds, initialCapacity, isRemote);
+            m_Timer = new TimerDispatcher(TimerSource.Cache, initialCapacity, isRemote);
             m_IsRemoteCache = isRemote;
             m_Perform = new CachePerformanceCounter(this, CacheAgentType.Cache, this.CacheName);
 
@@ -321,7 +321,7 @@ namespace Nistec.Caching
                 }
                 if (item.AllowExpires)
                 {
-                    m_Timer.AddOrUpdate(TimerSource.Cache, item.Id, item.ExpirationTime);
+                    m_Timer.AddOrUpdate(item.Id, item.ExpirationTime);
                 }
 
                 this.OnItemAdded(item);
@@ -440,7 +440,7 @@ namespace Nistec.Caching
                 }
                 if (item.AllowExpires)
                 {
-                    m_Timer.AddOrUpdate(TimerSource.Cache, item.Id, item.ExpirationTime);
+                    m_Timer.AddOrUpdate(item.Id, item.ExpirationTime);
                 }
                 if (state == CacheState.ItemAdded)
                     this.OnItemAdded(item);
@@ -594,7 +594,7 @@ namespace Nistec.Caching
                     SizeExchage(curSize, item.Size, 0,0, false);
                     if (item.AllowExpires)
                     {
-                        m_Timer.AddOrUpdate(TimerSource.Cache, item.Id, item.ExpirationTime);
+                        m_Timer.AddOrUpdate(item.Id, item.ExpirationTime);
                     }
                     this.OnItemChanged(item.Id, item.Size);
 
@@ -652,7 +652,7 @@ namespace Nistec.Caching
                     SizeExchage(curSize, item.Size, 0,0, false);
                     if (item.AllowExpires)
                     {
-                        m_Timer.AddOrUpdate(TimerSource.Cache, item.Id, item.ExpirationTime);
+                        m_Timer.AddOrUpdate(item.Id, item.ExpirationTime);
                     }
                     this.OnItemChanged(item.Id, item.Size);
 
@@ -959,7 +959,7 @@ namespace Nistec.Caching
                     curitem = item;
                     if (item.AllowExpires)
                     {
-                        m_Timer.AddOrUpdate(TimerSource.Cache, cacheKey, item.ExpirationTime);
+                        m_Timer.AddOrUpdate(cacheKey, item.ExpirationTime);
                     }
                     flag = true;
                     this.OnItemChanged(cacheKey, size);

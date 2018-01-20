@@ -124,7 +124,7 @@ namespace Nistec.Caching.Session
             {
                 if (m_Timer == null)
                 {
-                    m_Timer = new TimerDispatcher(DefaultSessionSyncIntervalMinute * 60, 0, true);
+                    m_Timer = new TimerDispatcher(TimerSource.Session, 0, true);
                 }
                 return m_Timer;
             }
@@ -143,7 +143,7 @@ namespace Nistec.Caching.Session
             int initialCapacity = 100;
             this.m_SessionList = new ConcurrentDictionary<string, SessionBag>(concurrencyLevel, initialCapacity);
             m_SessionTimeout = CacheSettings.SessionTimeout;
-            m_Timer = new TimerDispatcher(DefaultSessionSyncIntervalMinute * 60, 0, true);
+            m_Timer = new TimerDispatcher(TimerSource.Session, 0, true);
             DefaultSessionExpirationMinute = CacheSettings.SessionTimeout;
             if (DefaultSessionExpirationMinute <= 0)
                 DefaultSessionExpirationMinute = 30;
@@ -825,7 +825,7 @@ namespace Nistec.Caching.Session
             if (!m_SessionList.TryGetValue(sessionId, out item))
             {
                 item = new SessionBag(this, sessionId, m_SessionTimeout);
-                m_Timer.AddOrUpdate(TimerSource.Session, sessionId, m_SessionTimeout, DefaultSessionExpirationMinute);
+                m_Timer.AddOrUpdate(sessionId, m_SessionTimeout, DefaultSessionExpirationMinute);
                 m_SessionList[sessionId] = item;
             }
 
@@ -859,7 +859,7 @@ namespace Nistec.Caching.Session
             if (!m_SessionList.TryGetValue(sessionId, out item))
             {
                 item = new SessionBag(this, sessionId, m_SessionTimeout);
-                m_Timer.AddOrUpdate(TimerSource.Session, sessionId, m_SessionTimeout, DefaultSessionExpirationMinute);
+                m_Timer.AddOrUpdate(sessionId, m_SessionTimeout, DefaultSessionExpirationMinute);
                 m_SessionList[sessionId] = item;
             }
 
@@ -882,7 +882,7 @@ namespace Nistec.Caching.Session
             if (!m_SessionList.TryGetValue(sessionId, out item))
             {
                 item = new SessionBag(this, sessionId, m_SessionTimeout);
-                m_Timer.AddOrUpdate(TimerSource.Session, sessionId, m_SessionTimeout, DefaultSessionExpirationMinute);
+                m_Timer.AddOrUpdate(sessionId, m_SessionTimeout, DefaultSessionExpirationMinute);
                 m_SessionList[sessionId] = item;
             }
 
@@ -901,7 +901,7 @@ namespace Nistec.Caching.Session
             if (!m_SessionList.TryGetValue(sessionId, out item))
             {
                 item = new SessionBag(this, sessionId, m_SessionTimeout);
-                m_Timer.AddOrUpdate(TimerSource.Session, sessionId, m_SessionTimeout, DefaultSessionExpirationMinute);
+                m_Timer.AddOrUpdate(sessionId, m_SessionTimeout, DefaultSessionExpirationMinute);
                 m_SessionList[sessionId] = item;
             }
 
@@ -1357,7 +1357,7 @@ namespace Nistec.Caching.Session
             if (!m_SessionList.ContainsKey(sessionId))
             {
                 var sess = new SessionBag(this, sessionId, userId, timeout, args);
-                m_Timer.AddOrUpdate(TimerSource.Session, sessionId, timeout, DefaultSessionExpirationMinute);
+                m_Timer.AddOrUpdate(sessionId, timeout, DefaultSessionExpirationMinute);
                 m_SessionList[sessionId] = sess;
                 return CacheState.ItemAdded;
             }
@@ -1379,7 +1379,7 @@ namespace Nistec.Caching.Session
             if (!m_SessionList.ContainsKey(sessionId))
             {
                 var sess = new SessionBag(this, sessionId, userId, m_SessionTimeout, args);
-                m_Timer.AddOrUpdate(TimerSource.Session, sessionId, m_SessionTimeout, DefaultSessionExpirationMinute);
+                m_Timer.AddOrUpdate(sessionId, m_SessionTimeout, DefaultSessionExpirationMinute);
                 m_SessionList[sessionId] = sess;
                 return CacheState.ItemAdded;
             }
@@ -1399,7 +1399,7 @@ namespace Nistec.Caching.Session
                 return CacheState.ArgumentsError;
             if (!m_SessionList.ContainsKey(item.SessionId))
             {
-                m_Timer.AddOrUpdate(TimerSource.Session, item.SessionId, item.Timeout, DefaultSessionExpirationMinute);
+                m_Timer.AddOrUpdate(item.SessionId, item.Timeout, DefaultSessionExpirationMinute);
                 m_SessionList[item.SessionId] = item;
                 SizeExchage(0,item.Size,0,1,false);
                 return CacheState.ItemAdded;
@@ -1507,7 +1507,7 @@ namespace Nistec.Caching.Session
                 else
                 {
                     si = new SessionBag(this, sessionId, m_SessionTimeout);
-                    m_Timer.AddOrUpdate(TimerSource.Session, sessionId, m_SessionTimeout, DefaultSessionExpirationMinute);
+                    m_Timer.AddOrUpdate(sessionId, m_SessionTimeout, DefaultSessionExpirationMinute);
                     m_SessionList[sessionId] = si;
                 }
                 state = CacheState.Ok;

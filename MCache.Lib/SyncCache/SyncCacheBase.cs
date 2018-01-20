@@ -233,6 +233,8 @@ namespace Nistec.Caching.Sync
         {
             if (_SyncConfig != null)
             {
+                _SyncConfig.LoadCompleted -= _SyncConfig_LoadCompleted;
+                _SyncConfig.SyncError -= _SyncConfig_SyncError;
                 _SyncConfig.Stop();
             }
             if (_DataCache != null)
@@ -240,6 +242,7 @@ namespace Nistec.Caching.Sync
                 _DataCache.Stop();
             }
             _initialized = false;
+
             Interlocked.Exchange(ref _Started, 0);
             CacheLogger.Logger.LogAction(CacheAction.General, CacheActionState.Debug, "SyncCache Stoped!");
         }

@@ -64,19 +64,19 @@ namespace Nistec.Caching.Demo.Remote
             //SyncType = "Interval"
             //SyncTime = "00:24:30" />
 
-            var table1 = api.QueryTable(db, "[HumanResources].[EmployeeDepartmentHistory]", 10, null);
+            var table1 = api.QueryTable(db, "[HumanResources].[EmployeeDepartmentHistory]", 3, null);
             //var table1 = api.QueryTable(db, "[HumanResources].[EmployeeDepartmentHistory]", "[EmployeeID],[DepartmentID],[ShiftID],[StartDate]", 10, null);
             foreach (var row in table1.DataSource)
             {
                 Console.WriteLine(row.Key);
             }
 
-            var entity = api.QueryEntity(db, "[HumanResources].[EmployeeDepartmentHistory]", "181|7|3|24/03/1999 00:00:00", 10, null);
+            var entity = api.QueryEntity(db, "[HumanResources].[EmployeeDepartmentHistory]", "181|7|3|24/03/1999 00:00:00", 3, null);
             //var entity = api.QueryEntity(db, EntitySourceType.Table, "[HumanResources].[EmployeeDepartmentHistory]", "[EmployeeID],[DepartmentID],[ShiftID],[StartDate]", "181|7|3|24/03/1999 00:00:00", 10, null);
 
             Console.WriteLine(entity.ToJson());
 
-            var table =    api.QueryTable(db, "select * from " + mappingName, "ContactID", 10, null);
+            var table =    api.QueryTable(db, "select * from " + mappingName, "ContactID", 2, null);
             foreach (var row in table.DataSource)
             {
                 Console.WriteLine(row.Key);

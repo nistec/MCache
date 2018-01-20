@@ -36,9 +36,9 @@ namespace Nistec.Caching.Demo
               string menu = "commands: remote-cache, remote-sync,remote-sync-mass, remote-api, remote-session";
               NetProtocol netProtocol = NetProtocol.Tcp;
               Nistec.Caching.Demo.Remote.DataCacheTest.TestAll(NetProtocol.Pipe,false);
-              Nistec.Caching.Demo.Remote.CacheTest.TestAll(NetProtocol.Pipe, false);
-              Nistec.Caching.Demo.Remote.SessionCacheTest.TestAll(NetProtocol.Pipe, false);
-              Nistec.Caching.Demo.Remote.SyncCacheTest.TestAll(NetProtocol.Pipe, false);
+              //Nistec.Caching.Demo.Remote.CacheTest.TestAll(NetProtocol.Pipe, false);
+              //Nistec.Caching.Demo.Remote.SessionCacheTest.TestAll(NetProtocol.Pipe, false);
+              //Nistec.Caching.Demo.Remote.SyncCacheTest.TestAll(NetProtocol.Pipe, false);
             return;
 
             do

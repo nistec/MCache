@@ -300,7 +300,7 @@ namespace Nistec.Caching.Data
             _tableCounts = 0;
             _state = DataCacheState.Closed;
             Expiration = DefaultExpirationMinute;
-            m_Timer = new TimerDispatcher(DefaultSessionSyncIntervalMinute * 60, 0, true);
+            m_Timer = new TimerDispatcher(TimerSource.Data, 0, true);
         }
 
  
@@ -886,7 +886,7 @@ namespace Nistec.Caching.Data
                     if (m_ds.TryAdd(mappingKey, table))
                     {
                         table.Owner = this;
-                        m_Timer.AddOrUpdate(TimerSource.Data, mappingKey, GetValidExpiration(expiration), DefaultExpirationMinute);
+                        m_Timer.AddOrUpdate(mappingKey, GetValidExpiration(expiration), DefaultExpirationMinute);
                         OnSizeChanged(table, 1);
                         return true;
                     }
@@ -976,7 +976,7 @@ namespace Nistec.Caching.Data
 
                 if (m_ds.TryAdd(mappingKey, value))
                 {
-                    m_Timer.AddOrUpdate(TimerSource.Data, mappingKey, GetValidExpiration(expiration), DefaultExpirationMinute);
+                    m_Timer.AddOrUpdate(mappingKey, GetValidExpiration(expiration), DefaultExpirationMinute);
                     OnSizeChanged(value, 1);
                     return true;
                 }
@@ -1021,7 +1021,7 @@ namespace Nistec.Caching.Data
                 if (m_ds.TryGetValue(mappingKey, out table))
                 {
                     m_ds[mappingKey] = value;
-                    m_Timer.AddOrUpdate(TimerSource.Data, mappingKey, GetValidExpiration(expiration), DefaultExpirationMinute);
+                    m_Timer.AddOrUpdate(mappingKey, GetValidExpiration(expiration), DefaultExpirationMinute);
                     OnSizeChanged(table, value);
                     return true;
                 }

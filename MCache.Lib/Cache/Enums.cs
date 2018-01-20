@@ -230,6 +230,8 @@ namespace Nistec.Caching
         ResetAll,
         /// <summary>SyncTime.</summary>
         SyncTime,
+        /// <summary>TimerDispatcher.</summary>
+        TimerDispatcher,
         /// <summary>DataCacheError.</summary>
         DataCacheError,
         /// <summary>Memory Size Exchange.</summary>

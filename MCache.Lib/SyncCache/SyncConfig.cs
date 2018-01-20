@@ -36,9 +36,10 @@ namespace Nistec.Caching.Sync
 
         #region properties
 
-        public string FilePath { get; private set; }
+        //public string FilePath { get; private set; }
         //public bool EnableAsyncTask { get; set; }
         //public bool ReloadAllItemsOnChange { get; set; }
+
         public bool EnableSyncFileWatcher { get; set; }
         public Action<SyncEntity> OnSyncItem { get; set; }
 
@@ -79,6 +80,10 @@ namespace Nistec.Caching.Sync
         public void Stop()
         {
             _initialized = false;
+            if (EnableSyncFileWatcher & _SyncFileWatcher !=null)
+            {
+                _SyncFileWatcher.FileChanged -= new FileSystemEventHandler(_SyncFileWatcher_FileChanged);
+            }
             CacheLogger.Logger.LogAction(CacheAction.General, CacheActionState.Debug, "SyncConfig Stoped!");
         }
 

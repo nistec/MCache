@@ -175,6 +175,8 @@ namespace Nistec.Caching.Config
         internal const int DefaultCacheExpiration = 0;
         //internal const bool EnableLog = false;
 
+        internal const int DefaultTimerIntervalSeconds = 90;
+
         internal static int GetValidIntervalSeconds(int intervalSeconds)
         {
             return intervalSeconds < CacheDefaults.MinIntervalSeconds ? CacheDefaults.DefaultIntervalSeconds : intervalSeconds;
