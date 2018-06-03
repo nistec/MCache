@@ -47,6 +47,7 @@ namespace Nistec.Caching.Demo.Remote
 
         static void GoOn()
         {
+            return;
             string entry = Console.ReadLine();
             if (entry == "q")
             {

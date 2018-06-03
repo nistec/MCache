@@ -17,9 +17,9 @@ namespace Nistec.Caching.Demo
       class Program
     {
 
-          [STAThread]
-          static void Main(string[] args)
-          {
+        [STAThread]
+        static void Main(string[] args)
+        {
 
             Console.WriteLine("Start test...");
 
@@ -31,81 +31,86 @@ namespace Nistec.Caching.Demo
             //return;
 
             //string mode = "remote-sync";
-            string protocol ="tcp";
-              string cmd="";
-              string menu = "commands: remote-cache, remote-sync,remote-sync-mass, remote-api, remote-session";
-              NetProtocol netProtocol = NetProtocol.Tcp;
-              Nistec.Caching.Demo.Remote.DataCacheTest.TestAll(NetProtocol.Pipe,false);
-              //Nistec.Caching.Demo.Remote.CacheTest.TestAll(NetProtocol.Pipe, false);
-              //Nistec.Caching.Demo.Remote.SessionCacheTest.TestAll(NetProtocol.Pipe, false);
-              //Nistec.Caching.Demo.Remote.SyncCacheTest.TestAll(NetProtocol.Pipe, false);
-            return;
+            string protocol = "tcp";
+            string cmd = "";
+            string menu = "commands: remote-cache, remote-sync,remote-sync-mass, remote-api, remote-session, remote-data";
+            NetProtocol netProtocol = NetProtocol.NA;
+            //return;
 
-            do
-              {
-                  Console.WriteLine("Choos protocol : tcp , pipe");
-                  protocol = Console.ReadLine().ToLower();
-                  netProtocol = GetProtocol(protocol);
-              }
-              while (netProtocol == NetProtocol.NA);
-             
-              while (cmd != "quit")
-              {
+            while (netProtocol == NetProtocol.NA)
+            {
+                Console.WriteLine("Choos protocol : tcp , pipe");
+                protocol = Console.ReadLine().ToLower();
+                netProtocol = GetProtocol(protocol);
+            }
 
-                  Console.WriteLine(menu);
-                  cmd = Console.ReadLine().ToLower();
+            while (cmd != "quit")
+            {
 
-                  switch (cmd)
-                  {
-                      case "remote-cache":
-                          Nistec.Caching.Demo.Remote.CacheTest.TestAll(netProtocol);
-                          break;
-                      case "remote-sync":
-                          Nistec.Caching.Demo.Remote.SyncCacheTest.TestAll(netProtocol);
-                          break;
-                      case "remote-session":
-                          Nistec.Caching.Demo.Remote.SessionCacheTest.TestAll(netProtocol);
-                          break;
-                      case "remote-data":
-                          Nistec.Caching.Demo.Remote.DataCacheTest.TestAll(netProtocol);
-                          break;
-                      case "remote-sync-mass":
-                          Console.WriteLine("Write count");
-                          int okCount=Types.ToInt( Console.ReadLine(),1000);
+                Console.WriteLine(menu);
+                cmd = Console.ReadLine().ToLower();
+                try
+                {
+                    switch (cmd)
+                    {
+                        case "remote-all":
+                              Nistec.Caching.Demo.Remote.DataCacheTest.TestAll(NetProtocol.Pipe,false);
+                              Nistec.Caching.Demo.Remote.CacheTest.TestAll(NetProtocol.Pipe, false);
+                              Nistec.Caching.Demo.Remote.SessionCacheTest.TestAll(NetProtocol.Pipe, false);
+                              Nistec.Caching.Demo.Remote.SyncCacheTest.TestAll(NetProtocol.Pipe, false);
+                            break;
+                        case "remote-cache":
+                            Nistec.Caching.Demo.Remote.CacheTest.TestAll(netProtocol);
+                            break;
+                        case "remote-sync":
+                            Nistec.Caching.Demo.Remote.SyncCacheTest.TestAll(netProtocol);
+                            break;
+                        case "remote-session":
+                            Nistec.Caching.Demo.Remote.SessionCacheTest.TestAll(netProtocol);
+                            break;
+                        case "remote-data":
+                            Nistec.Caching.Demo.Remote.DataCacheTest.TestAll(netProtocol);
+                            break;
+                        case "remote-sync-mass":
+                            Console.WriteLine("Write count");
+                            int okCount = Types.ToInt(Console.ReadLine(), 1000);
 
-                          //Console.WriteLine("Write wrong count");
-                        int wrongCount = 0;// Types.ToInt( Console.ReadLine(),0);
+                            //Console.WriteLine("Write wrong count");
+                            int wrongCount = 0;// Types.ToInt( Console.ReadLine(),0);
 
-                          Nistec.Caching.Demo.Mass.SyncCacheRemoteMass.SyncCacheTestMass(netProtocol,okCount, wrongCount);
-                          break;
-                      case "remote-api":
-                          Nistec.Caching.Demo.RemoteApi.CacheTest.TestAll(netProtocol);
-                          break;
-                      case "hosted-cache":
-                          HostedCacheTest.TestAll();
-                          break;
-                      case "hosted-sync":
-                          HostedSyncTest.TestAll();
-                          break;
-                      case "hosted-session":
-                          HostedSessionTest.TestAll();
-                          break;
-                      case "hosted-data":
-                          HostedDataCacheTest.TestAll();
-                          break;
-                      case "quit":
-                          break;
-                      default:
-                          Console.WriteLine("Unknown command!");
-                          break;
-                  }
-                  Console.WriteLine("Finished...");
-              }
-              Console.WriteLine("Finished an quit...");
-              Console.ReadLine();
-
-
-          }
+                            Nistec.Caching.Demo.Mass.SyncCacheRemoteMass.SyncCacheTestMass(netProtocol, okCount, wrongCount);
+                            break;
+                        case "remote-api":
+                            Nistec.Caching.Demo.RemoteApi.CacheTest.TestAll(netProtocol);
+                            break;
+                        case "hosted-cache":
+                            HostedCacheTest.TestAll();
+                            break;
+                        case "hosted-sync":
+                            HostedSyncTest.TestAll();
+                            break;
+                        case "hosted-session":
+                            HostedSessionTest.TestAll();
+                            break;
+                        case "hosted-data":
+                            HostedDataCacheTest.TestAll();
+                            break;
+                        case "quit":
+                            break;
+                        default:
+                            Console.WriteLine("Unknown command!");
+                            break;
+                    }
+                    Console.WriteLine("Finished...");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Error: " + ex.Message);
+                }
+            }
+            Console.WriteLine("Finished an quit...");
+            Console.ReadLine();
+        }
 
           static NetProtocol GetProtocol(string protocol)
           {
