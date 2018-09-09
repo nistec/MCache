@@ -175,14 +175,17 @@ namespace Nistec.Caching.Remote
                         {
                             throw new ArgumentNullException("value is required");
                         }
-                        var message = new CacheMessage()
+
+                        var bodyStream = BinarySerializer.ConvertToStream(value);
+
+                        var message = new CacheMessage(bodyStream)
                         {
                             Command = DataCacheCmd.Add,
                             GroupId = db,
                             Label= tableName,
                             Id= primaryKey,
-                            Args = MessageStream.CreateArgs(KnowsArgs.Column, field),
-                            BodyStream = BinarySerializer.ConvertToStream(value)
+                            Args = MessageStream.CreateArgs(KnowsArgs.Column, field)
+                            //BodyStream = BinarySerializer.ConvertToStream(value)
                         };
                         SendHttpJsonOut(message);
                         return CacheState.Ok.ToString();
@@ -322,14 +325,14 @@ namespace Nistec.Caching.Remote
                         {
                             throw new ArgumentNullException("value is required");
                         }
-                        var message = new CacheMessage()
+                        var message = new CacheMessage(BinarySerializer.ConvertToStream(value))//(MessageStream.GetTypeName(value), BinarySerializer.ConvertToStream(value))
                         {
                             Command = DataCacheCmd.Set,
                             GroupId = db,
                             Label = tableName,
                             Id = primaryKey,
-                            Args = MessageStream.CreateArgs(KnowsArgs.Column, field),
-                            BodyStream = BinarySerializer.ConvertToStream(value)// CacheMessageStream.EncodeBody(value)
+                            Args = MessageStream.CreateArgs(KnowsArgs.Column, field)
+                            //BodyStream = BinarySerializer.ConvertToStream(value)// CacheMessageStream.EncodeBody(value)
                         };
                         SendHttpJsonOut(message);
                         return CacheState.Ok.ToString();
@@ -376,14 +379,14 @@ namespace Nistec.Caching.Remote
             {
                 throw new ArgumentNullException("value is required");
             }
-            using (var message = new CacheMessage()
+            using (var message = new CacheMessage(BinarySerializer.ConvertToStream(value))//(MessageStream.GetTypeName(value), BinarySerializer.ConvertToStream(value))
             {
-                Command = DataCacheCmd.Add,
+                //Command = DataCacheCmd.Add,
                 GroupId = db,
                 Label=tableName,
                 Id=primaryKey,
-                Args = MessageStream.CreateArgs(KnowsArgs.Column, column),//KnowsArgs.ConnectionKey, db, KnowsArgs.TableName, tableName, KnowsArgs.Column, column, KnowsArgs.Pk, primaryKey),
-                BodyStream = BinarySerializer.ConvertToStream(value)
+                Args = MessageStream.CreateArgs(KnowsArgs.Column, column)//KnowsArgs.ConnectionKey, db, KnowsArgs.TableName, tableName, KnowsArgs.Column, column, KnowsArgs.Pk, primaryKey),
+                //BodyStream = BinarySerializer.ConvertToStream(value)
             })
             {
                 SendOut(message);
@@ -420,14 +423,14 @@ namespace Nistec.Caching.Remote
             {
                 throw new ArgumentNullException("value is required");
             }
-            using (var message = new CacheMessage()
+            using (var message = new CacheMessage(BinarySerializer.ConvertToStream(value))//(MessageStream.GetTypeName(value), BinarySerializer.ConvertToStream(value))
             {
                 Command = DataCacheCmd.Set,
                 GroupId = db,
                 Label=tableName,
                 Id=primaryKey,
-                Args = MessageStream.CreateArgs(KnowsArgs.Column, column),//(KnowsArgs.ConnectionKey, db, KnowsArgs.TableName, tableName, KnowsArgs.Column, column, KnowsArgs.Pk, primaryKey),
-                BodyStream = BinarySerializer.ConvertToStream(value)// CacheMessageStream.EncodeBody(value)
+                Args = MessageStream.CreateArgs(KnowsArgs.Column, column)//(KnowsArgs.ConnectionKey, db, KnowsArgs.TableName, tableName, KnowsArgs.Column, column, KnowsArgs.Pk, primaryKey),
+                //BodyStream = BinarySerializer.ConvertToStream(value)// CacheMessageStream.EncodeBody(value)
             })
             {
                 SendOut(message);
@@ -565,14 +568,14 @@ namespace Nistec.Caching.Remote
             {
                 throw new ArgumentNullException("tableName is required");
             }
-            using (CacheMessage message = new CacheMessage()
+            using (var message = new CacheMessage()//typeof(NetStream).FullName, (NetStream)null)
             {
                 Command = DataCacheCmd.GetStream,
                 GroupId = db,
                 Label = tableName,
                 Id = primaryKey,
                 //Args = NameValueArgs.Get(KnowsArgs.TableName, tableName, KnowsArgs.Pk, primaryKey),
-                TypeName = typeof(NetStream).FullName,
+                //TypeName = typeof(NetStream).FullName,
                 TransformType = TransformType.Stream
             })
             {
@@ -751,14 +754,14 @@ namespace Nistec.Caching.Remote
                 throw new ArgumentNullException("dt is required");
             }
 
-            using (var message = new CacheMessage()
+            using (var message = new CacheMessage(BinarySerializer.ConvertToStream(dt))//(typeof(DbTable).FullName, BinarySerializer.ConvertToStream(dt))
             {
                 Command = DataCacheCmd.AddTable,
                 GroupId = db,
                 Label = tableName,
                 Id = primaryKey.JoinTrim(),
-                BodyStream = BinarySerializer.ConvertToStream(dt),// CacheMessageStream.EncodeBody(dt),
-                TypeName = typeof(DbTable).FullName,
+                //BodyStream = BinarySerializer.ConvertToStream(dt),// CacheMessageStream.EncodeBody(dt),
+                //TypeName = typeof(DbTable).FullName,
                 //Label = primaryKey.JoinTrim(),
                 Args = NameValueArgs.Get(KnowsArgs.MappingName, mappingName, KnowsArgs.SourceType, EntitySourceType.Table.ToString())
             })
@@ -789,14 +792,14 @@ namespace Nistec.Caching.Remote
             {
                 throw new ArgumentNullException("dt is required");
             }
-            using (var message = new CacheMessage()
+            using (var message = new CacheMessage(BinarySerializer.ConvertToStream(dt))//(typeof(DbTable).FullName, BinarySerializer.ConvertToStream(dt))
             {
                 Command = DataCacheCmd.SetTable,
                 GroupId = db,
                 Label = tableName,
                 Id = primaryKey.JoinTrim(),
-                BodyStream = BinarySerializer.ConvertToStream(dt),// CacheMessageStream.EncodeBody(dt),
-                TypeName = typeof(DbTable).FullName,
+                //BodyStream = BinarySerializer.ConvertToStream(dt),// CacheMessageStream.EncodeBody(dt),
+                //TypeName = typeof(DbTable).FullName,
                 //Label = primaryKey.JoinTrim(),
                 Args = NameValueArgs.Get(KnowsArgs.MappingName, mappingName, KnowsArgs.SourceType, EntitySourceType.Table.ToString())
             })
@@ -834,12 +837,12 @@ namespace Nistec.Caching.Remote
                 throw new ArgumentNullException("sourceName is required");
             }
 
-            using (var message = new CacheMessage()
+            using (var message = new CacheMessage(BinarySerializer.ConvertToStream(dt))//(MessageStream.GetTypeName(dt), BinarySerializer.ConvertToStream(dt))
             {
                 Command = DataCacheCmd.AddTableWithSync,
                 GroupId = db,
                 Label = tableName,
-                BodyStream = BinarySerializer.ConvertToStream(dt),
+                //BodyStream = BinarySerializer.ConvertToStream(dt),
                 Args = MessageStream.CreateArgs(KnowsArgs.MappingName, mappingName, KnowsArgs.SourceName, NameValueArgs.JoinArg(sourceName), KnowsArgs.SyncType, ((int)syncType).ToString(), KnowsArgs.SyncTime, ts.ToString(), KnowsArgs.SourceType, EntitySourceType.Table.ToString())
             })
             {
@@ -885,12 +888,12 @@ namespace Nistec.Caching.Remote
                 throw new ArgumentNullException("mappingName is required");
             }
 
-            using (var message = new CacheMessage()
+            using (var message = new CacheMessage(BinarySerializer.ConvertToStream(dt))//(MessageStream.GetTypeName(dt), BinarySerializer.ConvertToStream(dt))
             {
                 Command = DataCacheCmd.AddTableWithSync,
                 GroupId = db,
                 Label = tableName,
-                BodyStream = BinarySerializer.ConvertToStream(dt),//CacheMessageStream.EncodeBody(dt),
+                //BodyStream = BinarySerializer.ConvertToStream(dt),//CacheMessageStream.EncodeBody(dt),
                 Args = MessageStream.CreateArgs(tableName, KnowsArgs.MappingName, mappingName, KnowsArgs.SourceName, mappingName, KnowsArgs.SyncType, ((int)syncType).ToString(), KnowsArgs.SyncTime, ts.ToString())
             })
             {

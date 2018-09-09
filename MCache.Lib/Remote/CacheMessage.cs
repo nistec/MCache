@@ -60,8 +60,24 @@ namespace Nistec.Caching.Remote
         public CacheMessage(object body) : this()
         {
             Formatter = MessageStream.DefaultFormatter;
-            SetBody(body);
+            if (body is NetStream)
+                EntityRead((NetStream)body, null);
+            else
+                SetBody(body);
         }
+
+        ///// <summary>
+        ///// Initialize a new instance of cache message.
+        ///// </summary>
+        ///// <param name="typeName"></param>
+        ///// <param name="bodyStream"></param>
+        //public CacheMessage(string typeName, NetStream bodyStream) : base(bodyStream,null)//(typeName, bodyStream)
+        //{
+        //    //TypeName = typeName;
+        //    Formatter = MessageStream.DefaultFormatter;
+        //}
+
+        
 
         /// <summary>
         /// Initialize a new instance of cache message.
@@ -99,6 +115,10 @@ namespace Nistec.Caching.Remote
         internal CacheMessage(MessageStream message)
             : this()
         {
+            if(message==null)
+            {
+                throw new ArgumentNullException("message");
+            }
             Command = message.Command;
             Id = message.Id;
             Expiration = message.Expiration;
@@ -108,7 +128,8 @@ namespace Nistec.Caching.Remote
             TypeName = message.TypeName;
             Args = message.Args;
             Formatter = message.Formatter;
-            IsDuplex = message.IsDuplex;
+            //IsDuplex = message.IsDuplex;
+            DuplexType = message.DuplexType;
             Modified = message.Modified;
             Sender = message.Sender;
             //Size = message.Size;

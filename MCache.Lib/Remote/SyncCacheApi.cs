@@ -518,12 +518,12 @@ namespace Nistec.Caching.Remote
             {
                 throw new ArgumentNullException("ComplexKey is required");
             }
-            using (CacheMessage message = new CacheMessage()
+            using (CacheMessage message = new CacheMessage()//(typeof(NetStream).FullName, (NetStream)null)
             {
                 Command = SyncCacheCmd.GetAs,
                 Label = info.Prefix,
-                TypeName = typeof(NetStream).FullName,
-                Id =info.Suffix
+                //TypeName = typeof(NetStream).FullName,
+                Id = info.Suffix
             })
             {
                 return SendDuplexStream<NetStream>(message, OnFault);
@@ -546,11 +546,11 @@ namespace Nistec.Caching.Remote
             {
                 throw new ArgumentNullException("keys is required");
             }
-            using (CacheMessage message = new CacheMessage()
+            using (CacheMessage message = new CacheMessage()//typeof(NetStream).FullName, (NetStream)null)
             {
                 Command = SyncCacheCmd.GetAs,
                 Label = entityName,
-                TypeName = typeof(NetStream).FullName,
+                //TypeName = typeof(NetStream).FullName,
                 Id = KeySet.Join(keys)
             })
             {
@@ -838,10 +838,10 @@ namespace Nistec.Caching.Remote
         /// <returns></returns>
         public IEnumerable<string> GetAllEntityNames()
         {
-            using (CacheMessage message = new CacheMessage()
+            using (CacheMessage message = new CacheMessage()//(typeof(ICollection<string>).FullName,(NetStream)null)
             {
-                Command = SyncCacheCmd.GetAllEntityNames,
-                TypeName = typeof(ICollection<string>).FullName
+                Command = SyncCacheCmd.GetAllEntityNames
+                //TypeName = typeof(ICollection<string>).FullName
             })
             {
                 return SendDuplexStream<ICollection<string>>(message, OnFault);

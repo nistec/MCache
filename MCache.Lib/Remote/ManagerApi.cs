@@ -34,6 +34,7 @@ using Nistec.Data.Entities.Cache;
 using Nistec.Runtime;
 using Nistec.Generic;
 using Nistec.Serialization;
+using Nistec.IO;
 
 namespace Nistec.Caching.Remote
 {
@@ -513,12 +514,12 @@ namespace Nistec.Caching.Remote
             /// <param name="ts"></param>
             public static void AddTableWithSync(string db, DataTable dt, string tableName, string mappingName, string[] sourceName, SyncType syncType, TimeSpan ts)
             {
-                PipeClient.SendOut(new CacheMessage()
+                PipeClient.SendOut(new CacheMessage(BinarySerializer.ConvertToStream(dt))//(MessageStream.GetTypeName(dt), BinarySerializer.ConvertToStream(dt))
                 {
                     Command = DataCacheCmd.AddTableWithSync,
                     GroupId = db,
                     Label=tableName,
-                    BodyStream = BinarySerializer.ConvertToStream(dt),//CacheMessageStream.EncodeBody(dt),
+                    //BodyStream = BinarySerializer.ConvertToStream(dt),//CacheMessageStream.EncodeBody(dt),
                     Args = MessageStream.CreateArgs(KnowsArgs.MappingName, mappingName, KnowsArgs.SourceName, NameValueArgs.JoinArg(sourceName), KnowsArgs.SyncType, ((int)syncType).ToString(), KnowsArgs.SyncTime, ts.ToString())
                 }, CacheDefaults.DefaultBundleHostName, CacheApiSettings.EnableRemoteException);
             }
@@ -548,12 +549,12 @@ namespace Nistec.Caching.Remote
             /// </code></example>
             public static void AddTableWithSync(string db, DataTable dt, string tableName, string mappingName, Nistec.Caching.SyncType syncType, TimeSpan ts)
             {
-                PipeClient.SendOut(new CacheMessage()
+                PipeClient.SendOut(new CacheMessage(BinarySerializer.ConvertToStream(dt))//(MessageStream.GetTypeName(dt), BinarySerializer.ConvertToStream(dt))
                 {
                     Command = DataCacheCmd.AddTableWithSync,
                     GroupId = db,
                     Label=tableName,
-                    BodyStream = BinarySerializer.ConvertToStream(dt),//CacheMessageStream.EncodeBody(dt),
+                    //BodyStream = BinarySerializer.ConvertToStream(dt),//CacheMessageStream.EncodeBody(dt),
                     Args = MessageStream.CreateArgs(KnowsArgs.MappingName, mappingName, KnowsArgs.SourceName, mappingName, KnowsArgs.SyncType, ((int)syncType).ToString(), KnowsArgs.SyncTime, ts.ToString())
                 }, CacheDefaults.DefaultBundleHostName, CacheApiSettings.EnableRemoteException);
 
@@ -678,11 +679,11 @@ namespace Nistec.Caching.Remote
             /// <returns></returns>
             public static CacheItemReport GetItemsReport(string entityName)
             {
-                using (CacheMessage message = new CacheMessage()
+                using (CacheMessage message = new CacheMessage()//(typeof(ICollection<string>).FullName, (NetStream)null)
                 {
                     Command = SyncCacheCmd.GetItemsReport,
-                    Label = entityName,
-                    TypeName = typeof(ICollection<string>).FullName
+                    Label = entityName
+                    //TypeName = typeof(ICollection<string>).FullName
                 })
                 {
                     return ManagerApi.SendDuplexStream<CacheItemReport>(message, OnFault);
