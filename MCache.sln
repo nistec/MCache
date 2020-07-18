@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.852
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Library", "Library", "{6169AF0A-0F85-4F2D-BC72-B0E88A859F5B}"
 EndProject
@@ -11,7 +11,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nistec.Cache", "MCache.Lib\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MCacheDemo", "CacheDemo\MCacheDemo.csproj", "{45EB2F6F-9EAD-430B-8776-C60932423B7F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nistec.Cache.Controller", "MCacheServiceController\Nistec.Cache.Controller.csproj", "{0FD2097A-D345-45A9-9592-162516FDD974}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nistec.Service.Controller", "MCacheServiceController\Nistec.Service.Controller.csproj", "{0FD2097A-D345-45A9-9592-162516FDD974}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nistec.Lib", "..\Nistec.Lib\Nistec.Lib.csproj", "{54F52ED5-AECD-47C6-93D8-7B3358BA7F8C}"
 EndProject
@@ -86,5 +86,8 @@ Global
 		{E510DD2C-859C-476C-9901-60EDFC5E71F1} = {6169AF0A-0F85-4F2D-BC72-B0E88A859F5B}
 		{0839A364-A34D-4143-AD4C-AEF4C7B232AC} = {6169AF0A-0F85-4F2D-BC72-B0E88A859F5B}
 		{D5FD6C68-86EA-48BF-8F6D-29CE57419500} = {6169AF0A-0F85-4F2D-BC72-B0E88A859F5B}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {ACF5DC2C-C5EB-4E83-959A-68CAA640FB41}
 	EndGlobalSection
 EndGlobal
