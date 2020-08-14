@@ -385,7 +385,7 @@ namespace Nistec.Caching.Config
                PipeDirection = EnumExtension.Parse<PipeDirection>(settings.PipeDirection, PipeDirection.InOut),
                PipeOptions = EnumExtension.Parse<PipeOptions>(settings.PipeOptions, PipeOptions.None),
                VerifyPipe = settings.VerifyPipe,
-               ConnectTimeout = (uint)settings.ConnectTimeout,
+               ConnectTimeout = settings.ConnectTimeout,
                ReceiveBufferSize = settings.ReceiveBufferSize,
                SendBufferSize = settings.SendBufferSize,
                MaxServerConnections = settings.MaxServerConnections,
@@ -423,8 +423,8 @@ namespace Nistec.Caching.Config
                 ReceiveBufferSize = settings.ReceiveBufferSize,
                 SendBufferSize = settings.SendBufferSize,
                 ConnectTimeout = settings.ConnectTimeout,
-                ProcessTimeout=settings.ProcessTimeout,
-                //ReadTimeout=settings.ReadTimeout,
+                ReadTimeout= settings.ReadTimeout,
+                //ProcessTimeout=settings.ProcessTimeout,
                 MaxSocketError = settings.MaxSocketError,
                 MaxServerConnections = Math.Max(1, settings.MaxServerConnections)
             };

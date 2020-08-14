@@ -114,7 +114,7 @@ namespace Nistec.Caching.Server.Tcp
             return AgentManager.ExecManager(message);
         }
         /// <summary>
-        /// Read Request
+        /// Read Request from client.
         /// </summary>
         /// <param name="stream"></param>
         /// <returns></returns>

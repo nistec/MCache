@@ -215,7 +215,7 @@ namespace Nistec.Caching.Config
                 ReceiveBufferSize = settings.ReceiveBufferSize,
                 SendBufferSize = settings.SendBufferSize,
                 ConnectTimeout = settings.ConnectTimeout,
-                ProcessTimeout = settings.ProcessTimeout,
+                ReadTimeout = settings.ReadTimeout,
             };
         }
     }
@@ -272,8 +272,8 @@ namespace Nistec.Caching.Config
                 PipeDirection = EnumExtension.Parse<PipeDirection>(settings.PipeDirection, PipeDirection.InOut),
                 PipeOptions = EnumExtension.Parse<PipeOptions>(settings.PipeOptions, PipeOptions.None),
                 VerifyPipe = settings.VerifyPipe,
-                ConnectTimeout = (uint)settings.ConnectTimeout,
-                ProcessTimeout = settings.ProcessTimeout,
+                ConnectTimeout = settings.ConnectTimeout,
+                //ProcessTimeout = settings.ProcessTimeout,
                 ReceiveBufferSize = settings.ReceiveBufferSize,
                 SendBufferSize=settings.SendBufferSize
             };
@@ -338,8 +338,8 @@ namespace Nistec.Caching.Config
                 //IsAsync = settings.IsAsync,
                 //ReceiveBufferSize = settings.ReceiveBufferSize,
                 //SendBufferSize = settings.SendBufferSize,
-                ConnectTimeout = settings.ConnectTimeout,
-                ProcessTimeout = settings.ProcessTimeout,
+                ConnectTimeout = settings.ConnectTimeout
+                //ProcessTimeout = settings.ProcessTimeout,
             };
         }
     }
