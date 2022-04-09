@@ -264,6 +264,10 @@
       <Project>{54f52ed5-aecd-47c6-93d8-7b3358ba7f8c}</Project>
       <Name>Nistec.Lib</Name>
     </ProjectReference>
+    <ProjectReference Include="..\..\Nistec.Logger\Nistec.Logger.csproj">
+      <Project>{e510dd2c-859c-476c-9901-60edfc5e71f1}</Project>
+      <Name>Nistec.Logger</Name>
+    </ProjectReference>
     <ProjectReference Include="..\MCache.Agent\Nistec.Cache.Agent.csproj">
       <Project>{68B39437-C795-4B1D-938C-CDA5AD79FF07}</Project>
       <Name>Nistec.Cache.Agent</Name>
