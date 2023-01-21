@@ -772,7 +772,7 @@ namespace Nistec
 
         static string[] SplitCmd(string cmd, int maxArgs = 0)
         {
-            string[] cmdargs = cmd.SplitTrim(' ');
+            string[] cmdargs = cmd.SplitTrim('|');
             List<string> list = new List<string>();
             int i = 0;
             int length = cmdargs.Length;

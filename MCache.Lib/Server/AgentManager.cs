@@ -317,7 +317,7 @@ namespace Nistec.Caching.Server
                 switch (message.Command.ToLower())
                 {
                     case CacheManagerCmd.Reply:
-                        return TransStream.Write("Reply: "+message.Id, TransType.Object);
+                        return TransStream.Write("Reply: " + message.Id, TransType.Text);
                     case CacheManagerCmd.CacheProperties:
                         if (_Cache == null)
                             return null;
@@ -398,7 +398,7 @@ namespace Nistec.Caching.Server
                 CacheLogger.Logger.LogAction(CacheAction.CacheException, CacheActionState.Error, "ExecManager error: " + ex.Message);
             }
 
-            return TransStream.Write(message.Command+", "+ state.ToString(), CacheUtil.ToTransType(state));
+            return TransStream.WriteState((int)state, message.Command + ", " + state.ToString());//, CacheUtil.ToTransType(state));
         }
         //TOD:~
         internal static TransStream ExecCommand(MessageStream message)
@@ -406,7 +406,7 @@ namespace Nistec.Caching.Server
             if(message==null || message.Command==null)
             {
                 CacheLogger.Logger.LogAction(CacheAction.CacheException, CacheActionState.Error, "AgentManager.ExecCommand error: Message is null or Command not supported!");
-                return TransStream.Write("Unknown message or command",  TransType.Error); 
+                return TransStream.WriteState(-1,"Unknown message or command");//,  TransType.Error); 
             }
 
             string CommandType = message.Command.Substring(0, 5);
@@ -425,7 +425,7 @@ namespace Nistec.Caching.Server
                     return ExecManager(message);
                 default:
                     CacheLogger.Logger.LogAction(CacheAction.CacheException, CacheActionState.Error, "AgentManager.ExecCommand error: Command not supported " + message.Command);
-                    return TransStream.Write("CommandNotSupported", TransType.Error);
+                    return TransStream.WriteState(-1, "CommandNotSupported");//, , TransType.Error);
             }
         }
 
@@ -447,7 +447,7 @@ namespace Nistec.Caching.Server
             }
             task.TryDispose();
             //SendState(requestTime, failedState);
-            return TransStream.Write(command + ": " + failedState.ToString(), TransType.Error);
+            return TransStream.WriteState(-1, command + ": " + failedState.ToString());//, , TransType.Error);
         }
         internal static TransStream AsyncTransObject(Func<object> action, string command, CacheState successState= CacheState.Ok, CacheState failedState = CacheState.NotFound, TransType transType = TransType.Object)//TransformType transform = TransformType.Message)
         {
@@ -465,7 +465,7 @@ namespace Nistec.Caching.Server
             }
             task.TryDispose();
             //SendState(requestTime, failedState);
-            return TransStream.Write(command + ": " + failedState.ToString(), TransType.Error);
+            return TransStream.WriteState(-1, command + ": " + failedState.ToString());//, TransType.Error);
         }
 
         internal static TransStream AsyncTransState(Func<CacheState> action, CacheState failedState = CacheState.NotFound)
@@ -476,12 +476,12 @@ namespace Nistec.Caching.Server
                 if (task.IsCompleted)
                 {
                     //SendState(requestTime, task.Result);
-                    return TransStream.Write((int)task.Result, TransType.State);
+                    return TransStream.WriteState((int)task.Result, failedState.ToString());// TransType.State);
                 }
             }
             task.TryDispose();
             //SendState(requestTime, failedState);
-            return TransStream.Write((int)failedState, TransType.State);
+            return TransStream.WriteState((int)failedState, failedState.ToString());// TransType.State);
         }
 
 
@@ -494,12 +494,12 @@ namespace Nistec.Caching.Server
                 {
                     CacheState state = task.Result ? successState : failedState;
                     //SendState(requestTime, state);
-                    return TransStream.Write((int)state, TransType.State);
+                    return TransStream.WriteState((int)state, failedState.ToString());//TransType.State);
                 }
             }
             task.TryDispose();
             //SendState(requestTime, failedState);
-            return TransStream.Write((int)failedState, TransType.State);
+            return TransStream.WriteState((int)failedState, failedState.ToString());//TransType.State);
         }
 
         internal static TransStream AsyncTransState(Action action, CacheState successState= CacheState.Ok, CacheState failedState = CacheState.UnKnown)
@@ -510,12 +510,12 @@ namespace Nistec.Caching.Server
                 if (task.IsCompleted)
                 {
                     //SendState(requestTime, successState);
-                    return TransStream.Write((int)successState, TransType.State);
+                    return TransStream.WriteState((int)successState, successState.ToString());//TransType.State);
                 }
             }
             task.TryDispose();
             //SendState(requestTime, failedState);
-            return TransStream.Write((int)failedState, TransType.State);
+            return TransStream.WriteState((int)failedState, failedState.ToString());// TransType.State);
         }
 
         #endregion

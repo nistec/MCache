@@ -137,7 +137,7 @@ namespace Nistec.Caching.Server
                 switch (message.Command.ToLower())
                 {
                     case CacheCmd.Reply:
-                        return TransStream.Write("Reply: " + message.Id, TransType.Object);
+                        return TransStream.Write("Reply: " + message.Id, TransType.Text);
                     case CacheCmd.Add:
                         return AsyncTransState(() => Add(message),requestTime, CacheState.AddItemFailed);
                     case CacheCmd.Set:
@@ -197,7 +197,7 @@ namespace Nistec.Caching.Server
             catch (Exception ex)
             {
                 state = CacheState.UnexpectedError;
-                LogAction(CacheAction.CacheException, CacheActionState.Error, "CacheAgent.ExecRemote error: " + ex.Message);
+                LogAction(CacheAction.CacheException, CacheActionState.Error, Formatter.ExceptionFormat("CacheAgent.ExecRemote error", ex, true));
             }
             //finally
             //{
@@ -216,7 +216,7 @@ namespace Nistec.Caching.Server
             //return new TransStream(message.Command + ": " + state.ToString(), CacheUtil.ToTransType(state));
 
             SendState(requestTime, state);
-            return TransStream.Write(message.Command + ": " + state.ToString(), CacheUtil.ToTransType(state));
+            return TransStream.WriteState((int)state,message.Command + ": " + state.ToString());//, CacheUtil.ToTransType(state));
 
         }
 
@@ -246,7 +246,7 @@ namespace Nistec.Caching.Server
             }
             task.TryDispose();
             SendState(requestTime, failedState);
-            return TransStream.Write(command + ": " + failedState.ToString(), TransType.Error);
+            return TransStream.WriteState(-1, command + ": " + failedState.ToString());//, TransType.Error);
         }
         public TransStream AsyncTransObject(Func<object> action, string command, DateTime requestTime, CacheState successState, CacheState failedState = CacheState.NotFound, TransType transType = TransType.Object)//TransformType transform = TransformType.Message)
         {
@@ -264,7 +264,7 @@ namespace Nistec.Caching.Server
             }
             task.TryDispose();
             SendState(requestTime, failedState);
-            return TransStream.Write(command + ": " + failedState.ToString(), TransType.Error);
+            return TransStream.WriteState(-1, command + ": " + failedState.ToString());//, TransType.Error);
         }
 
         public TransStream AsyncTransState(Func<CacheState> action, DateTime requestTime, CacheState failedState = CacheState.NotFound)
@@ -275,12 +275,12 @@ namespace Nistec.Caching.Server
                 if (task.IsCompleted)
                 {
                     SendState(requestTime, task.Result);
-                    return TransStream.Write((int)task.Result, TransType.State);
+                    return TransStream.WriteState((int)task.Result, failedState.ToString());// TransType.State);
                 }
             }
             task.TryDispose();
             SendState(requestTime, failedState);
-            return TransStream.Write((int)failedState, TransType.State);
+            return TransStream.WriteState((int)failedState, failedState.ToString());// TransType.State);
         }
 
 
@@ -293,12 +293,12 @@ namespace Nistec.Caching.Server
                 {
                     CacheState state = task.Result ? successState : failedState;
                     SendState(requestTime, state);
-                    return TransStream.Write((int)state, TransType.State);
+                    return TransStream.WriteState((int)state, failedState.ToString());//TransType.State);
                 }
             }
             task.TryDispose();
             SendState(requestTime, failedState);
-            return TransStream.Write((int)failedState, TransType.State);
+            return TransStream.WriteState((int)failedState, failedState.ToString());//TransType.State);
         }
 
         public TransStream AsyncTransState(Action action, DateTime requestTime, CacheState successState, CacheState failedState = CacheState.UnKnown)
@@ -309,12 +309,12 @@ namespace Nistec.Caching.Server
                 if (task.IsCompleted)
                 {
                     SendState(requestTime, successState);
-                    return TransStream.Write((int)successState, TransType.State);
+                    return TransStream.WriteState((int)successState, successState.ToString());//TransType.State);
                 }
             }
             task.TryDispose();
             SendState(requestTime, failedState);
-            return TransStream.Write((int)failedState, TransType.State);
+            return TransStream.WriteState((int)failedState, failedState.ToString());//TransType.State);
         }
 
         #endregion

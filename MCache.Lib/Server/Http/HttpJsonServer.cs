@@ -33,6 +33,7 @@ using Nistec.Caching.Config;
 using Nistec.Channels.Http;
 using System.Net.Sockets;
 using Nistec.Serialization;
+using Nistec.Runtime;
 
 namespace Nistec.Caching.Server.Http
 {
@@ -157,7 +158,7 @@ namespace Nistec.Caching.Server.Http
             {
                 return null;
             }
-            string json = TransReader.ReadJson(ack.GetStream());
+            string json = TransStream.ReadJson(ack.GetStream());
             return TransStream.Write(json, TransType.Json);
 
             //string json = TransReader.ReadJson(ack);
@@ -181,7 +182,7 @@ namespace Nistec.Caching.Server.Http
             {
                 return null;
             }
-            string json = TransReader.ReadJson(ack.GetStream());
+            string json = TransStream.ReadJson(ack.GetStream());
             //string json = ack.ToJson();
             return json;
         }

@@ -11,9 +11,9 @@ namespace Nistec.Caching.Demo.Hosted
     public class HostedDataCacheTest
     {
         //int timeout = 30;
-        string db = "AdventureWorks";
-        string tableName = "Contacts";
-        string mappingName = "Person.Contact";
+        string db = "Netcell_Docs";
+        string tableName = "Accounts";
+        string mappingName = "Accounts";
 
         public static void TestAll()
         {
@@ -64,13 +64,13 @@ namespace Nistec.Caching.Demo.Hosted
                 dt = cmd.ExecuteCommand<DataTable>("select * from " + mappingName,true);
             }
 
-            var state = dbCache.AddTableWithKey(db, dt, tableName, mappingName, Nistec.Data.Entities.EntitySourceType.Table);//, new string[] { "ContactID" });
+            var state = dbCache.AddTableWithKey(db, dt, tableName, mappingName, Nistec.Data.Entities.EntitySourceType.Table);//, new string[] { "AccountId" });
 
             Console.WriteLine("AddItems " + state.ToString());
 
 
             //add table to sync tables, for synchronization by interval.
-            // dbCache.AddSyncItem(db, tableName, "Person.Contact", SyncType.Interval, TimeSpan.FromMinutes(60));
+            // dbCache.AddSyncItem(db, tableName, "Accounts", SyncType.Interval, TimeSpan.FromMinutes(60));
 
         }
 
@@ -88,11 +88,11 @@ namespace Nistec.Caching.Demo.Hosted
         public void GetRecord()
         {
             string key = "1";
-            var item = dbCache.GetRow(db, tableName, "ContactID=1");
+            var item = dbCache.GetRow(db, tableName, "AccountId=1");
             if (item == null)
                 Console.WriteLine("item not found " + key);
             else
-                Console.WriteLine(item["FirstName"]);
+                Console.WriteLine(item["AccountName"]);
         }
 
         void BackgroundTasks()
@@ -118,11 +118,11 @@ namespace Nistec.Caching.Demo.Hosted
 
             for (int i = 0; i < keys.Length; i++)
             {
-                var o = dbCache.GetValue(db, tableName, keys[i].ToString(), "FirstName");
+                var o = dbCache.GetValue(db, tableName, keys[i].ToString(), "AccountName");
                 Console.WriteLine(o==null? "not found": o.ToString() );
-                string str = dbCache.GetValue<string>(db, tableName, keys[i].ToString(), "FirstName");
+                string str = dbCache.GetValue<string>(db, tableName, keys[i].ToString(), "AccountName");
                 Console.WriteLine(str == null ? "not found" : str);
-                string val = dbCache.FindValue<string>(db, tableName, keys[i].ToString(), "FirstName");
+                string val = dbCache.FindValue<string>(db, tableName, keys[i].ToString(), "AccountName");
                 Console.WriteLine(val == null ? "not found" : val);
 
                 //GetValueObject(keys[i].ToString());
@@ -138,7 +138,7 @@ namespace Nistec.Caching.Demo.Hosted
             int[] keys = new int[] { 17, 1170, 2793, 2798, 2810, 2835, 11269, 13590, 16259, 19046, 19976, -1 };
             for (int i = 0; i < keys.Length; i++)
             {
-                string val = dbCache.GetValue<string>(db, tableName, keys[i].ToString(), "FirstName");
+                string val = dbCache.GetValue<string>(db, tableName, keys[i].ToString(), "AccountName");
                 Console.WriteLine(val);
             }
         }
@@ -146,20 +146,20 @@ namespace Nistec.Caching.Demo.Hosted
         //Get value from data cache.
         public void GetValue(string key)
         {
-            string val = dbCache.GetValue<string>(db, tableName, key, "FirstName");
+            string val = dbCache.GetValue<string>(db, tableName, key, "AccountName");
             Console.WriteLine(val);
         }
 
         public void GetValueObject(string key)
         {
-            var val = dbCache.GetValue(db, tableName, key, "FirstName");
+            var val = dbCache.GetValue(db, tableName, key, "AccountName");
             Console.WriteLine(val);
         }
 
         //Get value from data cache.
         public void FindValue(string key)
         {
-            string val = dbCache.FindValue<string>(db, tableName, key, "FirstName");
+            string val = dbCache.FindValue<string>(db, tableName, key, "AccountName");
             Console.WriteLine(val);
         }
 

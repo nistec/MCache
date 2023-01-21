@@ -86,17 +86,17 @@ namespace Nistec.Caching.Demo.Remote
 
                 for (int i = 0; i < 20; i++)
                 {
-                    var dt = ContactEntityContext.GetList();
+                    var dt = AccountDocsEntityContext.GetList();
                     api.Set("A-" + sessionId, "contact " + (i + 100).ToString(), new EntitySample() { Id = 123, Name = "entity sample " + i, Creation = DateTime.Now, Value = dt }, timeout);
                 }
                 for (int i = 0; i < 20; i++)
                 {
-                    var dt = ContactEntityContext.GetList();
+                    var dt = AccountDocsEntityContext.GetList();
                     api.Set("B-" + sessionId, "contact " + (i + 100).ToString(), new EntitySample() { Id = 123, Name = "entity sample " + i, Creation = DateTime.Now, Value = dt }, timeout);
                 }
                 for (int i = 0; i < 20; i++)
                 {
-                    var dt = ContactEntityContext.GetList();
+                    var dt = AccountDocsEntityContext.GetList();
                     api.Set("C-" + sessionId, "contact " + (i + 100).ToString(), new EntitySample() { Id = 123, Name = "entity sample " + i, Creation = DateTime.Now, Value = dt }, timeout);
                 }
 

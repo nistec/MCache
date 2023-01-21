@@ -23,7 +23,7 @@ namespace Nistec.Caching.Demo.Remote
         const string TcpSyncHostName = "nistec_cache_sync";
         const int TcpSyncPort = 13001;
 
-        const string entityName = "contactEntity";
+        const string entityName = "accountEntity";
         const string entityKey = "1";
 
         bool keepAlive = false;
@@ -41,7 +41,7 @@ namespace Nistec.Caching.Demo.Remote
             test.GetEntityKeys(entityName);
             test.GetEntityItems();
             if (enableRemove)
-                test.RemoveItem("contactGeneric");
+                test.RemoveItem("accountGeneric");
             test.RefreshItem();
         }
 
@@ -75,27 +75,27 @@ namespace Nistec.Caching.Demo.Remote
             {
                 var api = SyncCacheApi.Get(Protocol);
 
-                api.AddSyncItem("AdventureWorks",
-                    "contactGeneric",
-                    "Person.Contact",
-                    new string[] { "Person.Contact" },
+                api.AddSyncItem("Netcell_Docs",
+                    "accountGeneric",
+                    "Accounts",
+                    new string[] { "Accounts" },
                     SyncType.Interval,
                     TimeSpan.FromMinutes(10),
                     EntitySourceType.Table,
-                    new string[] { "ContactID" });
+                    new string[] { "AccountId" });
 
-                Print(CacheState.ItemAdded.ToString(), "contactGeneric", "AddSyncItem");
+                Print(CacheState.ItemAdded.ToString(), "accountGeneric", "AddSyncItem");
 
-                api.AddSyncItem("AdventureWorks",
-                   "contactEntity",
-                   "Person.Contact",
-                   new string[] { "Person.Contact" },
+                api.AddSyncItem("Netcell_Docs",
+                   "accountEntity",
+                   "Accounts",
+                   new string[] { "Accounts" },
                    SyncType.Interval,
                    TimeSpan.FromMinutes(10),
                    EntitySourceType.Table,
-                   new string[] { "ContactID" });
+                   new string[] { "AccountId" });
 
-                Print(CacheState.ItemAdded.ToString(), "contactEntity", "AddSyncItem");
+                Print(CacheState.ItemAdded.ToString(), "accountEntity", "AddSyncItem");
             }
             catch (Exception ex)
             {
@@ -116,8 +116,8 @@ namespace Nistec.Caching.Demo.Remote
                 if (item != null)
                 {
                     //convert to entity
-                    //ContactEntity entity = EntityContext.Get<ContactEntity>(item);
-                    Print(item["FirstName"], key, "GetValue by EntityContext");
+                    //AccountEntity entity = EntityContext.Get<AccountEntity>(item);
+                    Print(item["AccountName"], key, "GetValue by EntityContext");
                 }
             }
             catch (Exception ex)
@@ -133,7 +133,7 @@ namespace Nistec.Caching.Demo.Remote
             try
             {
                 //var item = api.Get<GenericRecord>(ComplexArgs.Get(entityName, new string[] { key }));
-                var value = api.Get<string>(ComplexArgs.Get(entityName, new string[] { key }),"FirstName");
+                var value = api.Get<string>(ComplexArgs.Get(entityName, new string[] { key }),"AccountName");
                 Print(value, key, "GetValue");
             }
             catch (Exception ex)
@@ -179,7 +179,7 @@ namespace Nistec.Caching.Demo.Remote
         //{
         //    try
         //    {
-        //        var item = api.GetEntity<ContactEntity>(ComplexArgs.Get(entityName, new string[] { key }));
+        //        var item = api.GetEntity<AccountEntity>(ComplexArgs.Get(entityName, new string[] { key }));
 
         //        Print(item, key, "GetEntity");
         //    }
@@ -204,11 +204,11 @@ namespace Nistec.Caching.Demo.Remote
                 else
                 {
                     stream.Position = 0;
-                    var entity = BinarySerializer.DeserializeFromStream<ContactEntity>((NetStream)stream, SerialContextType.GenericEntityAsIEntityType);
+                    var entity = BinarySerializer.DeserializeFromStream<AccountEntity>((NetStream)stream, SerialContextType.GenericEntityAsIEntityType);
                     if (entity == null)
                         Console.WriteLine("item serialization failed " + key);
                     else
-                        Console.WriteLine(entity.FirstName);
+                        Console.WriteLine(entity.AccountName);
 
                 }
             }
@@ -239,7 +239,7 @@ namespace Nistec.Caching.Demo.Remote
         {
             try
             {
-                string syncName = "contactGeneric";
+                string syncName = "accountGeneric";
                 api.Refresh(syncName);
                 Print("item Refreshed", syncName, "RefreshItem");
             }

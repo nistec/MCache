@@ -298,7 +298,8 @@ namespace Nistec.Caching
         {
             object val = message.DecodeBody();
             CacheState state= MergeItem(message.Id, val);
-            return TransStream.Write((int)state, TransType.State);
+            //return TransStream.Write((int)state, state.ToString());//TransType.State);
+            return TransStream.WriteState((int)state, state.ToString());
         }
 
         /// <summary>
@@ -310,7 +311,8 @@ namespace Nistec.Caching
         {
             object val = message.DecodeBody();
             CacheState state = MergeRemoveItem(message.Id, val);
-            return TransStream.Write((int)state, TransType.State);
+            //return TransStream.Write((int)state, state.ToString());//TransType.State);
+            return TransStream.WriteState((int)state, state.ToString());
         }
 
         #endregion

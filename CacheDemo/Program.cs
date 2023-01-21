@@ -10,6 +10,7 @@ using Nistec.Caching.Demo.Entities;
 using Nistec.IO;
 using Nistec.Channels;
 using MControl.Caching.Demo;
+using Nistec.Caching.Demo.RemoteApi;
 
 namespace Nistec.Caching.Demo
 {
@@ -23,8 +24,8 @@ namespace Nistec.Caching.Demo
 
             Console.WriteLine("Start test...");
 
-            //RemoteSyncTest.TestAll();
-            //Console.ReadLine();
+            RemoteCacheSyncTest.TestAll(NetProtocol.Tcp);
+            Console.ReadLine();
 
             //DelayWorker.Run();
             //Console.ReadLine();

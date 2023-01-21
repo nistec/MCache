@@ -6,7 +6,7 @@ using Nistec.Data.Entities;
 
 namespace Nistec.Caching.Demo.Entities
 {
-
+    /*
     [Serializable]
     public class ContactEntity : IEntityItem
     {
@@ -80,4 +80,5 @@ namespace Nistec.Caching.Demo.Entities
         }
         #endregion
     }
+    */
 }

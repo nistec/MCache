@@ -6,18 +6,18 @@
 
     <SyncItem
 	  EntityType="GenericEntity"
-      ConnectionKey="AdventureWorks"
-      EntityName="contactEntity"
-      MappingName="Person.Contact"
-      SourceName="Person.Contact"
+      ConnectionKey="Netcell_Docs"
+      EntityName="accountEntity"
+      MappingName="Accounts"
+      SourceName="Accounts"
       SourceType="Table"
-      EntityKeys="ContactID"
+      EntityKeys="AccountId"
       SyncType="Event"
       SyncTime="00:33:00" />
 
     <SyncItem
       EntityType="GenericEntity"
-        ConnectionKey="AdventureWorks"
+        ConnectionKey="Netcell_Docs"
         EntityName="ContactTypeEntity"
         MappingName="Person.ContactType"
         SourceName="Person.ContactType"
@@ -28,7 +28,7 @@
 
     <SyncItem
       EntityType="GenericEntity"
-        ConnectionKey="AdventureWorks"
+        ConnectionKey="Netcell_Docs"
         EntityName="ProductEntity"
         MappingName="Production.Product"
         SourceName="Production.Product"
@@ -39,7 +39,7 @@
 
     <SyncItem
       EntityType="GenericEntity"
-        ConnectionKey="AdventureWorks"
+        ConnectionKey="Netcell_Docs"
         EntityName="ProductCategoryEntity"
         MappingName="Production.ProductCategory"
         SourceName="Production.ProductCategory"
@@ -50,7 +50,7 @@
 
     <SyncItem
       EntityType="GenericEntity"
-        ConnectionKey="AdventureWorks"
+        ConnectionKey="Netcell_Docs"
         EntityName="CurrencyEntity"
         MappingName="Sales.Currency"
         SourceName="Sales.Currency"

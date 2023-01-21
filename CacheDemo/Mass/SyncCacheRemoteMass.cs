@@ -20,8 +20,8 @@ namespace Nistec.Caching.Demo.Mass
     public class SyncCacheRemoteMass
     {
 
-        static string itemName = "contactEntity";
-        static string printField = "FirstName";
+        static string itemName = "accountEntity";
+        static string printField = "AccountName";
         static int LoopCount = 1000;
         static NetProtocol Protocol = NetProtocol.Tcp;
         static long ElapsedMilliseconds;

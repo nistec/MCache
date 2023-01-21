@@ -13,9 +13,9 @@ namespace Nistec.Caching.Demo.Remote
     public class DataCacheTest
     {
         //int timeout = 30;
-        string db = "AdventureWorks";
-        string tableName = "Contacts";
-        string mappingName = "Person.Contact";
+        string db = "Netcell_Docs";
+        string tableName = "Accounts";
+        string mappingName = "Accounts";
         NetProtocol Protocol;
         DataCacheApi api;
 
@@ -60,26 +60,26 @@ namespace Nistec.Caching.Demo.Remote
                 //EntityType = "GenericEntity"
                 //ConnectionKey = "AdventureWorks"
                 //EntityName = "EmployeeDepartmentHistory"
-                //MappingName = "[HumanResources].[EmployeeDepartmentHistory]"
-                //SourceName = "[HumanResources].[EmployeeDepartmentHistory]"
+                //MappingName = "Accounts_Category"
+                //SourceName = "Accounts_Category"
                 //SourceType = "Table"
                 //EntityKeys = "[EmployeeID],[DepartmentID],[ShiftID],[StartDate]"
                 //SyncType = "Interval"
                 //SyncTime = "00:24:30" />
 
-                var table1 = api.QueryTable(db, "[HumanResources].[EmployeeDepartmentHistory]", 3, null);
-                //var table1 = api.QueryTable(db, "[HumanResources].[EmployeeDepartmentHistory]", "[EmployeeID],[DepartmentID],[ShiftID],[StartDate]", 10, null);
+                var table1 = api.QueryTable(db, "Accounts_Category", 3, null);
+                //var table1 = api.QueryTable(db, "Accounts_Category", "[EmployeeID],[DepartmentID],[ShiftID],[StartDate]", 10, null);
                 foreach (var row in table1.DataSource)
                 {
                     Console.WriteLine(row.Key);
                 }
 
-                var entity = api.QueryEntity(db, "[HumanResources].[EmployeeDepartmentHistory]", "181|7|3|24/03/1999 00:00:00", 3, null);
-                //var entity = api.QueryEntity(db, EntitySourceType.Table, "[HumanResources].[EmployeeDepartmentHistory]", "[EmployeeID],[DepartmentID],[ShiftID],[StartDate]", "181|7|3|24/03/1999 00:00:00", 10, null);
+                var entity = api.QueryEntity(db, "Accounts_Category", "181|7|3|24/03/1999 00:00:00", 3, null);
+                //var entity = api.QueryEntity(db, EntitySourceType.Table, "Accounts_Category", "[EmployeeID],[DepartmentID],[ShiftID],[StartDate]", "181|7|3|24/03/1999 00:00:00", 10, null);
 
                 Console.WriteLine(entity.ToJson());
 
-                var table = api.QueryTable(db, "select * from " + mappingName, "ContactID", 2, null);
+                var table = api.QueryTable(db, "select * from " + mappingName, "AccountId", 2, null);
                 foreach (var row in table.DataSource)
                 {
                     Console.WriteLine(row.Key);
@@ -103,7 +103,7 @@ namespace Nistec.Caching.Demo.Remote
                     dt = cmd.ExecuteCommand<DataTable>("select * from " + mappingName);
                 }
 
-                var state = api.AddTable(db, dt, tableName, mappingName, new string[] { "ContactID" });
+                var state = api.AddTable(db, dt, tableName, mappingName, new string[] { "AccountId" });
                 Console.WriteLine("AddItems: {0} is {1}", tableName, state.ToString());
 
                 GoOn();
@@ -154,7 +154,7 @@ namespace Nistec.Caching.Demo.Remote
                 //if (item == null)
                 //    Console.WriteLine("item not found " + key);
                 //else
-                //    Console.WriteLine(item["FirstName"]);
+                //    Console.WriteLine(item["AccountName"]);
 
                 GoOn();
             }
@@ -170,7 +170,7 @@ namespace Nistec.Caching.Demo.Remote
             try
             {
                 string key = "1";
-                string val = api.GetValue<string>(db, tableName, "1", "FirstName");
+                string val = api.GetValue<string>(db, tableName, "1", "AccountName");
                 Print(val, db + "=>" + tableName + "," + key, "GetValue");
                 // Console.WriteLine(val);
                 GoOn();

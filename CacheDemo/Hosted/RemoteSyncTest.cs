@@ -44,12 +44,12 @@ namespace Nistec.Caching.Demo.Hosted
         public void AddItems()
         {
 
-            SyncCache.AddItem<ContactEntity>("AdventureWorks", "contactGeneric", "Person.Contact", new string[] { "Person.Contact" }, EntitySourceType.Table, new string[] { "ContactID" }, "*", TimeSpan.FromMinutes(10), SyncType.Interval);
+            SyncCache.AddItem<AccountEntity>("Netcell_Docs", "accountGeneric", "Person.Contact", new string[] { "Person.Contact" }, EntitySourceType.Table, new string[] { "AccountId" }, "*", TimeSpan.FromMinutes(10), SyncType.Interval);
 
-            SyncCache.AddItem<GenericRecord>("AdventureWorks", "contactEntity", "Person.Contact", new string[] { "Person.Contact" }, EntitySourceType.Table, new string[] { "ContactID" }, "*", TimeSpan.FromMinutes(10), SyncType.Interval);
+            SyncCache.AddItem<GenericRecord>("Netcell_Docs", "accountEntity", "Person.Contact", new string[] { "Person.Contact" }, EntitySourceType.Table, new string[] { "AccountId" }, "*", TimeSpan.FromMinutes(10), SyncType.Interval);
 
-            //SyncCache.Refresh("contactGeneric");
-            //SyncCache.Refresh("contactEntity");
+            //SyncCache.Refresh("accountGeneric");
+            //SyncCache.Refresh("accountEntity");
 
         }
 
@@ -57,13 +57,13 @@ namespace Nistec.Caching.Demo.Hosted
         public void GetValue()
         {
             string key = "1";
-            var item = SyncCache.GetEntity<ContactEntity>(ComplexArgs.Get("contactGeneric", new string[] { "1" }));
+            var item = SyncCache.GetEntity<AccountEntity>(ComplexArgs.Get("accountGeneric", new string[] { "1" }));
             if (item == null)
                 Console.WriteLine("item not found " + key);
             else
-                Console.WriteLine(item.FirstName);
+                Console.WriteLine(item.AccountName);
 
-            var item2 = SyncCache.Get(ComplexArgs.Get("contactEntity", new string[] { "1" }));
+            var item2 = SyncCache.Get(ComplexArgs.Get("accountEntity", new string[] { "1" }));
             if (item2 == null)
                 Console.WriteLine("item not found " + key);
             else
@@ -71,7 +71,7 @@ namespace Nistec.Caching.Demo.Hosted
 
 
 
-            var val1 = SyncCache.Get(ComplexArgs.Get("contactEntity", new string[] { "1" }), "FirstName");
+            var val1 = SyncCache.Get(ComplexArgs.Get("accountEntity", new string[] { "1" }), "AccountName");
             if (val1 == null)
                 Console.WriteLine("item not found " + key);
             else
@@ -86,22 +86,26 @@ namespace Nistec.Caching.Demo.Hosted
         {
             string key = "1";
 
-            var ts= SyncCache.ExecRemote(new CacheMessage() { Command = SyncCacheCmd.GetRecord, Label = "contactEntity" , Id = "1" });
-            var o1= ts.ReadValue();
+            var ts= SyncCache.ExecRemote(new CacheMessage() { Command = SyncCacheCmd.GetRecord, Label = "accountEntity" , Id = "1" });
+            var o1= ts.ReadValue((message)=> {
+                Console.WriteLine(message);
+            });
             Console.WriteLine(o1);
 
-            var stream = SyncCache.GetRecord(ComplexArgs.Get("contactEntity", new string[] { "1" }));
+            var stream = SyncCache.GetRecord(ComplexArgs.Get("accountEntity", new string[] { "1" }));
             using (var streamer = new Serialization.BinaryStreamer(stream))
             {
                 var dic= streamer.ReadGenericEntityAsDictionary(false);
                 Console.WriteLine(dic);
             }
 
-            var ts2 = SyncCache.ExecRemote(new CacheMessage() { Command = SyncCacheCmd.GetRecord, Label = "contactGeneric", Id = "1" });
-            var o2 = ts.ReadValue();
+            var ts2 = SyncCache.ExecRemote(new CacheMessage() { Command = SyncCacheCmd.GetRecord, Label = "accountGeneric", Id = "1" });
+            var o2 = ts.ReadValue((message) => {
+                Console.WriteLine(message);
+            });
             Console.WriteLine(o1);
 
-            var stream2 = SyncCache.GetRecord(ComplexArgs.Get("contactGeneric", new string[] { "1" }));
+            var stream2 = SyncCache.GetRecord(ComplexArgs.Get("accountGeneric", new string[] { "1" }));
             using (var streamer = new Serialization.BinaryStreamer(stream2))
             {
                 var dic = streamer.ReadGenericEntityAsDictionary(false);
@@ -110,36 +114,36 @@ namespace Nistec.Caching.Demo.Hosted
 
 
 
-            var item = SyncCache.GetGenericRecord(ComplexArgs.Get("contactEntity", new string[] { "1" }));
+            var item = SyncCache.GetGenericRecord(ComplexArgs.Get("accountEntity", new string[] { "1" }));
             if (item == null)
                 Console.WriteLine("item not found " + key);
             else
-                Console.WriteLine(item["FirstName"]);
+                Console.WriteLine(item["AccountName"]);
         }
 
 
         //Remove item from sync cache.
         public void RemoveItem()
         {
-            SyncCache.RemoveItem("contactGeneric");
+            SyncCache.RemoveItem("accountGeneric");
         }
 
         //Refresh sync item which mean reload sync item from Db.
         public void RefreshItem()
         {
-            SyncCache.Refresh("contactGeneric");
+            SyncCache.Refresh("accountGeneric");
         }
         //get entity from sync cache as EntityStream.
         public void GetEntityStream()
         {
-            var keyInfo= ComplexArgs.Get("contactEntity", new string[] { "1" });
+            var keyInfo= ComplexArgs.Get("accountEntity", new string[] { "1" });
             var item = SyncCache.GetTable(keyInfo.Prefix);
             var stream = item.GetItemStream(keyInfo.Suffix);
-            ContactEntityContext context = new ContactEntityContext();
+            AccountDocsEntityContext context = new AccountDocsEntityContext();
             context.EntityRead(stream,null);
-            ContactEntity entity = context.Entity;
+            AccountEntity entity = context.Entity;
 
-            Console.WriteLine(entity.FirstName);
+            Console.WriteLine(entity.AccountName);
         }
         
     }

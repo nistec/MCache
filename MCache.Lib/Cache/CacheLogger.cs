@@ -92,6 +92,7 @@ namespace Nistec.Caching
 
         internal static int logCapacity = 1000;
         internal static bool debugEnabled = true;
+        internal static bool logfileEnabled = false;
         #region  members
 
         //int logCapacity = 1000;
@@ -115,6 +116,7 @@ namespace Nistec.Caching
         {
             logCapacity = CacheSettings.LogMonitorCapacityLines;
             debugEnabled = CacheSettings.LogMonitorDebugEnabled;
+            logfileEnabled = CacheSettings.EnableLog;
         }
         /// <summary>
         /// Read log as string array.
@@ -244,6 +246,7 @@ namespace Nistec.Caching
             // Call EndInvoke to wait for the asynchronous call to complete,
             // and to retrieve the results.
             caller.EndInvoke(result);
+
         }
 
         /// <summary>
@@ -360,6 +363,24 @@ namespace Nistec.Caching
         {
             Logger.WriteLog(LoggerLevel.Error, message, args);
         }
+        /// <summary>
+        /// Exception Format
+        /// </summary>
+        /// <param name="message"></param>
+        /// <param name="ex"></param>
+        /// <param name="enableInner"></param>
+        /// <param name="enableTrace"></param>
+        /// <returns></returns>
+        public static string ExceptionFormat(string message, Exception ex, bool enableInner = true, bool enableTrace = true)
+        {
+            message += " Message: " + ex.Message;
+            if (enableInner)
+                message += (ex.InnerException != null ? ", Inner: " + ex.InnerException.Message : "");
+            if(enableTrace)
+                message+= ", Trace: " + ex.StackTrace;
+            return message; 
+        }
+
 
         void WriteLog(LoggerLevel level, string text, params object[] args)
         {
@@ -403,25 +424,26 @@ namespace Nistec.Caching
             {
                 case LoggerLevel.Error:
                     Log(level.ToString() + "-" + msg);
-                    if (CacheSettings.EnableLog)
+                    if (logfileEnabled)
                         ILog.Error(msg); break;
                 case LoggerLevel.Debug:
                     if (debugEnabled)
                         Log(level.ToString() + "-" + msg);
-                    if (CacheSettings.EnableLog)
+                    if (logfileEnabled)
                         ILog.Debug(msg); break;
                 case LoggerLevel.Info:
                     Log(level.ToString() + "-" + msg);
-                    if (CacheSettings.EnableLog)
+                    if (logfileEnabled)
                         ILog.Info(msg); break;
                 case LoggerLevel.Warn:
                     Log(level.ToString() + "-" + msg);
-                    if (CacheSettings.EnableLog)
+                    if (logfileEnabled)
                         ILog.Warn(msg); break;
                     //case LoggerLevel.Trace:
                     //    Netlog.Trace(msg); break;
             }
             Console.WriteLine(msg);
+
         }
 
         ///// <summary>

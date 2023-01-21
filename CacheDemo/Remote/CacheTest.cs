@@ -52,7 +52,7 @@ namespace Nistec.Caching.Demo.Remote
             try
             {
                 CacheState state = CacheState.UnKnown;
-                var dt = ContactEntityContext.GetList();
+                var dt = AccountDocsEntityContext.GetList();
                 for (int i = 0; i < 1000; i++)
                 {
                     state = api.Add("auto item key " + i.ToString(), new EntitySample() { Id = i, Name = "entity sample " + i.ToString(), Creation = DateTime.Now, Value = dt }, timeout);

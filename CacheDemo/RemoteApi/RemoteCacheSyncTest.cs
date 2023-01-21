@@ -22,7 +22,7 @@ namespace Nistec.Caching.Demo.RemoteApi
         const string TcpSyncHostName = "nistec_cache_bundle";
         const int TcpSyncPort = 13001;
 
-        const string entityName = "contactEntity";
+        const string entityName = "accountEntity";
         const string entityKey = "1";
         SyncCacheApi api;
 
@@ -51,6 +51,14 @@ namespace Nistec.Caching.Demo.RemoteApi
             }
         }
 
+        public static void GetAllEntityNames(NetProtocol protocol)
+        {
+            RemoteCacheSyncTest test = new RemoteCacheSyncTest() { Protocol = protocol, api = SyncCacheApi.Get(protocol) };
+
+            test.GetAllEntityNames();
+            
+        }
+
         public static void TestAll(NetProtocol protocol)
         {
             RemoteCacheSyncTest test = new RemoteCacheSyncTest() { Protocol = protocol , api= SyncCacheApi.Get(protocol) };
@@ -59,8 +67,8 @@ namespace Nistec.Caching.Demo.RemoteApi
             test.GetValue("1");
             test.GetRecord("1");
             test.GetEntity("1");
-            test.GetAs("contactEntity", "1");
-            test.RemoveItem("contactGeneric");
+            test.GetAs("accountEntity", "1");
+            test.RemoveItem("accountGeneric");
             test.RefreshItem();
         }
 
@@ -70,15 +78,14 @@ namespace Nistec.Caching.Demo.RemoteApi
         {
             try
             {
-                var value = api.Get<string>(entityName, new string[] { key },"FirstName");
+                var value = api.Get<string>(entityName, new string[] { key },"AccountName");
                 if (value == null)
                     Console.WriteLine("item not found " + key);
                 else
                 {
                     Console.WriteLine(value);
                 }
-
-                var item = api.GetEntity<ContactEntity>(entityName, new string[] { key });
+                var item = api.GetEntity<AccountEntity>(entityName, new string[] { key });
                 if (item == null)
                     Console.WriteLine("item not found " + key);
                 else
@@ -86,8 +93,8 @@ namespace Nistec.Caching.Demo.RemoteApi
                     Console.WriteLine(item);
 
                     //convert to entity
-                    ContactEntity entity = new EntityContext<ContactEntity>(item).Entity;
-                    Console.WriteLine(entity.FirstName);
+                    AccountEntity entity = new EntityContext<AccountEntity>(item).Entity;
+                    Console.WriteLine(entity.AccountName);
                 }
 
 
@@ -108,7 +115,7 @@ namespace Nistec.Caching.Demo.RemoteApi
                 if (item == null)
                     Console.WriteLine("item not found " + key);
                 else
-                    Console.WriteLine(item["FirstName"]);
+                    Console.WriteLine(item["AccountName"]);
             }
             catch (Exception ex)
             {
@@ -121,11 +128,11 @@ namespace Nistec.Caching.Demo.RemoteApi
         {
             try
             {
-                var item = api.GetEntity<ContactEntity>(entityName, new string[] { key });
+                var item = api.GetEntity<AccountEntity>(entityName, new string[] { key });
                 if (item == null)
                     Console.WriteLine("item not found " + key);
                 else
-                    Console.WriteLine(item.FirstName);
+                    Console.WriteLine(item.AccountName);
             }
             catch (Exception ex)
             {
@@ -139,7 +146,7 @@ namespace Nistec.Caching.Demo.RemoteApi
         {
             try
             {
-                //get item as ContactEntity
+                //get item as AccountEntity
                 var item = api.GetAs(entityName, new string[] { key });
                 if (item == null)
                     Console.WriteLine("item not found " + key);
@@ -149,7 +156,7 @@ namespace Nistec.Caching.Demo.RemoteApi
                     if (gr == null)
                         Console.WriteLine("Deserialize  error");
                     else
-                        Console.WriteLine(gr["FirstName"]);
+                        Console.WriteLine(gr["AccountName"]);
                 }
             }
             catch (Exception ex)
@@ -178,7 +185,7 @@ namespace Nistec.Caching.Demo.RemoteApi
         {
             try
             {
-                api.Refresh("contactGeneric");
+                api.Refresh("accountGeneric");
             }
             catch (Exception ex)
             {

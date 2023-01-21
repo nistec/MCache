@@ -245,7 +245,7 @@ namespace Nistec.Caching.Remote
             var ts = SendDuplexStream(message);
             if (ts == null)
                 return defaultValue;
-            return TransReader.ReadValue<T>(ts.GetStream(), defaultValue);
+            return TransStream.ReadValue<T>(ts.GetStream(), defaultValue);
         }
 
         /// <summary>

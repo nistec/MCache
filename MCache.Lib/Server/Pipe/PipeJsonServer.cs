@@ -32,6 +32,7 @@ using System.Threading.Tasks;
 using Nistec.Caching.Config;
 using System.Net.Sockets;
 using Nistec.Serialization;
+using Nistec.Runtime;
 
 namespace Nistec.Caching.Server.Pipe
 {
@@ -147,10 +148,10 @@ namespace Nistec.Caching.Server.Pipe
             var ack= AgentManager.ExecCommand(cm);
             if (ack == null)
             {
-                return TransStream.Write("Invalid result for message: " + message.Message, TransType.Error);
+                return TransStream.WriteState(-1,"Invalid result for message: " + message.Message);//, TransType.Error);
             }
             //return ack.ToJsonStream();
-            string json = TransReader.ReadJson(ack.GetStream());
+            string json = TransStream.ReadJson(ack.GetStream());
             return TransStream.Write(json, TransType.Json);
 
 

@@ -1,0 +1,18 @@
+   <connectionStrings>
+
+      <add name="cnn_pro" connectionString="Data Source=212.199.65.22; Initial Catalog=NetcellSB; uid=netcell;password=Net$5678; Connection Timeout=30" providerName="System.Data.SqlClient"/>
+      <add name="cnn_proxy" connectionString="Data Source=212.199.65.22; Initial Catalog=Netcell_Proxy; uid=netcell;password=Net$5678; Connection Timeout=30" providerName="System.Data.SqlClient"/>
+      <add name="netcell_Logs" connectionString="Data Source=212.199.65.22; Initial Catalog=Netcell_Logs; uid=netcell;password=Net$5678; Connection Timeout=30" providerName="System.Data.SqlClient"/>
+      <add name="cnn_Trace" connectionString="Data Source=212.199.65.22; Initial Catalog=Nistec_Trace; uid=netcell;password=Net$5678; Connection Timeout=30" providerName="System.Data.SqlClient"/>
+      <add name="cnn_web" connectionString="Data Source=212.199.65.22; Initial Catalog=Netcell_Web; uid=netcell;password=Net$5678; Connection Timeout=30" providerName="System.Data.SqlClient"/>
+      <add name="netcell_services" connectionString="Data Source=212.199.65.22; Initial Catalog=Netcell_Services; uid=netcell;password=Net$5678; Connection Timeout=30" providerName="System.Data.SqlClient"/>
+      <add name="netcell_system" connectionString="Data Source=212.199.65.22; Initial Catalog=Netcell_Team; uid=netcell;password=Net$5678; Connection Timeout=30" providerName="System.Data.SqlClient"/>
+      <add name="Default" connectionString="Data Source=212.199.65.22; Initial Catalog=NetcellSB; uid=netcell;password=Net$5678; Connection Timeout=30" providerName="System.Data.SqlClient"/>
+      <add name="Netcell_Team" connectionString="Data Source=212.199.65.22; Initial Catalog=Netcell_Team; uid=netcell;password=Net$5678; Connection Timeout=30" providerName="System.Data.SqlClient"/>
+      <add name="Netcell_Docs" connectionString="Data Source=212.199.65.22; Initial Catalog=Netcell_Docs; uid=netcell;password=Net$5678; Connection Timeout=30" providerName="System.Data.SqlClient"/>
+      <add name="Netcell_Stg" connectionString="Data Source=212.199.65.22; Initial Catalog=Netcell_Stg; uid=netcell;password=Net$5678; Connection Timeout=30" providerName="System.Data.SqlClient"/>
+      <!--
+      <add name="AdventureWorks" connectionString="Data Source=62.219.21.58; Initial Catalog=AdventureWorks; uid=netcell; Password=Net5678; Connection Timeout=30" providerName="System.Data.SqlClient" />
+      <add name="EnterpriseDB" connectionString="Data Source=62.219.21.58; Initial Catalog=EnterpriseDB; uid=netcell; Password=Net5678; Connection Timeout=30;" providerName="System.Data.SqlClient" />
+	-->
+    </connectionStrings>

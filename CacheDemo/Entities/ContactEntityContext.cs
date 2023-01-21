@@ -10,7 +10,7 @@ using Nistec.Caching.Demo.DB;
 
 namespace Nistec.Caching.Demo.Entities
 {
-
+    /*
     [Serializable]
     [Entity(EntityName = "Contact", MappingName = "Person.Contact", ConnectionKey = "AdventureWorks", EntityKey = new string[] { "ContactID" })]
     public class ContactEntityContext : EntityContext<ContactEntity>
@@ -37,9 +37,9 @@ namespace Nistec.Caching.Demo.Entities
         public static DataTable GetList()
         {
             DataTable dt = null;
-            using (IDbCmd cmd = AdventureWorks.Instance.NewCmd())
+            using (IDbCmd cmd = Netcell_Docs.Instance.NewCmd())
             {
-                dt = cmd.ExecuteCommand<DataTable>("select top 10 * from Person.Contact", true);
+                dt = cmd.ExecuteCommand<DataTable>("select top 10 * from Cms_Master", true);
             }
 
             return dt;
@@ -51,7 +51,7 @@ namespace Nistec.Caching.Demo.Entities
 
         protected override void EntityBind()
         {
-            base.EntityDb.EntityCulture = AdventureWorksResources.GetCulture();
+            base.EntityDb.EntityCulture = NetcellResources.GetCulture();
             //If EntityAttribute not define you can initilaize the entity here
             //base.InitEntity<AdventureWorks>("Contact", "Person.Contact", EntityKeys.Get("ContactID"));
         }
@@ -62,11 +62,11 @@ namespace Nistec.Caching.Demo.Entities
 
         public void Test()
         {
-            string str = base.EntityDb.DoCommand<string>("select EmailAddress from Person.Contact where ContactID=@ContactID", new DataParameter[] { new DataParameter("ContactID", 2) }, CommandType.Text);
+            string str = base.EntityDb.DoCommand<string>("select Email from Accounta where ContactID=@ContactID", new DataParameter[] { new DataParameter("ContactID", 2) }, CommandType.Text);
             Console.WriteLine(str);
 
         }
         #endregion
     }
-
+    */
 }

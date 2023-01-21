@@ -70,7 +70,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DB\NetcellDb.cs" />
     <Compile Include="DelayWorker.cs" />
+    <Compile Include="Entities\AccountDocsEntityContext.cs" />
     <Compile Include="Hosted\RemoteSyncTest.cs" />
     <Compile Include="Mass\CacheRemoteMass.cs" />
     <Compile Include="Mass\SyncCacheRemoteMass.cs" />
@@ -85,10 +87,6 @@
     <Compile Include="Hosted\HostedSessionTest.cs" />
     <Compile Include="Hosted\HostedSyncTest.cs" />
     <Compile Include="Entities\EntitySample.cs" />
-    <Compile Include="DB\AdventureWorks.cs" />
-    <Compile Include="Entities\ContactEntity.cs" />
-    <Compile Include="Entities\ContactEntityContext.cs" />
-    <Compile Include="DB\Norhwind.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

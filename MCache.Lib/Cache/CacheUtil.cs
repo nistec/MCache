@@ -42,13 +42,13 @@ namespace Nistec.Caching
     /// </summary>
     public static class CacheUtil
     {
-        internal static TransType ToTransType(CacheState state)
-        {
-            if ((int)state >= 500)
-                return TransType.Error;
-            else
-                return TransType.Info;
-        }
+        //internal static TransType ToTransType(CacheState state)
+        //{
+        //    if ((int)state >= 500)
+        //        return TransType.Error;
+        //    else
+        //        return TransType.Info;
+        //}
         internal static MessageState ToMessageState(CacheState state)
         {
 
@@ -67,7 +67,7 @@ namespace Nistec.Caching
                 case CacheState.SerializationError:
                     return MessageState.SerializeError;
                 case CacheState.CommandNotSupported:
-                    return MessageState.NotSupportedError;
+                    return MessageState.Unsupported;
 
 
                 case CacheState.AddItemFailed:

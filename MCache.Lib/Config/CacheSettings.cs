@@ -64,8 +64,9 @@ namespace Nistec.Caching.Config
         public static int SessionTimeout { get; private set; } = CacheDefaults.DefaultSessionTimeout;
         /// <summary>MaxSessionTimeout.</summary>
         public static int MaxSessionTimeout { get; private set; } = 1440;
-        /// <summary>EnableLog.</summary>
+        /// <summary>EnableLog file.</summary>
         public static bool EnableLog = false;
+ 
         /// <summary>LogActionDebugEnabled.</summary>
         public static bool LogMonitorDebugEnabled { get; private set; } = true;
         /// <summary>LogActionCapacity.</summary>
