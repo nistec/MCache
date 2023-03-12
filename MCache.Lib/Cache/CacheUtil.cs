@@ -49,7 +49,7 @@ namespace Nistec.Caching
         //    else
         //        return TransType.Info;
         //}
-        internal static MessageState ToMessageState(CacheState state)
+        internal static ChannelState ToMessageState(CacheState state)
         {
 
             switch (state)
@@ -58,16 +58,16 @@ namespace Nistec.Caching
                 case CacheState.ItemChanged:
                 case CacheState.ItemRemoved:
                 case CacheState.Ok:
-                    return MessageState.Ok;
+                    return ChannelState.Ok;
 
                 case CacheState.NotFound:
-                    return MessageState.ItemNotFound;
+                    return ChannelState.ItemNotFound;
                 case CacheState.UnexpectedError:
-                    return MessageState.UnexpectedError;
+                    return ChannelState.UnexpectedError;
                 case CacheState.SerializationError:
-                    return MessageState.SerializeError;
+                    return ChannelState.SerializeError;
                 case CacheState.CommandNotSupported:
-                    return MessageState.Unsupported;
+                    return ChannelState.Unsupported;
 
 
                 case CacheState.AddItemFailed:
@@ -75,26 +75,26 @@ namespace Nistec.Caching
                 case CacheState.SetItemFailed:
                 case CacheState.RemoveItemFailed:
                 case CacheState.ItemAllreadyExists:
-                    return MessageState.Failed;
+                    return ChannelState.Failed;
 
 
 
                 case CacheState.InvalidItem:
                 case CacheState.InvalidSession:
                 case CacheState.ArgumentsError:
-                    return MessageState.ArgumentsError;
+                    return ChannelState.ArgumentsError;
 
                 case CacheState.CacheNotReady:
                 case CacheState.CacheIsFull:
-                    return MessageState.OperationError;
+                    return ChannelState.OperationError;
 
 
                 default:
 
                     if ((int)state >= 500)
-                        return MessageState.Failed;
+                        return ChannelState.Failed;
                     else
-                        return MessageState.Ok;
+                        return ChannelState.Ok;
             }
         }
         /// <summary>
