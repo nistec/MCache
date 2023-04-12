@@ -177,7 +177,7 @@ namespace Nistec.Caching.Server.Http
                 return null;
             }
 
-            string res=ts.ReadString();
+            string res=ts.ReadToText();
             return res;
         }
 
