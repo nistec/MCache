@@ -71,13 +71,12 @@ namespace Nistec.Caching.Remote
         }
 
         #region do custom
-        public object DoCustom(string command, string entityName, string primaryKey, string field = null,  object value = null, string args = null)
+        public object DoCustom(string command, string entityName, string primaryKey, string field = null,  object value = null, string kvArgs = null)
         {
-            NameValueArgs valArgs = null;
-            if (!string.IsNullOrEmpty(args))
+            string[] arrayArgs = null;
+            if (!string.IsNullOrEmpty(kvArgs))
             {
-                var argsArray = KeySet.SplitTrim(args);
-                valArgs = NameValueArgs.Get(argsArray);
+                arrayArgs = KeySet.SplitTrim(kvArgs);
             }
 
             if (primaryKey != null)
@@ -135,16 +134,15 @@ namespace Nistec.Caching.Remote
         }
 
 
-        public string DoHttpJson(string command, string entityName,string primaryKey, string field=null, object value = null, string keyValueArgs = null, bool pretty = false)
+        public string DoHttpJson(string command, string entityName,string primaryKey, string field=null, object value = null, string kvArgs = null, bool pretty = false)
         {
-            NameValueArgs valArgs = null;
-            if (!string.IsNullOrEmpty(keyValueArgs))
+            string[] arrayArgs = null;
+            if (!string.IsNullOrEmpty(kvArgs))
             {
-                var argsArray = KeySet.SplitTrim(keyValueArgs);
-                valArgs = NameValueArgs.Get(argsArray);
+                arrayArgs = KeySet.SplitTrim(kvArgs);
             }
 
-            if(primaryKey != null)
+            if (primaryKey != null)
             {
                 primaryKey = primaryKey.Replace(",", KeySet.Separator);
             }
@@ -165,7 +163,7 @@ namespace Nistec.Caching.Remote
                             throw new ArgumentNullException("entityName is required");
                         }
                         //var ck = ComplexArgs.Parse(itemName);
-                        return SendHttpJsonDuplex(new CacheMessage() { Command= cmd, Label = entityName, Id= primaryKey, Args= MessageStream.CreateArgs(KnowsArgs.Column, field) }, pretty);
+                        return SendHttpJsonDuplex(new CacheMessage() { Command= cmd, Label = entityName, CustomId = primaryKey, Args= NameValueArgs.Create(KnownArgs.Column, field) }, pretty);
                     }
                 case SyncCacheCmd.GetAllEntityNames:
                     {
@@ -182,7 +180,7 @@ namespace Nistec.Caching.Remote
                         }
                         //var ck = ComplexArgs.Parse(itemName);
                         //return SendJsonDuplex(cmd, ComplexKey.Get(entityName, primeryKey), pretty);
-                        return SendHttpJsonDuplex(new CacheMessage() { Command = cmd, Label = entityName, Id = primaryKey }, pretty);
+                        return SendHttpJsonDuplex(new CacheMessage() { Command = cmd, Label = entityName, CustomId = primaryKey }, pretty);
                     }
                 case SyncCacheCmd.FindEntity:
                     {
@@ -190,7 +188,7 @@ namespace Nistec.Caching.Remote
                         {
                             throw new ArgumentNullException("entityName is required");
                         }
-                        return SendHttpJsonDuplex(new CacheMessage() { Command=cmd, Label = entityName, Args= valArgs });
+                        return SendHttpJsonDuplex(new CacheMessage() { Command=cmd, Label = entityName, Args= NameValueArgs.Create(arrayArgs) });
                     }
                 case SyncCacheCmd.GetEntityPrimaryKey:
                 case SyncCacheCmd.GetItemsReport:
@@ -290,8 +288,8 @@ namespace Nistec.Caching.Remote
             {
                 Command = SyncCacheCmd.Get,
                 Label = info.Prefix,// info.ToString(),
-                Id = info.Suffix,
-                Args = MessageStream.CreateArgs(KnowsArgs.Column,field)
+                CustomId = info.Suffix,
+                Args = NameValueArgs.Create(KnownArgs.Column,field)
             })
             {
                 return SendDuplexStreamValue(message, OnFault);
@@ -319,8 +317,8 @@ namespace Nistec.Caching.Remote
             {
                 Command = SyncCacheCmd.Get,
                 Label = entityName,// ComplexArgs.GetInfo(entityName, keys),
-                Id = KeySet.Join(keys),
-                Args = MessageStream.CreateArgs(KnowsArgs.Column, field)
+                CustomId = KeySet.Join(keys),
+                Args = NameValueArgs.Create(KnownArgs.Column, field)
             })
             {
                 return SendDuplexStreamValue(message, OnFault);
@@ -343,8 +341,8 @@ namespace Nistec.Caching.Remote
             {
                 Command = SyncCacheCmd.Get,
                 Label = info.Prefix,
-                Id=info.Suffix,
-                Args = MessageStream.CreateArgs(KnowsArgs.Column, field)
+                CustomId = info.Suffix,
+                Args = NameValueArgs.Create(KnownArgs.Column, field)
             })
             {
                 return SendDuplexStream<T>(message, OnFault);
@@ -371,8 +369,8 @@ namespace Nistec.Caching.Remote
             {
                 Command = SyncCacheCmd.Get,
                 Label = entityName,//ComplexArgs.GetInfo(entityName, keys)
-                Id = KeySet.Join(keys),
-                Args = MessageStream.CreateArgs(KnowsArgs.Column, field)
+                CustomId = KeySet.Join(keys),
+                Args = NameValueArgs.Create(KnownArgs.Column, field)
             })
             {
                 return SendDuplexStream<T>(message, OnFault);
@@ -473,7 +471,7 @@ namespace Nistec.Caching.Remote
             {
                 Command = SyncCacheCmd.GetRecord,
                 Label = info.Prefix,// info.ToString(),
-                Id = info.Suffix
+                CustomId = info.Suffix
             })
             {
                 return SendDuplexStream<Dictionary<string, object>>(message, OnFault);
@@ -500,7 +498,7 @@ namespace Nistec.Caching.Remote
             {
                 Command = SyncCacheCmd.GetRecord,
                 Label = entityName,
-                Id = KeySet.Join(keys)
+                CustomId = KeySet.Join(keys)
             })
             {
                 return SendDuplexStream<Dictionary<string, object>>(message, OnFault);
@@ -523,7 +521,7 @@ namespace Nistec.Caching.Remote
                 Command = SyncCacheCmd.GetAs,
                 Label = info.Prefix,
                 //TypeName = typeof(NetStream).FullName,
-                Id = info.Suffix
+                CustomId = info.Suffix
             })
             {
                 return SendDuplexStream<NetStream>(message, OnFault);
@@ -551,7 +549,7 @@ namespace Nistec.Caching.Remote
                 Command = SyncCacheCmd.GetAs,
                 Label = entityName,
                 //TypeName = typeof(NetStream).FullName,
-                Id = KeySet.Join(keys)
+                CustomId = KeySet.Join(keys)
             })
             {
                 return SendDuplexStream<NetStream>(message, OnFault);
@@ -593,7 +591,7 @@ namespace Nistec.Caching.Remote
             {
                 Command = SyncCacheCmd.GetEntity,
                 Label = info.Prefix,
-                Id = info.Suffix
+                CustomId = info.Suffix
             })
             {
                 return SendDuplexStream<T>(message, OnFault);
@@ -751,15 +749,15 @@ namespace Nistec.Caching.Remote
             {
                 Command = SyncCacheCmd.AddSyncItem,
                 Label = db,
-                Args = MessageStream.CreateArgs(
-                KnowsArgs.ConnectionKey, db,
-                KnowsArgs.TableName, tableName,
-                KnowsArgs.MappingName, mappingName,
-                KnowsArgs.SourceName, NameValueArgs.JoinArg(sourceName),
-                KnowsArgs.SyncType, ((int)syncType).ToString(),
-                KnowsArgs.SyncTime, ts.ToString(),
-                KnowsArgs.EntityKeys, NameValueArgs.JoinArg(entityKeys),
-                KnowsArgs.SourceType, ((int)sourceType).ToString())//KnowsArgs.EntityType,entityType)
+                Args = NameValueArgs.Create(
+                KnownArgs.ConnectionKey, db,
+                KnownArgs.TableName, tableName,
+                KnownArgs.MappingName, mappingName,
+                KnownArgs.SourceName, NameValueArgs.JoinArg(sourceName),
+                KnownArgs.SyncType, ((int)syncType).ToString(),
+                KnownArgs.SyncTime, ts.ToString(),
+                KnownArgs.EntityKeys, NameValueArgs.JoinArg(entityKeys),
+                KnownArgs.SourceType, ((int)sourceType).ToString())//KnownArgs.EntityType,entityType)
             })
             {
                 SendOut(message);
@@ -903,7 +901,7 @@ namespace Nistec.Caching.Remote
             using (var message = new CacheMessage()
             {
                 Command = SyncCacheCmd.Reply,
-                Id = text
+                CustomId = text
             })
             {
                 return SendDuplexStream<string>(message, OnFault);
@@ -931,7 +929,7 @@ namespace Nistec.Caching.Remote
             {
                 Command = SyncCacheCmd.Contains,
                 Label = entityName,
-                Id = KeySet.Join(keys)
+                CustomId = KeySet.Join(keys)
             })
             {
                 return SendDuplexState(message) == CacheState.Ok;
@@ -947,7 +945,7 @@ namespace Nistec.Caching.Remote
             {
                 Command = SyncCacheCmd.Contains,
                 Label = keyInfo.Prefix,
-                Id = keyInfo.Suffix
+                CustomId = keyInfo.Suffix
             })
             {
                 return SendDuplexState(message) == CacheState.Ok;

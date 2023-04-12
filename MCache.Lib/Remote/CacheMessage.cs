@@ -53,18 +53,47 @@ namespace Nistec.Caching.Remote
         /// </summary>
         public CacheMessage() : base() { Formatter = MessageStream.DefaultFormatter; }
 
-        /// <summary>
-        /// Initialize a new instance of cache message.
-        /// </summary>
-        /// <param name="body"></param>
-        public CacheMessage(object body) : this()
+        //public static CacheMessage CreateWithBody(object body)
+        //{
+        //    var message = new CacheMessage();
+        //    message.Formatter = MessageStream.DefaultFormatter;
+        //    if (body is NetStream)
+        //        message.EntityRead((NetStream)body, null);
+        //    else
+        //        message.SetBody(body);
+        //    return message;
+        //}
+        ///// <summary>
+        ///// Initialize a new instance of cache message.
+        ///// </summary>
+        ///// <param name="body"></param>
+        //public CacheMessage(NetStream body) : base(body)
+        //{
+        //    Formatter = MessageStream.DefaultFormatter;
+        //    if (body != null)
+        //        EntityRead((NetStream)body, null);
+        //}
+        public CacheMessage(HttpRequestInfo request) : base(request)
         {
-            Formatter = MessageStream.DefaultFormatter;
-            if (body is NetStream)
-                EntityRead((NetStream)body, null);
-            else
-                SetBody(body);
         }
+
+        public CacheMessage(Stream stream, IBinaryStreamer streamer):base(stream, streamer)
+        {
+            
+        }
+
+        ///// <summary>
+        ///// Initialize a new instance of cache message.
+        ///// </summary>
+        ///// <param name="body"></param>
+        //public CacheMessage(object body) : this()
+        //{
+        //    Formatter = MessageStream.DefaultFormatter;
+        //    if (body is NetStream)
+        //        EntityRead((NetStream)body, null);
+        //    else
+        //        SetBody(body);
+        //}
 
         ///// <summary>
         ///// Initialize a new instance of cache message.
@@ -77,7 +106,7 @@ namespace Nistec.Caching.Remote
         //    Formatter = MessageStream.DefaultFormatter;
         //}
 
-        
+
 
         /// <summary>
         /// Initialize a new instance of cache message.
@@ -90,7 +119,7 @@ namespace Nistec.Caching.Remote
             : this()
         {
             Command = command;
-            Id = id;
+            CustomId = id;
             Expiration = expiration;
             SetBody(value);
         }
@@ -113,27 +142,27 @@ namespace Nistec.Caching.Remote
         //}
 
         internal CacheMessage(MessageStream message)
-            : this()
+            : base(message)
         {
-            if(message==null)
-            {
-                throw new ArgumentNullException("message");
-            }
-            Command = message.Command;
-            Id = message.Id;
-            Expiration = message.Expiration;
-            Label = message.Label;
-            GroupId = message.GroupId;
-            BodyStream = message.BodyStream;
-            TypeName = message.TypeName;
-            Args = message.Args;
-            Formatter = message.Formatter;
-            //IsDuplex = message.IsDuplex;
-            DuplexType = message.DuplexType;
-            Modified = message.Modified;
-            Sender = message.Sender;
-            //Size = message.Size;
-            TransformType = message.TransformType;
+            //if(message==null)
+            //{
+            //    throw new ArgumentNullException("message");
+            //}
+            //Command = message.Command;
+            //CustomId = message.CustomId;
+            //SessionId = message.SessionId;
+            //Expiration = message.Expiration;
+            //Label = message.Label;
+            //BodyStream = message.BodyStream;
+            //TypeName = message.TypeName;
+            //Args = message.Args;
+            //Formatter = message.Formatter;
+            ////IsDuplex = message.IsDuplex;
+            //DuplexType = message.DuplexType;
+            //Modified = message.Modified;
+            //Sender = message.Sender;
+            ////Size = message.Size;
+            //TransformType = message.TransformType;
         }
         #endregion   
 
@@ -324,6 +353,16 @@ namespace Nistec.Caching.Remote
 
         #region extension
 
+        [NoSerialize]
+        public string CacheKey { get { return CustomId; } internal set { CustomId = value; } }
+        [NoSerialize]
+        public string TableName { get { return Label; } internal set { Label = value; } }
+        [NoSerialize]
+        public string DbName { get { return Args[KnownArgs.DbName]; } internal set { Args[KnownArgs.DbName] = value; } }
+        [NoSerialize]
+        public string MappingName { get { return Args[KnownArgs.MappingName]; } internal set { Args[KnownArgs.MappingName] = value; } }
+
+        [NoSerialize]
         internal string CommandType
         {
             get
@@ -331,7 +370,7 @@ namespace Nistec.Caching.Remote
                 return Command.Substring(0, 5);
             }
         }
-
+        /*
         /// <summary>
         /// Convert <see cref="IDictionary"/> to <see cref="MessageStream"/>.
         /// </summary>
@@ -343,7 +382,7 @@ namespace Nistec.Caching.Remote
             {
                 Command = dict.Get<string>("Command"),
                 Sender = dict.Get<string>("Sender"),
-                Id = dict.Get<string>("Id"),
+                Identifier = dict.Get<string>("Identifier"),
                 Args = dict.Get<NameValueArgs>("Args"),
                 BodyStream = dict.Get<NetStream>("Body", null),//, ConvertDescriptor.Implicit),
                 Expiration = dict.Get<int>("Expiration", 0),
@@ -356,6 +395,7 @@ namespace Nistec.Caching.Remote
 
             return message;
         }
+        */
         /// <summary>
         /// Convert stream to json.
         /// </summary>

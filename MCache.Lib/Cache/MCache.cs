@@ -166,7 +166,7 @@ namespace Nistec.Caching
         /// <returns></returns>
         public IDictionary<string,object> GetRecord(MessageStream message)
         {
-            CacheEntry item = GetItem(message.Id);
+            CacheEntry item = GetItem(message.Identifier);
             if (item == null)
             {
                 return null;
@@ -181,7 +181,7 @@ namespace Nistec.Caching
         /// <returns></returns>
         public NetStream GetValueStream(MessageStream message)
         {
-            CacheEntry item = GetItem(message.Id);
+            CacheEntry item = GetItem(message.Identifier);
             if (item == null)
             {
                 return null;
@@ -195,7 +195,7 @@ namespace Nistec.Caching
         /// <returns></returns>
         public NetStream FetchValueStream(MessageStream message)
         {
-            CacheEntry item = FetchItem(message.Id);
+            CacheEntry item = FetchItem(message.Identifier);
             if (item == null)
             {
                 return null;
@@ -210,7 +210,7 @@ namespace Nistec.Caching
         ///// <returns></returns>
         //public TransStream ViewItemStream(MessageStream message)
         //{
-        //    CacheEntry item = ViewItem(message.Id);
+        //    CacheEntry item = ViewItem(message.Identifier);
         //    if (item == null)
         //    {
         //        return new TransStream(CacheState.NotFound.ToString(), TransType.Error);
@@ -225,7 +225,7 @@ namespace Nistec.Caching
         ///// <returns></returns>
         //public TransStream GetItemStream(MessageStream message)
         //{
-        //    CacheEntry item = GetItem(message.Id);
+        //    CacheEntry item = GetItem(message.Identifier);
         //    if (item == null)
         //    {
         //        return null;// new TransStream(CacheState.NotFound.ToString(), TransType.Error);
@@ -240,7 +240,7 @@ namespace Nistec.Caching
         ///// <returns></returns>
         //public TransStream FetchItemStream(MessageStream message)
         //{
-        //    CacheEntry item = FetchItem(message.Id);
+        //    CacheEntry item = FetchItem(message.Identifier);
         //    if (item == null)
         //    {
         //        return new TransStream(CacheState.NotFound.ToString(), TransType.Error);
@@ -273,7 +273,7 @@ namespace Nistec.Caching
         /// <returns></returns>
         internal CacheState RemoveItemAsync(MessageStream message)
         {
-            bool ok = RemoveAsync(message.Id);
+            bool ok = RemoveAsync(message.Identifier);
             return ok ? CacheState.ItemRemoved : CacheState.RemoveItemFailed;
             //return new TransStream((int)state, TransType.State);
         }
@@ -285,7 +285,7 @@ namespace Nistec.Caching
         /// <returns></returns>
         internal CacheState RemoveItem(MessageStream message)
         {
-            bool ok = Remove(message.Id);
+            bool ok = Remove(message.Identifier);
             return ok ? CacheState.ItemRemoved : CacheState.RemoveItemFailed;
             //return new TransStream((int)state, TransType.State);
         }
@@ -297,7 +297,7 @@ namespace Nistec.Caching
         internal TransStream MergeItem(MessageStream message)
         {
             object val = message.DecodeBody();
-            CacheState state= MergeItem(message.Id, val);
+            CacheState state= MergeItem(message.Identifier, val);
             //return TransStream.Write((int)state, state.ToString());//TransType.State);
             return TransStream.WriteState((int)state, state.ToString());
         }
@@ -310,7 +310,7 @@ namespace Nistec.Caching
         internal TransStream MergeRemoveItem(MessageStream message)
         {
             object val = message.DecodeBody();
-            CacheState state = MergeRemoveItem(message.Id, val);
+            CacheState state = MergeRemoveItem(message.Identifier, val);
             //return TransStream.Write((int)state, state.ToString());//TransType.State);
             return TransStream.WriteState((int)state, state.ToString());
         }
@@ -328,7 +328,7 @@ namespace Nistec.Caching
 
             if (result == null)
             {
-                string sessionId=message.GroupId;
+                string sessionId=message.SessionId;
                 int expiration = message.Expiration;
 
                 result = command.Exec();
@@ -389,7 +389,7 @@ namespace Nistec.Caching
             string[] keys = null;
             if (this.m_cacheList != null)
             {
-                 IEnumerable<string> k = from n in m_cacheList.Values.Cast<CacheEntry>() where n.GroupId == sessionId select n.Id;
+                 IEnumerable<string> k = from n in m_cacheList.Values.Cast<CacheEntry>() where n.SessionId == sessionId select n.Id;
                 if (k != null)
                 {
                     keys = k.ToArray();

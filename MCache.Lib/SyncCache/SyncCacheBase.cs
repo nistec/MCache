@@ -529,6 +529,16 @@ namespace Nistec.Caching.Sync
 
             OnSyncChanged(new GenericEventArgs<string>(entity));
         }
+        /// <summary>
+        /// OnSyncCompleted
+        /// </summary>
+        /// <param name="entity"></param>
+        /// <param name="data"></param>
+        protected virtual void OnSyncCompleted(string entity, DataTable data)
+        {
+            CacheLogger.Logger.LogAction(CacheAction.SyncTime, CacheActionState.Debug, "OnSync Completed :" + entity);
+            OnSyncChanged(new GenericEventArgs<string>(entity));
+        }
         /*
         /// <summary>
         /// Sync Reload Event Handler.
@@ -607,6 +617,8 @@ namespace Nistec.Caching.Sync
             {
                 case "GenericRecord":
                     return AddItem<GenericRecord>(connectionKey, entityName, mappingName, sourceName, sourceType, entityKeys, columns, syncTime, syncType, enableNoLock, commandTimeout);
+                case "GenericData":
+                    return AddItem<GenericData>(connectionKey, entityName, mappingName, sourceName, sourceType, entityKeys, columns, syncTime, syncType, enableNoLock, commandTimeout);
                 case "EntityStream":
                     return AddItem<EntityStream>(connectionKey, entityName, mappingName, sourceName, sourceType, entityKeys, columns, syncTime, syncType, enableNoLock, commandTimeout);
                 case "GenericEntity":

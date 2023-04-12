@@ -209,7 +209,7 @@ namespace Nistec.Caching.Server
         /// </summary>
         /// <param name="message"></param>
         /// <returns></returns>
-        public TransStream ExecRemote(MessageStream message)
+        public TransStream ExecRemote(CacheMessage message)
         {
             if(!this.Initialized)
             {
@@ -224,7 +224,7 @@ namespace Nistec.Caching.Server
                 switch (message.Command.ToLower())
                 {
                     case SyncCacheCmd.Reply:
-                        return TransStream.Write("Reply: " + message.Id, TransType.Text);
+                        return TransStream.Write("Reply: " + message.Identifier, TransType.Text);
                     case SyncCacheCmd.Get:
                         return AsyncTransObject(() => Get(message), message.Command, requestTime, CacheState.Ok, CacheState.NotFound, message.TransformType.ToTransType());
                     case SyncCacheCmd.GetRecord:
@@ -238,9 +238,9 @@ namespace Nistec.Caching.Server
                     case SyncCacheCmd.Reset:
                         return AsyncTransState(() => Reset(), requestTime, CacheState.Ok, CacheState.UnKnown);
                     case SyncCacheCmd.Refresh:
-                        return AsyncTransState(() => Refresh(message.Id), requestTime, CacheState.Ok, CacheState.UnKnown);
+                        return AsyncTransState(() => Refresh(message.Identifier), requestTime, CacheState.Ok, CacheState.UnKnown);
                     case SyncCacheCmd.Contains:
-                        return AsyncTransState(() => Contains(ComplexArgs.Get(message.Id, message.Label)), requestTime, CacheState.Ok, CacheState.NotFound);
+                        return AsyncTransState(() => Contains(ComplexArgs.Get(message.Identifier, message.Label)), requestTime, CacheState.Ok, CacheState.NotFound);
                     case SyncCacheCmd.AddSyncItem:
                          return AsyncTransState(() => AddItem(message), requestTime, CacheState.AddItemFailed);
                     case SyncCacheCmd.Remove:

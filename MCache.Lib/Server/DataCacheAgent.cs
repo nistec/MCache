@@ -184,7 +184,7 @@ namespace Nistec.Caching.Server
         /// </summary>
         /// <param name="message"></param>
         /// <returns></returns>
-        public TransStream ExecRemote(MessageStream message)
+        public TransStream ExecRemote(CacheMessage message)
         {
             CacheState state = CacheState.Ok;
             DateTime requestTime = DateTime.Now;
@@ -193,134 +193,136 @@ namespace Nistec.Caching.Server
             {
                 //IKeyValue args = null;
 
+                var args = message.Args;
+
                 switch (message.Command.ToLower())
                 {
                     case DataCacheCmd.Reply:
-                        return TransStream.Write("Reply: " + message.Id, TransType.Text);
+                        return TransStream.Write("Reply: " + message.Identifier, TransType.Text);
 
                     case DataCacheCmd.Add:
                         {
-                            var args = message.GetArgs();
-                            return AsyncTransState(() => AddValue(message.GroupId,message.Label, message.Id, args[KnowsArgs.Column], message.DecodeBody()), requestTime, CacheState.ItemAdded, CacheState.AddItemFailed);
+                            //var args = message.ArgsGet();
+                            return AsyncTransState(() => AddValue(args.Get(KnownArgs.DbName), message.Label, message.Identifier, args.Get(KnownArgs.Column), message.DecodeBody()), requestTime, CacheState.ItemAdded, CacheState.AddItemFailed);
                         }
                     case DataCacheCmd.Set:
                         {
-                            var args = message.GetArgs();
-                            return AsyncTransState(() => SetValue(message.GroupId, message.Label, message.Id, args[KnowsArgs.Column],  message.DecodeBody()),requestTime, CacheState.ItemChanged, CacheState.SetItemFailed);
+                            //var args = message.ArgsGet();
+                            return AsyncTransState(() => SetValue(args.Get(KnownArgs.DbName), message.Label, message.Identifier, args.Get(KnownArgs.Column),  message.DecodeBody()),requestTime, CacheState.ItemChanged, CacheState.SetItemFailed);
                         }
                     case DataCacheCmd.Get:
                         {
-                            var args = message.GetArgs();
-                            return AsyncTransObject(()=> GetValue(message.GroupId, message.Label, message.Id, args[KnowsArgs.Column]), message.Command, requestTime, CacheState.Ok, CacheState.NotFound, message.TransformType.ToTransType());
+                            //var args = message.ArgsGet();
+                            return AsyncTransObject(()=> GetValue(args.Get(KnownArgs.DbName), message.Label, message.Identifier, args.Get(KnownArgs.Column)), message.Command, requestTime, CacheState.Ok, CacheState.NotFound, message.TransformType.ToTransType());
                         }
                     case DataCacheCmd.GetRecord:
                         {
-                            var args = message.GetArgs();
-                            return AsyncTransObject(() => GetRecord(message.GroupId, message.Label,message.Id), message.Command, requestTime, CacheState.Ok, CacheState.NotFound, message.TransformType.ToTransType());
+                            //var args = message.ArgsGet();
+                            return AsyncTransObject(() => GetRecord(args.Get(KnownArgs.DbName), message.Label,message.Identifier), message.Command, requestTime, CacheState.Ok, CacheState.NotFound, message.TransformType.ToTransType());
                         }
                     case DataCacheCmd.GetStream:
                         {
-                            var args = message.GetArgs();
-                            return AsyncTransStream(() => GetStream(message.GroupId, message.Label, message.Id), message.Command, requestTime, CacheState.Ok, CacheState.NotFound, TransType.Stream);
+                            //var args = message.ArgsGet();
+                            return AsyncTransStream(() => GetStream(args.Get(KnownArgs.DbName), message.Label, message.Identifier), message.Command, requestTime, CacheState.Ok, CacheState.NotFound, TransType.Stream);
                         }
                     case DataCacheCmd.AddTable:
                         {
-                            var args = message.GetArgs();
-                            EntitySourceType sourceType = EnumExtension.Parse<EntitySourceType>(args[KnowsArgs.SourceType], EntitySourceType.Table);//(EntitySourceType)Types.ToInt(args[KnowsArgs.SourceType]);
-                            return AsyncTransState(() => AddTable(message.GroupId, (DataTable)message.DecodeBody(), message.Label, args[KnowsArgs.MappingName], sourceType, message.Id.SplitTrim(',')), requestTime, CacheState.ItemAdded, CacheState.AddItemFailed);
+                            //var args = message.ArgsGet();
+                            EntitySourceType sourceType = EnumExtension.Parse<EntitySourceType>(args.Get(KnownArgs.SourceType), EntitySourceType.Table);//(EntitySourceType)Types.ToInt(args[KnownArgs.SourceType]);
+                            return AsyncTransState(() => AddTable(args.Get(KnownArgs.DbName), (DataTable)message.DecodeBody(), message.Label, args.Get(KnownArgs.MappingName), sourceType, message.Identifier.SplitTrim(',')), requestTime, CacheState.ItemAdded, CacheState.AddItemFailed);
                         }
                     case DataCacheCmd.SetTable:
                         {
-                            var args = message.GetArgs();
-                            EntitySourceType sourceType = EnumExtension.Parse<EntitySourceType>(args[KnowsArgs.SourceType], EntitySourceType.Table);// (EntitySourceType)Types.ToInt(args[KnowsArgs.SourceType]);
-                            return AsyncTransState(() => SetTable(message.GroupId, (DataTable)message.DecodeBody(), message.Label, args[KnowsArgs.MappingName], sourceType, message.Id.SplitTrim(',')),requestTime, CacheState.ItemChanged, CacheState.SetItemFailed);
+                            //var args = message.ArgsGet();
+                            EntitySourceType sourceType = EnumExtension.Parse<EntitySourceType>(args.Get(KnownArgs.SourceType), EntitySourceType.Table);// (EntitySourceType)Types.ToInt(args[KnownArgs.SourceType]);
+                            return AsyncTransState(() => SetTable(args.Get(KnownArgs.DbName), (DataTable)message.DecodeBody(), message.Label, args.Get(KnownArgs.MappingName), sourceType, message.Identifier.SplitTrim(',')),requestTime, CacheState.ItemChanged, CacheState.SetItemFailed);
                         }
                     case DataCacheCmd.GetTable:
                         {
-                            return AsyncTransObject(() => GetTable(message.GroupId, message.Label), message.Command, requestTime, CacheState.Ok, CacheState.NotFound, message.TransformType.ToTransType());
+                            return AsyncTransObject(() => GetTable(args.Get(KnownArgs.DbName), message.Label), message.Command, requestTime, CacheState.Ok, CacheState.NotFound, message.TransformType.ToTransType());
                         }
                     case DataCacheCmd.RemoveTable:
                         {
-                            return AsyncTransState(() => RemoveTable(message.GroupId, message.Label), requestTime, CacheState.ItemRemoved, CacheState.RemoveItemFailed);
+                            return AsyncTransState(() => RemoveTable(args.Get(KnownArgs.DbName), message.Label), requestTime, CacheState.ItemRemoved, CacheState.RemoveItemFailed);
                         }
                     case DataCacheCmd.GetItemProperties:
                         {
-                            return AsyncTransObject(() => GetItemProperties(message.GroupId, message.Label), message.Command, requestTime, CacheState.Ok, CacheState.NotFound, message.TransformType.ToTransType());
+                            return AsyncTransObject(() => GetItemProperties(args.Get(KnownArgs.DbName), message.Label), message.Command, requestTime, CacheState.Ok, CacheState.NotFound, message.TransformType.ToTransType());
                         }
                     case DataCacheCmd.AddTableWithSync:
                         {
-                            var args = message.GetArgs();
+                            //var args = message.ArgsGet();
 
                             string tableName = message.Label;
-                            string mappingName = args[KnowsArgs.MappingName];
-                            EntitySourceType sourceType = EnumExtension.Parse<EntitySourceType>(args[KnowsArgs.SourceType], EntitySourceType.Table);//(EntitySourceType) Types.ToInt(args[KnowsArgs.SourceType]);
-                            string[] pk = message.Id.SplitTrim(',');
+                            string mappingName = args[KnownArgs.MappingName];
+                            EntitySourceType sourceType = EnumExtension.Parse<EntitySourceType>(args[KnownArgs.SourceType], EntitySourceType.Table);//(EntitySourceType) Types.ToInt(args[KnownArgs.SourceType]);
+                            string[] pk = message.Identifier.SplitTrim(',');
                             SyncEntity syncEntity = new SyncEntity()
                             {
                                 EntityName = tableName, 
                                 ViewName = mappingName,
                                 SourceType=sourceType,
-                                SourceName = args.SplitArg(KnowsArgs.SourceName, null),
+                                SourceName = args.SplitArg(KnownArgs.SourceName, null),
                                 PreserveChanges = false,
                                 MissingSchemaAction = MissingSchemaAction.Add,
-                                SyncType = (SyncType)args.Get<int>(KnowsArgs.SyncType),
-                                Interval = args.TimeArg(KnowsArgs.SyncTime, null),
+                                SyncType = (SyncType)args.Get<int>(KnownArgs.SyncType),
+                                Interval = args.TimeArg(KnownArgs.SyncTime, null),
                                 EnableNoLock = false,
                                 CommandTimeout = 0
                             };
-                            return AsyncTransState(() => AddTableWithSync(message.GroupId, (DataTable)message.DecodeBody(),  tableName, mappingName, sourceType, pk, syncEntity), requestTime, CacheState.ItemAdded, CacheState.NotFound);
+                            return AsyncTransState(() => AddTableWithSync(args.Get(KnownArgs.DbName), (DataTable)message.DecodeBody(),  tableName, mappingName, sourceType, pk, syncEntity), requestTime, CacheState.ItemAdded, CacheState.NotFound);
 
                         }
 
                     case DataCacheCmd.AddSyncItem:
                         {
-                            var args = message.GetArgs();
+                            //var args = message.ArgsGet();
 
                             SyncEntity syncEntity = new SyncEntity()
                             {
                                 EntityName = message.Label,
-                                ViewName = args[KnowsArgs.MappingName],
-                                SourceName = args.SplitArg(KnowsArgs.SourceName, null),
+                                ViewName = args[KnownArgs.MappingName],
+                                SourceName = args.SplitArg(KnownArgs.SourceName, null),
                                 PreserveChanges = false,
                                 MissingSchemaAction = MissingSchemaAction.Add,
-                                SyncType = (SyncType)args.Get<int>(KnowsArgs.SyncType),
-                                Interval = args.TimeArg(KnowsArgs.SyncTime, null),
+                                SyncType = (SyncType)args.Get<int>(KnownArgs.SyncType),
+                                Interval = args.TimeArg(KnownArgs.SyncTime, null),
                                 EnableNoLock = false,
                                 CommandTimeout = 0
                             };
 
-                            return AsyncTransState(() => AddSyncItem(message.GroupId, syncEntity), requestTime, CacheState.ItemAdded, CacheState.NotFound);
+                            return AsyncTransState(() => AddSyncItem(args.Get(KnownArgs.DbName), syncEntity), requestTime, CacheState.ItemAdded, CacheState.NotFound);
 
                         }
 
                     case DataCacheCmd.Reset:
-                        return AsyncTransState(() => RefreshDataSource(message.GroupId), requestTime, CacheState.Ok, CacheState.UnKnown);
+                        return AsyncTransState(() => RefreshDataSource(args.Get(KnownArgs.DbName)), requestTime, CacheState.Ok, CacheState.UnKnown);
                     case DataCacheCmd.Refresh:
-                        return AsyncTransState(() => Refresh(message.GroupId, message.Label), requestTime, CacheState.Ok, CacheState.UnKnown);
+                        return AsyncTransState(() => Refresh(args.Get(KnownArgs.DbName), message.Label), requestTime, CacheState.Ok, CacheState.UnKnown);
                     case DataCacheCmd.Contains:
                         {
-                            return AsyncTransState(() => Contains(message.GroupId, message.Label), requestTime, CacheState.Ok, CacheState.NotFound);
+                            return AsyncTransState(() => Contains(args.Get(KnownArgs.DbName), message.Label), requestTime, CacheState.Ok, CacheState.NotFound);
                         }
                     case DataCacheCmd.GetEntityItems:
                         {
-                            return AsyncTransObject(() => GetEntityItems(message.GroupId, message.Label), message.Command, requestTime, CacheState.Ok, CacheState.NotFound, message.TransformType.ToTransType());
+                            return AsyncTransObject(() => GetEntityItems(args.Get(KnownArgs.DbName), message.Label), message.Command, requestTime, CacheState.Ok, CacheState.NotFound, message.TransformType.ToTransType());
                         }
 
                     case DataCacheCmd.GetEntityKeys:
                         {
-                            return AsyncTransObject(() => GetEntityKeys(message.GroupId, message.Label), message.Command, requestTime, CacheState.Ok, CacheState.NotFound, message.TransformType.ToTransType());
+                            return AsyncTransObject(() => GetEntityKeys(args.Get(KnownArgs.DbName), message.Label), message.Command, requestTime, CacheState.Ok, CacheState.NotFound, message.TransformType.ToTransType());
                         }
                     case DataCacheCmd.GetAllEntityNames:
                         {
-                            return AsyncTransObject(() => GetNames(message.GroupId), message.Command, requestTime, CacheState.Ok, CacheState.NotFound, message.TransformType.ToTransType());
+                            return AsyncTransObject(() => GetNames(args.Get(KnownArgs.DbName)), message.Command, requestTime, CacheState.Ok, CacheState.NotFound, message.TransformType.ToTransType());
                         }
                     case DataCacheCmd.GetItemsReport:
                         {
-                            return AsyncTransObject(() => GetItemsReport(message.GroupId, message.Label), message.Command, requestTime, CacheState.Ok, CacheState.UnexpectedError, message.TransformType.ToTransType());
+                            return AsyncTransObject(() => GetItemsReport(args.Get(KnownArgs.DbName), message.Label), message.Command, requestTime, CacheState.Ok, CacheState.UnexpectedError, message.TransformType.ToTransType());
                         }
                     case DataCacheCmd.GetEntityItemsCount:
                         {
-                            return AsyncTransObject(() => GetEntityItemsCount(message.GroupId, message.Label), message.Command, requestTime, CacheState.Ok, CacheState.UnexpectedError, message.TransformType.ToTransType());
+                            return AsyncTransObject(() => GetEntityItemsCount(args.Get(KnownArgs.DbName), message.Label), message.Command, requestTime, CacheState.Ok, CacheState.UnexpectedError, message.TransformType.ToTransType());
                         }
                     case DataCacheCmd.QueryTable:
                         {

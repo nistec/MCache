@@ -74,6 +74,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Cache\CacheItemReport.cs" />
+    <Compile Include="Cache\GenericCache.cs" />
     <Compile Include="Cache\ISyncLoader.cs" />
     <Compile Include="Cache\SyncLoaderStream.cs" />
     <Compile Include="Config\ConfigFileWatcher.cs" />
@@ -185,8 +186,10 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Channels\" />
+    <Folder Include="Generic\" />
     <Folder Include="Loader\" />
     <Folder Include="Remote\ex\" />
+    <Folder Include="_Legacy\" />
     <Folder Include="_Obsolete\" />
   </ItemGroup>
   <ItemGroup>

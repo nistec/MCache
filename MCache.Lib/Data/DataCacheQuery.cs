@@ -38,6 +38,8 @@ using Nistec.Caching.Config;
 using System.Collections.Concurrent;
 using System.IO;
 using Nistec.Serialization;
+using Nistec.Caching.Remote;
+using Nistec.Channels;
 
 namespace Nistec.Caching.Data
 {
@@ -79,10 +81,12 @@ namespace Nistec.Caching.Data
                 Args = KeyValueArgs.Get(keyValueParameters)
             };
 
-            var message = new Channels.GenericMessage(arg)
+            var message = new CacheMessage()
             {
                 Command = Remote.DataCacheCmd.QueryTable,
-                Expiration = expiration
+                Expiration = expiration,
+                BodyStream=MessageStream.SerializeBody(arg),
+                TypeName=Types.GetTypeName(arg)
             };
 
             //var message = new Channels.GenericMessage(keyValueParameters)
@@ -109,11 +113,13 @@ namespace Nistec.Caching.Data
                 SourceType = sourceType,
                 Args = KeyValueArgs.Get(keyValueParameters)
             };
-            var message = new Channels.GenericMessage(arg)
+            var message = new CacheMessage()
             {
                 Command = Remote.DataCacheCmd.QueryEntity,
                 Expiration = expiration,
-                Id = entityKey.GetPrimaryKey(),
+                CustomId = entityKey.GetPrimaryKey(),
+                BodyStream = MessageStream.SerializeBody(arg),
+                TypeName = Types.GetTypeName(arg)
             };
 
             //var message = new Channels.GenericMessage(keyValueParameters)

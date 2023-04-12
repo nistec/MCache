@@ -189,14 +189,14 @@ namespace Nistec.Caching
         //internal SyncLoaderStream(IKeyValue dic, string columns, bool enableAsyncTask)
         //    : this(enableAsyncTask, false)
         //{
-        //    Set(dic.Get<string>(KnowsArgs.ConnectionKey),
-        //        dic.Get<string>(KnowsArgs.TableName),
-        //        dic.Get<string>(KnowsArgs.MappingName),
-        //        CacheMessage.SplitArg(dic, KnowsArgs.SourceName, null),
-        //        (EntitySourceType)dic.Get<int>(KnowsArgs.SourceType),
-        //        CacheMessage.SplitArg(dic, KnowsArgs.EntityKeys, null), columns,
+        //    Set(dic.Get<string>(KnownArgs.ConnectionKey),
+        //        dic.Get<string>(KnownArgs.TableName),
+        //        dic.Get<string>(KnownArgs.MappingName),
+        //        CacheMessage.SplitArg(dic, KnownArgs.SourceName, null),
+        //        (EntitySourceType)dic.Get<int>(KnownArgs.SourceType),
+        //        CacheMessage.SplitArg(dic, KnownArgs.EntityKeys, null), columns,
 
-        //        new SyncTimer(CacheMessage.TimeArg(dic, KnowsArgs.SyncTime, null), (SyncType)dic.Get<int>(KnowsArgs.SyncType)),
+        //        new SyncTimer(CacheMessage.TimeArg(dic, KnownArgs.SyncTime, null), (SyncType)dic.Get<int>(KnownArgs.SyncType)),
         //        false, 0);
         //}
 

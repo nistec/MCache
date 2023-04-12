@@ -106,14 +106,14 @@ namespace Nistec.Caching.Sync.Remote
         internal SyncTableStream(NameValueArgs dic, bool isAsync)
             : base(isAsync)
         {
-            Set(dic.Get(KnowsArgs.ConnectionKey),
-                dic.Get(KnowsArgs.TableName),
-                dic.Get(KnowsArgs.MappingName),
-                dic.SplitArg(KnowsArgs.SourceName, null),
-                (EntitySourceType)dic.Get<int>(KnowsArgs.SourceType),
-                dic.SplitArg(KnowsArgs.EntityKeys, null), "*",
+            Set(dic.Get(KnownArgs.ConnectionKey),
+                dic.Get(KnownArgs.TableName),
+                dic.Get(KnownArgs.MappingName),
+                dic.SplitArg(KnownArgs.SourceName, null),
+                (EntitySourceType)dic.Get<int>(KnownArgs.SourceType),
+                dic.SplitArg(KnownArgs.EntityKeys, null), "*",
 
-                new SyncTimer(dic.TimeArg(KnowsArgs.SyncTime, null), (SyncType)dic.Get<int>(KnowsArgs.SyncType)),
+                new SyncTimer(dic.TimeArg(KnownArgs.SyncTime, null), (SyncType)dic.Get<int>(KnownArgs.SyncType)),
                 false, 0);
         }
 

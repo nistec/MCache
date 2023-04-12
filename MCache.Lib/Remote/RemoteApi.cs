@@ -457,7 +457,7 @@ namespace Nistec.Caching.Remote
             using (CacheMessage message = new CacheMessage()
             {
                 Command = command,
-                Id = key
+                CustomId = key
             })
             {
                 switch (Protocol)

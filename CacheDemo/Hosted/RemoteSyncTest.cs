@@ -86,7 +86,7 @@ namespace Nistec.Caching.Demo.Hosted
         {
             string key = "1";
 
-            var ts= SyncCache.ExecRemote(new CacheMessage() { Command = SyncCacheCmd.GetRecord, Label = "accountEntity" , Id = "1" });
+            var ts= SyncCache.ExecRemote(new CacheMessage() { Command = SyncCacheCmd.GetRecord, Label = "accountEntity" , CustomId = "1" });
             var o1= ts.ReadValue((message)=> {
                 Console.WriteLine(message);
             });
@@ -99,7 +99,7 @@ namespace Nistec.Caching.Demo.Hosted
                 Console.WriteLine(dic);
             }
 
-            var ts2 = SyncCache.ExecRemote(new CacheMessage() { Command = SyncCacheCmd.GetRecord, Label = "accountGeneric", Id = "1" });
+            var ts2 = SyncCache.ExecRemote(new CacheMessage() { Command = SyncCacheCmd.GetRecord, Label = "accountGeneric", CustomId = "1" });
             var o2 = ts.ReadValue((message) => {
                 Console.WriteLine(message);
             });

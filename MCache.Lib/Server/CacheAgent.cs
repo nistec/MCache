@@ -128,16 +128,18 @@ namespace Nistec.Caching.Server
         /// </summary>
         /// <param name="message"></param>
         /// <returns></returns>
-        public TransStream ExecRemote(MessageStream message)
+        public TransStream ExecRemote(CacheMessage message)
         {
             CacheState state = CacheState.Ok;
             DateTime requestTime = DateTime.Now;
             try
             {
+                var args = message.Args;
+
                 switch (message.Command.ToLower())
                 {
                     case CacheCmd.Reply:
-                        return TransStream.Write("Reply: " + message.Id, TransType.Text);
+                        return TransStream.Write("Reply: " + message.Identifier, TransType.Text);
                     case CacheCmd.Add:
                         return AsyncTransState(() => Add(message),requestTime, CacheState.AddItemFailed);
                     case CacheCmd.Set:
@@ -149,31 +151,29 @@ namespace Nistec.Caching.Server
                     case CacheCmd.Fetch:
                         return AsyncTransStream(() => FetchValueStream(message), message.Command, requestTime, CacheState.Ok, CacheState.NotFound, message.TransformType.ToTransType());
                     case CacheCmd.GetEntry:
-                        return AsyncTransObject(() => GetItem(message.Id), message.Command, requestTime, CacheState.Ok, CacheState.NotFound, message.TransformType.ToTransType());
+                        return AsyncTransObject(() => GetItem(message.CacheKey), message.Command, requestTime, CacheState.Ok, CacheState.NotFound, message.TransformType.ToTransType());
                     case CacheCmd.FetchEntry:
-                        return AsyncTransObject(() => FetchItem(message.Id), message.Command, requestTime, CacheState.Ok, CacheState.NotFound, message.TransformType.ToTransType());
+                        return AsyncTransObject(() => FetchItem(message.CacheKey), message.Command, requestTime, CacheState.Ok, CacheState.NotFound, message.TransformType.ToTransType());
                     case CacheCmd.ViewEntry:
-                        return AsyncTransObject(() => ViewItem(message.Id), message.Command, requestTime, CacheState.Ok, CacheState.NotFound, message.TransformType.ToTransType());
+                        return AsyncTransObject(() => ViewItem(message.CacheKey), message.Command, requestTime, CacheState.Ok, CacheState.NotFound, message.TransformType.ToTransType());
                     case CacheCmd.Remove:
-                        return AsyncTransState(() => Remove(message.Id), requestTime, CacheState.ItemRemoved, CacheState.RemoveItemFailed);
+                        return AsyncTransState(() => Remove(message.CacheKey), requestTime, CacheState.ItemRemoved, CacheState.RemoveItemFailed);
                     case CacheCmd.RemoveAsync:
-                        return AsyncTransState(() => RemoveAsync(message.Id), requestTime, CacheState.ItemRemoved, CacheState.RemoveItemFailed);
+                        return AsyncTransState(() => RemoveAsync(message.CacheKey), requestTime, CacheState.ItemRemoved, CacheState.RemoveItemFailed);
                     case CacheCmd.CopyTo:
                         {
-                            var args = message.GetArgs();
-                            return AsyncTransState(() => CopyTo(args.Get<string>(KnowsArgs.Source), args.Get<string>(KnowsArgs.Destination), message.Expiration), requestTime, CacheState.SetItemFailed);
+                            return AsyncTransState(() => CopyTo(args.Get(KnownArgs.Source), message.Args.Get(KnownArgs.Destination), message.Expiration), requestTime, CacheState.SetItemFailed);
                         }
                     case CacheCmd.CutTo:
                         {
-                            var args = message.GetArgs();
-                            return AsyncTransState(() => CutTo(args.Get<string>(KnowsArgs.Source), args.Get<string>(KnowsArgs.Destination), message.Expiration), requestTime, CacheState.SetItemFailed);
+                            return AsyncTransState(() => CutTo(args.Get(KnownArgs.Source), args.Get(KnownArgs.Destination), message.Expiration), requestTime, CacheState.SetItemFailed);
                         }
                     case CacheCmd.KeepAliveItem:
                         {
-                            return AsyncTransState(() => KeepAliveItem(message.Id),requestTime, CacheState.Ok, CacheState.UnexpectedError);
+                            return AsyncTransState(() => KeepAliveItem(message.CacheKey),requestTime, CacheState.Ok, CacheState.UnexpectedError);
                         }
                     case CacheCmd.RemoveItemsBySession:
-                        return AsyncTransState(() => RemoveCacheSessionItemsAsync(message.Label), requestTime, CacheState.RemoveItemFailed);
+                        return AsyncTransState(() => RemoveCacheSessionItemsAsync(message.SessionId), requestTime, CacheState.RemoveItemFailed);
                     case CacheCmd.LoadData:
                         return AsyncTransObject(() => LoadData(message), message.Command, requestTime, CacheState.Ok, CacheState.UnexpectedError);
                 }

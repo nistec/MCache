@@ -39,7 +39,7 @@ namespace Nistec.Caching.Server.Tcp
     /// <summary>
     /// Represent a cache tcp server listner.
     /// </summary>
-    public class TcpBundleServer : TcpServer<MessageStream>//TcpServerPool<CacheMessage>
+    public class TcpBundleServer : TcpServer<CacheMessage>//TcpServerPool<CacheMessage>
     {
         bool isCache=false;
         bool isDataCache=false;
@@ -143,7 +143,7 @@ namespace Nistec.Caching.Server.Tcp
         /// </summary>
         /// <param name="message"></param>
         /// <returns></returns>
-        protected override TransStream ExecRequset(MessageStream message)
+        protected override TransStream ExecRequset(CacheMessage message)
         {
             return AgentManager.ExecCommand(message);
         }
@@ -152,9 +152,9 @@ namespace Nistec.Caching.Server.Tcp
         /// </summary>
         /// <param name="stream"></param>
         /// <returns></returns>
-        protected override MessageStream ReadRequest(NetworkStream stream)
+        protected override CacheMessage ReadRequest(NetworkStream stream)
         {
-            return MessageStream.ReadRequest(stream, Settings.ReceiveBufferSize);
+            return new CacheMessage(stream, null);// MessageStream.ReadRequest(stream, Settings.ReceiveBufferSize);
         }
        
         #endregion

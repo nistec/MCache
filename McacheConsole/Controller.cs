@@ -696,7 +696,7 @@ namespace Nistec
             {
                 if (transform == "json")
                 {
-                    json = api.DoHttpJson(command: cmd, groupId: sessionId, id: key, value: value, pretty: true);
+                    json = api.DoHttpJson(command: cmd, sessionId: sessionId, id: key, value: value, pretty: true);
                     Display(cmd, json);
                 }
                 else
@@ -1062,7 +1062,7 @@ namespace Nistec
                 {
                     case "createsession":
                         {
-                            json = api.DoHttpJson(command: "CreateSession",  groupId:sessionId, id: key, value: value, pretty: true);
+                            json = api.DoHttpJson(command: "CreateSession", sessionId: sessionId, id: key, value: value, pretty: true);
                             Display(cmd, json);
 
                             //json = api.SendJsonDuplex(API.SessionCmd.CreateSession, "*", null, expiration, sessionId, true);
@@ -1071,7 +1071,7 @@ namespace Nistec
                         break;
                     case "add":
                         {
-                            json = api.DoHttpJson(command: "Add", groupId: sessionId, id: key, value: value,expiration: expiration, pretty: true);
+                            json = api.DoHttpJson(command: "Add", sessionId: sessionId, id: key, value: value,expiration: expiration, pretty: true);
 
                             //json = api.SendJsonDuplex(API.SessionCmd.Add, key, value, expiration, sessionId, true);
                             Display(cmd, json);
@@ -1079,41 +1079,41 @@ namespace Nistec
                         break;
                     case "set":
                         {
-                            json = api.DoHttpJson(command: "Set", groupId: sessionId, id: key, value: value, expiration: expiration, pretty: true);
+                            json = api.DoHttpJson(command: "Set", sessionId: sessionId, id: key, value: value, expiration: expiration, pretty: true);
                             //json = api.SendJsonDuplex(API.SessionCmd.Set, key, value, expiration, sessionId, true);
                             Display(cmd, json);
                         }
                         break;
                     case "get":
                         {
-                            json = api.DoHttpJson(command: "Get", groupId: sessionId, id: key, pretty: true);
+                            json = api.DoHttpJson(command: "Get", sessionId: sessionId, id: key, pretty: true);
 
                             //json = api.SendJsonDuplex(API.SessionCmd.Get, key, null, 0, sessionId, true);
                             Display(cmd, json);
                         }
                         break;
                     case "getsessionitems":
-                        json = api.DoHttpJson(command: "GetSessionItems", groupId: sessionId, id: key, pretty: true);
+                        json = api.DoHttpJson(command: "GetSessionItems", sessionId: sessionId, id: key, pretty: true);
                         //json = api.SendJsonDuplex(API.SessionCmd.GetSessionItems, null, null, 0, sessionId, true);
                         Display(cmd, json);
                         break;
                     case "getallsessionskeys":
-                        json = api.DoHttpJson(command: "ViewAllSessionsKeys", groupId: sessionId, id: key, pretty: true);
+                        json = api.DoHttpJson(command: "ViewAllSessionsKeys", sessionId: sessionId, id: key, pretty: true);
                         //json = api.SendJsonDuplex(new CacheMessage() { Command= API.SessionCmd.ViewAllSessionsKeys },true);// API.SessionCmd.ViewAllSessionsKeys, null, true);
                         Display(cmd, json);
                         break;
                     case "removesession":
-                        json = api.DoHttpJson(command: "RemoveSession", groupId: sessionId, id: key, pretty: true);
+                        json = api.DoHttpJson(command: "RemoveSession", sessionId: sessionId, id: key, pretty: true);
                         //json = api.SendJsonDuplex(API.SessionCmd.RemoveSession, null, null, 0, sessionId, true);
                         Display(cmd, "session {0} will remove", sessionId);
                         break;
                     case "remove":
-                        json = api.DoHttpJson(command: "Remove", groupId: sessionId, id: key, pretty: true);
+                        json = api.DoHttpJson(command: "Remove", sessionId: sessionId, id: key, pretty: true);
                         //json = api.SendJsonDuplex(API.SessionCmd.Remove, key, null, 0, sessionId, true);
                         Display(cmd, "session item {0},{1} will remove", sessionId, key);
                         break;
                     case "reply":
-                        json = api.DoHttpJson(command: "Reply", groupId: sessionId, id: key, pretty: true);
+                        json = api.DoHttpJson(command: "Reply", sessionId: sessionId, id: key, pretty: true);
                         //json = api.SendJsonDuplex(API.SessionCmd.Reply, key);
                         Display(cmd, json);
                         break;

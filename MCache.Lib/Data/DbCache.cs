@@ -1178,7 +1178,7 @@ namespace Nistec.Caching.Data
         public GenericEntity QueryEntity(MessageStream message)
         {
             EntityDbArgs dbArgs = (EntityDbArgs)message.DecodeBody();
-            GenericEntity entity = CacheQuery.QueryEntity(message.Id, dbArgs.ConnectionKey, dbArgs.MappingName, dbArgs.SourceType, message.Expiration, dbArgs.Keys, dbArgs.GetKeyValueArray());
+            GenericEntity entity = CacheQuery.QueryEntity(message.Identifier, dbArgs.ConnectionKey, dbArgs.MappingName, dbArgs.SourceType, message.Expiration, dbArgs.Keys, dbArgs.GetKeyValueArray());
             return entity;
         }
 

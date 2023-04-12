@@ -578,7 +578,7 @@ namespace Nistec.Caching.Sync.Remote
             var syncItem = GetTable(message.Label);
             if (syncItem == null)
                 return null;
-            return syncItem.GetEntityStream(message.Id);
+            return syncItem.GetEntityStream(message.Identifier);
         }
         internal CacheItemReport GetItemsReport(MessageStream message)
         {
@@ -683,7 +683,7 @@ namespace Nistec.Caching.Sync.Remote
                 throw new ArgumentNullException("CacheMessage");
             message.ValiddateInfo();
 
-            if (TryGetBodyStream(message.Label, message.Id, out b))
+            if (TryGetBodyStream(message.Label, message.Identifier, out b))
             {
                 return b;
             }
@@ -782,7 +782,7 @@ namespace Nistec.Caching.Sync.Remote
         }
         public NetStream FindEntityByQueryString(string entityName, string[] keyValue)
         {
-            return FindEntity(entityName, NameValueArgs.Get(keyValue));
+            return FindEntity(entityName, NameValueArgs.Create(keyValue));
         }
         public NetStream FindEntity(string entityName, NameValueArgs nv)
         {
@@ -924,7 +924,7 @@ namespace Nistec.Caching.Sync.Remote
 
         internal object Get(MessageStream message)
         {
-            return Get(ComplexKey.Get(message.Label, message.Id), message.Args[KnowsArgs.Column]);
+            return Get(ComplexKey.Get(message.Label, message.Identifier), message.Args[KnownArgs.Column]);
         }
 
         public object Get(ComplexKey info, string field)
@@ -967,7 +967,7 @@ namespace Nistec.Caching.Sync.Remote
             //if (info == null || info.IsEmpty)
             //    throw new ArgumentException("ComplexKey is null or empty");
             
-            return GetEntityStream(message.Label, message.Id);
+            return GetEntityStream(message.Label, message.Identifier);
         }
         
 
@@ -1084,12 +1084,12 @@ namespace Nistec.Caching.Sync.Remote
             {
                 throw new ArgumentNullException("AddItem.CacheMessage");
             }
-            SyncTableStream<EntityStream> item = new SyncTableStream<EntityStream>(message.GetArgs(), true);
+            SyncTableStream<EntityStream> item = new SyncTableStream<EntityStream>(message.Args, true);
             while (!item.IsReady)
             {
                 if (item.IsTimeout)
                 {
-                    throw new Exception("SyncTableStream timeout error: " + message.Id);
+                    throw new Exception("SyncTableStream timeout error: " + message.Identifier);
                 }
                 Thread.Sleep(100);
             }
@@ -2501,7 +2501,7 @@ namespace Nistec.Caching.Sync.Remote
 
         internal object Get(MessageStream message)
         {
-            return Get(ComplexKey.Get(message.Key, message.Detail), message.Args[KnowsArgs.Column]);
+            return Get(ComplexKey.Get(message.Key, message.Detail), message.Args[KnownArgs.Column]);
         }
 
         public object Get(ComplexKey info, string field)

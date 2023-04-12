@@ -651,8 +651,9 @@ namespace Nistec.Caching.Sync.Embed
         
                 SyncTable<T> item = new SyncTable<T>(connectionKey, entityName, mappingName, sourceName,sourceType,entityKeys,columns, timer,enableNoLock, commandTimeout,false);
 
-               
                 item.Validate();
+
+                item.OnSyncCompleted = OnSyncCompleted;
 
                 _DataCache.AddSyncSource(item.ConnectionKey, item.SyncSource, this, IntervalSeconds, true);
 
@@ -700,9 +701,10 @@ namespace Nistec.Caching.Sync.Embed
                 SyncTimer timer = new SyncTimer(interval, syncType);
 
                 SyncTable<T> item = new SyncTable<T>(connectionKey, entityName, mappingName, sourceName, sourceType, entityKeys, columns, timer, enableNoLock, commandTimeout, false);
-
-
+                
                 item.Validate();
+
+                item.OnSyncCompleted = OnSyncCompleted;
 
                 _DataCache.AddSyncSource(item.ConnectionKey, item.SyncSource, this, IntervalSeconds, true);
 
@@ -731,6 +733,7 @@ namespace Nistec.Caching.Sync.Embed
             try
             {
                 item.Validate();
+                item.OnSyncCompleted = OnSyncCompleted;
 
                 _DataCache.AddSyncSource(item.ConnectionKey, item.SyncSource, this, IntervalSeconds, true);
 
@@ -756,7 +759,7 @@ namespace Nistec.Caching.Sync.Embed
         /// <returns></returns>
         public NetStream Get(MessageStream message)
         {
-            ComplexKey info = ComplexKey.Get(message.Id,message.Label);
+            ComplexKey info = ComplexKey.Get(message.Identifier, message.Label);
             if (info.IsEmpty)
             {
                 return null;
@@ -776,7 +779,7 @@ namespace Nistec.Caching.Sync.Embed
         /// <returns></returns>
         public NetStream GetRecord(MessageStream message)
         {
-            ComplexKey info = ComplexKey.Get(message.Id,message.Label);
+            ComplexKey info = ComplexKey.Get(message.Identifier, message.Label);
             if (info.IsEmpty)
             {
                 return null;
@@ -798,7 +801,7 @@ namespace Nistec.Caching.Sync.Embed
         public bool Contains(MessageStream message)
         {
 
-            return _SyncBag.Contains(ComplexKey.Get(message.Id,message.Label));
+            return _SyncBag.Contains(ComplexKey.Get(message.Identifier, message.Label));
         }
 
 

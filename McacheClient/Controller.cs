@@ -1148,7 +1148,7 @@ namespace Nistec
             {
                 if (transform == "json")
                 {
-                    json = api.DoHttpJson(command: cmd, groupId: sessionId, id: key, value: value, pretty: true);
+                    json = api.DoHttpJson(command: cmd, sessionId: sessionId, id: key, value: value, pretty: true);
                     Display(cmd, json);
                 }
                 else

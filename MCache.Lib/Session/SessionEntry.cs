@@ -100,7 +100,7 @@ namespace Nistec.Caching.Session
         public SessionEntry(string sessionId, string key, object value, int expiration)
             : this()
         {
-            GroupId = sessionId;
+            SessionId = sessionId;
             Id = key;
             Expiration = CacheSettings.GetValidSessionTimeout(expiration);
             SetBody(value);
@@ -118,7 +118,7 @@ namespace Nistec.Caching.Session
         public SessionEntry(string sessionId, string key, byte[] value, Type type, int expiration)
             : this()
         {
-            GroupId = sessionId;
+            SessionId = sessionId;
             Id = key;
             Expiration = CacheSettings.GetValidSessionTimeout(expiration);
             SetBody(value, type);
@@ -131,8 +131,8 @@ namespace Nistec.Caching.Session
         public SessionEntry(MessageStream m)
             : this()
         {
-            GroupId = m.GroupId;
-            Id = m.Id;
+            SessionId = m.SessionId;
+            Id = m.Identifier;
             Expiration = CacheSettings.GetValidSessionTimeout(m.Expiration);
             Label = m.Label;
             SetBody(m.GetStream(), m.TypeName);
@@ -160,7 +160,7 @@ namespace Nistec.Caching.Session
                 Label = this.Label,
                 Formatter = this.Formatter,
                 Id = this.Id,
-                GroupId = this.GroupId,
+                SessionId = this.SessionId,
                 Modified = this.Modified,
                 TypeName = this.TypeName,
                 TransformType = this.TransformType
@@ -181,11 +181,11 @@ namespace Nistec.Caching.Session
                 //val = this.BodyToBase64();
             }
 
-            string sessionKey = string.Format("{0}{1}{2}", GroupId, KeySet.Separator, Id);
+            string sessionKey = string.Format("{0}{1}{2}", SessionId, KeySet.Separator, Id);
             if (noBody)
-                return new object[] { sessionKey, val, TypeName, bag.State.ToString(), GroupId, bag.Creation, bag.Timeout, Size, bag.LastUsed, bag.UserId };
+                return new object[] { sessionKey, val, TypeName, bag.State.ToString(), SessionId, bag.Creation, bag.Timeout, Size, bag.LastUsed, bag.UserId };
             else
-                return new object[] { sessionKey, val, TypeName, bag.State.ToString(), GroupId, bag.Creation, bag.Timeout, Size, bag.LastUsed, bag.UserId };
+                return new object[] { sessionKey, val, TypeName, bag.State.ToString(), SessionId, bag.Creation, bag.Timeout, Size, bag.LastUsed, bag.UserId };
 
         }
 

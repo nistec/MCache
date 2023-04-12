@@ -136,7 +136,7 @@ namespace Nistec.Caching
             {
                 return null;
             }
-            IEnumerable<string> k = from n in m_cacheList.Values.Cast<CacheEntry>() where n.GroupId == sessionId select n.Id;
+            IEnumerable<string> k = from n in m_cacheList.Values.Cast<CacheEntry>() where n.SessionId == sessionId select n.Id;
             return k;
         }
 
@@ -1594,7 +1594,7 @@ namespace Nistec.Caching
                         {
                             CacheEntry item = (CacheEntry)o;
 
-                            if (item.GroupId == sessionId)
+                            if (item.SessionId == sessionId)
                             {
                                 items.Add(item);
                             }
@@ -1704,7 +1704,7 @@ namespace Nistec.Caching
             switch (type)
             {
                 case CloneType.Session:
-                    list = m_cacheList.Values.Where(i => !string.IsNullOrEmpty(i.GroupId)).Select(i => i.Clone());
+                    list = m_cacheList.Values.Where(i => !string.IsNullOrEmpty(i.SessionId)).Select(i => i.Clone());
                     break;
                 case CloneType.Timeout:
                     list = m_cacheList.Values.Where(i => i.IsTimeOut).Select(i => i.Clone());

@@ -144,10 +144,10 @@ namespace Nistec.Caching.Demo.Mass
             AgentManager.Cache.ExecRemote(new CacheMessage(CacheCmd.Add, "CDEntity", new CacheEntityDemo() { ID = 2345, Name = "neomi" }, 30));
             AgentManager.Cache.ExecRemote(new CacheMessage(CacheCmd.Add, "EFEntity", new CacheEntityDemo() { ID = 3456, Name = "liron" }, 30));
 
-           TransStream b = AgentManager.Cache.ExecRemote(new CacheMessage() { Command = CacheCmd.Get, Id = "ABEntity" });
+           TransStream b = AgentManager.Cache.ExecRemote(new CacheMessage() { Command = CacheCmd.Get, CustomId = "ABEntity" });
            var entity = new BinarySerializer().Deserialize<CacheEntityDemo>(b.GetStream());
 
-            b = AgentManager.Cache.ExecRemote(new CacheMessage() { Command = CacheCmd.Get, Id = "nissimEntity1" });
+            b = AgentManager.Cache.ExecRemote(new CacheMessage() { Command = CacheCmd.Get, CustomId = "nissimEntity1" });
             entity = new BinarySerializer().Deserialize<CacheEntityDemo>(b.GetStream());
 
         }

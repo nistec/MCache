@@ -298,7 +298,7 @@ namespace Nistec.Caching.Server
         /// </summary>
         /// <param name="message"></param>
         /// <returns></returns>
-        internal static TransStream ExecManager(MessageStream message)
+        internal static TransStream ExecManager(CacheMessage message)
         {
             CacheState state = CacheState.Ok;
             DateTime requestTime = DateTime.Now;
@@ -317,7 +317,7 @@ namespace Nistec.Caching.Server
                 switch (message.Command.ToLower())
                 {
                     case CacheManagerCmd.Reply:
-                        return TransStream.Write("Reply: " + message.Id, TransType.Text);
+                        return TransStream.Write("Reply: " + message.Identifier, TransType.Text);
                     case CacheManagerCmd.CacheProperties:
                         if (_Cache == null)
                             return null;
@@ -345,8 +345,8 @@ namespace Nistec.Caching.Server
                     case CacheManagerCmd.CloneItems:
                         if (_Cache == null)
                             return null;
-                        var args = message.GetArgs();
-                        CloneType ct = EnumExtension.Parse<CloneType>(args.Get<string>("value"), CloneType.All);
+                        var args = message.Args;
+                        CloneType ct = EnumExtension.Parse<CloneType>(args.Get("value"), CloneType.All);
                         return AsyncTransObject(() => Cache.CloneItems(ct), message.Command);
 
                     case CacheManagerCmd.GetAllKeys:
@@ -370,7 +370,7 @@ namespace Nistec.Caching.Server
                     case CacheManagerCmd.GetPerformanceReport:
                         return AsyncTransObject(() => PerformanceReport(), message.Command);
                     case CacheManagerCmd.GetAgentPerformanceReport:
-                        CacheAgentType agentType = CachePerformanceCounter.GetAgent(message.Id);
+                        CacheAgentType agentType = CachePerformanceCounter.GetAgent(message.Identifier);
                         return AsyncTransObject(() => PerformanceReport(agentType), message.Command);
                     case CacheManagerCmd.ResetPerformanceCounter:
                         message.AsyncTask(() => ResetPerformanceCounter());
@@ -401,7 +401,7 @@ namespace Nistec.Caching.Server
             return TransStream.WriteState((int)state, message.Command + ", " + state.ToString());//, CacheUtil.ToTransType(state));
         }
         //TOD:~
-        internal static TransStream ExecCommand(MessageStream message)
+        internal static TransStream ExecCommand(CacheMessage message)
         {
             if(message==null || message.Command==null)
             {

@@ -67,7 +67,7 @@ namespace Nistec.Caching
         {
             Id = cacheKey;
             Expiration = expiration;
-            GroupId = sessionId;
+            SessionId = sessionId;
             IsRemote = isRemote;
             if (value != null)
             {
@@ -92,7 +92,7 @@ namespace Nistec.Caching
             : base()
         {
             Id = entity.Id;
-            GroupId = entity.GroupId;
+            SessionId = entity.SessionId;
             Expiration = entity.Expiration;
             TypeName = entity.TypeName;
             Label = entity.Label;
@@ -115,10 +115,10 @@ namespace Nistec.Caching
         public CacheEntry(MessageStream m)
             : this()
         {
-            Id = m.Id;
+            Id = m.Identifier;
             Expiration = m.Expiration;
             Label = m.Label;
-            GroupId = m.GroupId;
+            SessionId = m.SessionId;
             IsRemote = true;
             SetBody(m.GetStream(), m.TypeName);
         }
@@ -403,7 +403,7 @@ namespace Nistec.Caching
                 val = BinarySerializer.SerializeToBase64(Value);
             }
 
-            return new object[] { Id, val, Expiration, Size, TypeName, GroupId, Modified };
+            return new object[] { Id, val, Expiration, Size, TypeName, SessionId, Modified };
         }
 
         /// <summary>
@@ -437,7 +437,7 @@ namespace Nistec.Caching
                 item.Value = val;
             }
             item.Expiration = Types.NZ(dr["Expiration"], CacheDefaults.DefaultCacheExpiration);
-            item.GroupId = Types.NZ(dr["SessionId"], null);
+            item.SessionId = Types.NZ(dr["SessionId"], null);
             item.Modified = Types.ToDateTime(dr["Modified"], DateTime.Now);
             return item;
         }
@@ -507,7 +507,7 @@ namespace Nistec.Caching
         public new CacheEntry Copy(bool valueAswell)
         {
             CacheEntry item = new CacheEntry();
-            item.GroupId = GroupId;
+            item.SessionId = SessionId;
             item.Modified = Modified;
             
             item.Id = Id;
@@ -606,7 +606,7 @@ namespace Nistec.Caching
         {
             CacheEntry item = new CacheEntry();
             item.Label = Label;
-            item.GroupId = GroupId;
+            item.SessionId = SessionId;
             item.Modified = DateTime.Now;
             item.Id = cacheKey;
             item.Value = Value;

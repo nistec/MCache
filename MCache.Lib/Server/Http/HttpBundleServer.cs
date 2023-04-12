@@ -50,7 +50,7 @@ namespace Nistec.Caching.Server.Http
     /// <summary>
     /// Represent a cache Http server listner.
     /// </summary>
-    public class HttpBundleServer : HttpServer<MessageStream>
+    public class HttpBundleServer : HttpServer<CacheMessage>
     {
         bool isCache=false;
         bool isDataCache=false;
@@ -159,7 +159,7 @@ namespace Nistec.Caching.Server.Http
         /// </summary>
         /// <param name="message"></param>
         /// <returns></returns>
-        protected override TransStream ExecTransStream(MessageStream message)
+        protected override TransStream ExecTransStream(CacheMessage message)
         {
             return AgentManager.ExecCommand(message);
         }
@@ -169,7 +169,7 @@ namespace Nistec.Caching.Server.Http
         /// </summary>
         /// <param name="message"></param>
         /// <returns></returns>
-        protected override string ExecString(MessageStream message)
+        protected override string ExecString(CacheMessage message)
         {
             var ts= AgentManager.ExecCommand(message);
             if(ts == null)
@@ -186,9 +186,9 @@ namespace Nistec.Caching.Server.Http
         /// </summary>
         /// <param name="request"></param>
         /// <returns></returns>
-        protected override MessageStream ReadRequest(HttpRequestInfo request)
+        protected override CacheMessage ReadRequest(HttpRequestInfo request)
         {
-            return MessageStream.ReadRequest(request);
+            return new CacheMessage(request);
         }
        
         #endregion

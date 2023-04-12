@@ -952,7 +952,7 @@ namespace Nistec.Caching.Session
         /// <returns></returns>
         public CacheState AddItem(SessionEntry entry)
         {
-            SessionBag si = GetExistingInternal(entry.GroupId);
+            SessionBag si = GetExistingInternal(entry.SessionId);
             if (si == null)
             {
                 return CacheState.AddItemFailed;
@@ -996,7 +996,7 @@ namespace Nistec.Caching.Session
         /// <returns></returns>
         public CacheState SetItem(SessionEntry entry)
         {
-            SessionBag si = GetOrCreateInternal(entry.GroupId);
+            SessionBag si = GetOrCreateInternal(entry.SessionId);
             if (si == null)
             {
                 return CacheState.AddItemFailed;

@@ -29,6 +29,7 @@ using Nistec.Caching.Session;
 using Nistec.Caching.Config;
 using Nistec.Serialization;
 using Nistec.IO;
+using Nistec.Generic;
 
 namespace Nistec.Caching.Remote
 {
@@ -74,68 +75,68 @@ namespace Nistec.Caching.Remote
         }
 
         #region do custom
-        public object DoCustom(string command, string groupId, string id, object value = null, int expiration = 0)
+        public object DoCustom(string command, string sessionId, string id, object value = null, int expiration = 0)
         {
             switch ("sess_" + command)
             {
                 case SessionCmd.Add:
-                    return Add(groupId, id, value, expiration);
+                    return Add(sessionId, id, value, expiration);
                 case SessionCmd.ClearAll:
                     return ClearAll();
                 case SessionCmd.ClearItems:
-                    return ClearItems(groupId);
+                    return ClearItems(sessionId);
                 case SessionCmd.CopyTo:
-                    return CopyTo(groupId, id, ComplexKey.Get(groupId, id).ToString(), expiration);
+                    return CopyTo(sessionId, id, ComplexKey.Get(sessionId, id).ToString(), expiration);
                 case SessionCmd.CreateSession:
-                    return CreateSession(groupId, "0", expiration, null);
+                    return CreateSession(sessionId, "0", expiration, null);
                 case SessionCmd.CutTo:
-                    return CutTo(groupId, id, ComplexKey.Get(groupId, id).ToString(), expiration);
+                    return CutTo(sessionId, id, ComplexKey.Get(sessionId, id).ToString(), expiration);
                 case SessionCmd.Exists:
-                    return Exists(groupId, id);
+                    return Exists(sessionId, id);
                 case SessionCmd.Fetch:
-                    return Fetch(groupId, id);
+                    return Fetch(sessionId, id);
                 case SessionCmd.FetchRecord:
-                    return FetchRecord(groupId, id);
+                    return FetchRecord(sessionId, id);
                 case SessionCmd.Get:
-                    return GetValue(groupId, id);
+                    return GetValue(sessionId, id);
                 case SessionCmd.GetEntry:
-                    return GetEntry(groupId, id);
+                    return GetEntry(sessionId, id);
                 case SessionCmd.GetOrCreateSession:
-                    return GetOrCreateSession(groupId);
+                    return GetOrCreateSession(sessionId);
                 case SessionCmd.GetOrCreateRecord:
-                    return GetOrCreateRecord(groupId, id, value, expiration);
+                    return GetOrCreateRecord(sessionId, id, value, expiration);
                 case SessionCmd.GetRecord:
-                    return GetRecord(groupId, id);
+                    return GetRecord(sessionId, id);
                 case SessionCmd.GetSessionItems:
-                    return GetSessionItems(groupId);
+                    return GetSessionItems(sessionId);
                 case SessionCmd.Refresh:
-                    return Refresh(groupId);
+                    return Refresh(sessionId);
                 case SessionCmd.RefreshOrCreate:
-                    return RefreshOrCreate(groupId);
+                    return RefreshOrCreate(sessionId);
                 case SessionCmd.Remove:
-                    return Remove(groupId, id);
+                    return Remove(sessionId, id);
                 case SessionCmd.RemoveSession:
-                    return RemoveSession(groupId);
+                    return RemoveSession(sessionId);
                 case SessionCmd.Reply:
-                    return Reply(groupId);
+                    return Reply(sessionId);
                 case SessionCmd.Set:
-                    return Set(groupId, id, value, expiration);
+                    return Set(sessionId, id, value, expiration);
                 case SessionCmd.ViewAllSessionsKeys:
                     return ViewAllSessionsKeys();
                 case SessionCmd.ViewAllSessionsKeysByState:
                     return ViewAllSessionsKeysByState(SessionState.Active);
                 case SessionCmd.ViewEntry:
-                    return ViewEntry(groupId, id);
+                    return ViewEntry(sessionId, id);
                 case SessionCmd.ViewSessionKeys:
-                    return ViewSessionKeys(groupId);
+                    return ViewSessionKeys(sessionId);
                 case SessionCmd.ViewSessionStream:
-                    return ViewSessionStream(groupId);
+                    return ViewSessionStream(sessionId);
                 default:
                     throw new ArgumentException("Unknown command " + command);
             }
         }
 
-        public string DoHttpJson(string command, string groupId, string id, object value = null, int expiration = 0, bool pretty=false)
+        public string DoHttpJson(string command, string sessionId, string id, object value = null, int expiration = 0, bool pretty=false)
         {
             string cmd = "sync_" + command.ToLower();
             switch (cmd)
@@ -144,11 +145,11 @@ namespace Nistec.Caching.Remote
                 case SessionCmd.GetOrCreateRecord:
                 case SessionCmd.Set:
                     {
-                        if (string.IsNullOrWhiteSpace(groupId))
+                        if (string.IsNullOrWhiteSpace(sessionId))
                         {
                             throw new ArgumentNullException("key is required");
                         }
-                        var msg=new CacheMessage() { Command = cmd, GroupId = groupId, Id = id , Expiration=expiration};
+                        var msg=new CacheMessage() { Command = cmd, SessionId = sessionId, CustomId = id , Expiration=expiration};
                         msg.SetBody(value);
                         return SendHttpJsonDuplex(msg, pretty);
                     }
@@ -163,11 +164,11 @@ namespace Nistec.Caching.Remote
                 case SessionCmd.RemoveSession:
                 case SessionCmd.Refresh:
                 case SessionCmd.ClearItems:
-                    if (string.IsNullOrWhiteSpace(groupId))
+                    if (string.IsNullOrWhiteSpace(sessionId))
                     {
-                        throw new ArgumentNullException("groupId is required");
+                        throw new ArgumentNullException("sessionId is required");
                     }
-                    return SendHttpJsonDuplex(new CacheMessage() { Command = cmd, GroupId = groupId }, pretty);
+                    return SendHttpJsonDuplex(new CacheMessage() { Command = cmd, SessionId = sessionId }, pretty);
                 case SessionCmd.Exists:
                 case SessionCmd.Fetch:
                 case SessionCmd.FetchRecord:
@@ -176,29 +177,29 @@ namespace Nistec.Caching.Remote
                 case SessionCmd.GetRecord:
                 case SessionCmd.Remove:
                 case SessionCmd.ViewEntry:
-                    if (string.IsNullOrWhiteSpace(groupId))
+                    if (string.IsNullOrWhiteSpace(sessionId))
                     {
-                        throw new ArgumentNullException("groupId is required");
+                        throw new ArgumentNullException("sessionId is required");
                     }
                     if (string.IsNullOrWhiteSpace(id))
                     {
                         throw new ArgumentNullException("id is required");
                     }
-                    return SendHttpJsonDuplex(new CacheMessage() { Command = cmd, Id = id, GroupId = groupId } , pretty);
+                    return SendHttpJsonDuplex(new CacheMessage() { Command = cmd, CustomId = id, SessionId = sessionId } , pretty);
                 case SessionCmd.CopyTo:
                     //return CopyTo(key, detail, ComplexKey.Get(key, detail).ToString(), expiration);
                     return CacheState.CommandNotSupported.ToString();
                 case SessionCmd.CreateSession:
                     {
-                        if (string.IsNullOrWhiteSpace(groupId))
+                        if (string.IsNullOrWhiteSpace(sessionId))
                         {
                             throw new ArgumentNullException("sessionId is required");
                         }
                         var message = new CacheMessage()
                         {
                             Command = SessionCmd.CreateSession,
-                            GroupId = groupId,
-                            Args = MessageStream.CreateArgs(KnowsArgs.UserId, "0", KnowsArgs.StrArgs, ""),
+                            SessionId = sessionId,
+                            Args = NameValueArgs.Create(KnownArgs.UserId, "0", KnownArgs.StrArgs, ""),
                             Expiration = expiration
                         };
                         return SendHttpJsonDuplex(message, pretty);
@@ -212,7 +213,7 @@ namespace Nistec.Caching.Remote
                         var message = new CacheMessage()
                         {
                             Command = SessionCmd.ViewAllSessionsKeysByState,
-                            Args = CacheMessage.CreateArgs("state", ((int)SessionState.Active).ToString())
+                            Args = NameValueArgs.Create("state", ((int)SessionState.Active).ToString())
                         };
                         return SendHttpJsonDuplex(message, pretty);
                     }
@@ -284,8 +285,8 @@ namespace Nistec.Caching.Remote
             CacheMessage message = new CacheMessage()
             {
                 Command = SessionCmd.Get,
-                Id = key,
-                GroupId = sessionId
+                CustomId = key,
+                SessionId = sessionId
             };
             var stream = (TransStream)SendDuplexStream(message);
             if (stream == null)
@@ -329,8 +330,8 @@ namespace Nistec.Caching.Remote
             CacheMessage message = new CacheMessage()
             {
                 Command = SessionCmd.GetEntry,
-                Id = key,
-                GroupId = sessionId
+                CustomId = key,
+                SessionId = sessionId
             };
             return (SessionEntry)SendDuplexStream<SessionEntry>(message, OnFault);
         }
@@ -348,8 +349,8 @@ namespace Nistec.Caching.Remote
             CacheMessage message = new CacheMessage()
             {
                 Command = SessionCmd.ViewEntry,
-                Id = key,
-                GroupId = sessionId
+                CustomId = key,
+                SessionId = sessionId
             };
             return (SessionEntry)SendDuplexStream<SessionEntry>(message, OnFault);
         }
@@ -374,8 +375,8 @@ namespace Nistec.Caching.Remote
             CacheMessage message = new CacheMessage()
             {
                 Command = SessionCmd.GetRecord,
-                Id = key,
-                GroupId = sessionId
+                CustomId = key,
+                SessionId = sessionId
             };
             return SendDuplexStream<Dictionary<string, object>>(message, OnFault);
         }
@@ -400,8 +401,8 @@ namespace Nistec.Caching.Remote
             CacheMessage message = new CacheMessage()
             {
                 Command = SessionCmd.FetchRecord,
-                Id = key,
-                GroupId = sessionId
+                CustomId = key,
+                SessionId = sessionId
             };
             return SendDuplexStream<Dictionary<string,object>>(message, OnFault);
         }
@@ -427,8 +428,8 @@ namespace Nistec.Caching.Remote
             CacheMessage message = new CacheMessage()
             {
                 Command = SessionCmd.Fetch,
-                Id = key,
-                GroupId = sessionId
+                CustomId = key,
+                SessionId = sessionId
             };
             return SendDuplexStreamValue(message, OnFault);
         }
@@ -453,8 +454,8 @@ namespace Nistec.Caching.Remote
             CacheMessage message = new CacheMessage()
             {
                 Command = SessionCmd.Fetch,
-                Id = key,
-                GroupId = sessionId
+                CustomId = key,
+                SessionId = sessionId
             };
             return SendDuplexStream<T>(message, OnFault);
         }
@@ -494,9 +495,9 @@ namespace Nistec.Caching.Remote
             using (var message = new CacheMessage()
             {
                 Command = SessionCmd.CopyTo,
-                GroupId = sessionId,
-                Args = MessageStream.CreateArgs(KnowsArgs.TargetKey, targetKey, KnowsArgs.AddToCache, addToCache.ToString()),
-                Id = key,
+                SessionId = sessionId,
+                Args = NameValueArgs.Create(KnownArgs.TargetKey, targetKey, KnownArgs.AddToCache, addToCache.ToString()),
+                CustomId = key,
                 Expiration = expiration
             })
             {
@@ -531,9 +532,9 @@ namespace Nistec.Caching.Remote
             using (var message = new CacheMessage()
             {
                 Command = SessionCmd.CutTo,
-                GroupId = sessionId,
-                Args = MessageStream.CreateArgs(KnowsArgs.TargetKey, targetKey, KnowsArgs.AddToCache, addToCache.ToString()),
-                Id = key,
+                SessionId = sessionId,
+                Args = NameValueArgs.Create(KnownArgs.TargetKey, targetKey, KnownArgs.AddToCache, addToCache.ToString()),
+                CustomId = key,
                 Expiration = expiration
             })
             {
@@ -562,8 +563,8 @@ namespace Nistec.Caching.Remote
             using (var message = new CacheMessage()
             {
                 Command = SessionCmd.CreateSession,
-                GroupId = sessionId,
-                Args = MessageStream.CreateArgs(KnowsArgs.UserId, userId, KnowsArgs.StrArgs, args),
+                SessionId = sessionId,
+                Args = NameValueArgs.Create(KnownArgs.UserId, userId, KnownArgs.StrArgs, args),
                 Expiration = timeout
             })
             {
@@ -585,7 +586,7 @@ namespace Nistec.Caching.Remote
             using (var message = new CacheMessage()
             {
                 Command = SessionCmd.RemoveSession,
-                GroupId = sessionId
+                SessionId = sessionId
             })
             {
                 return SendDuplexState(message);
@@ -605,7 +606,7 @@ namespace Nistec.Caching.Remote
             using (var message = new CacheMessage()
             {
                 Command = SessionCmd.ClearItems,
-                GroupId = sessionId
+                SessionId = sessionId
             })
             {
                 return SendDuplexState(message);
@@ -647,8 +648,8 @@ namespace Nistec.Caching.Remote
             using (var message = new CacheMessage()
             {
                 Command = SessionCmd.GetOrCreateSession,
-                GroupId = sessionId,
-                Args = MessageStream.CreateArgs(KnowsArgs.ShouldSerialized, "true")
+                SessionId = sessionId,
+                Args = NameValueArgs.Create(KnownArgs.ShouldSerialized, "true")
             })
             {
                 return SendDuplexStream<SessionBagStream>(message, OnFault);
@@ -671,9 +672,9 @@ namespace Nistec.Caching.Remote
             }
             using (var message = new CacheMessage() {
                 Command = SessionCmd.GetOrCreateRecord,
-                Id=key,
+                CustomId = key,
                 Expiration= sessionTimeout,
-                GroupId=sessionId
+                SessionId = sessionId
 
             })// SessionCmd.GetOrCreateRecord, key, value, sessionTimeout, sessionId))
             {
@@ -698,7 +699,7 @@ namespace Nistec.Caching.Remote
         //    {
         //        Command = SessionCmd.GetExistingSession,
         //        Id = sessionId,
-        //        Args = MessageStream.CreateArgs(KnowsArgs.ShouldSerialized, "true")
+        //        Args = NameValueArgs.Create(KnownArgs.ShouldSerialized, "true")
         //    })
         //    {
         //        return SendDuplexStream<SessionBagStream>(message, OnFault);
@@ -720,8 +721,8 @@ namespace Nistec.Caching.Remote
             using (var message = new CacheMessage()
             {
                 Command = SessionCmd.GetSessionItems,
-                GroupId = sessionId,
-                Args = MessageStream.CreateArgs(KnowsArgs.ShouldSerialized, "true")
+                SessionId = sessionId,
+                Args = NameValueArgs.Create(KnownArgs.ShouldSerialized, "true")
             })
             {
                 return SendDuplexStream<IDictionary<string, object>>(message, OnFault);
@@ -745,7 +746,7 @@ namespace Nistec.Caching.Remote
             using (var message = new CacheMessage()
             {
                 Command = SessionCmd.Refresh,
-                GroupId = sessionId,
+                SessionId = sessionId,
             })
             {
                 return SendDuplexState(message);
@@ -765,7 +766,7 @@ namespace Nistec.Caching.Remote
             using (var message = new CacheMessage()
             {
                 Command = SessionCmd.RefreshOrCreate,
-                GroupId = sessionId,
+                SessionId = sessionId,
             })
             {
                 return SendDuplexState(message);
@@ -801,8 +802,8 @@ namespace Nistec.Caching.Remote
             using (var message = new CacheMessage()
             {
                 Command = SessionCmd.Remove,
-                GroupId = sessionId,
-                Id = key
+                SessionId = sessionId,
+                CustomId = key
             })
             {
                 return SendDuplexState(message);
@@ -933,8 +934,8 @@ namespace Nistec.Caching.Remote
 
             using (var message = new CacheMessage() {
                 Command = SessionCmd.Set,
-                Id=key,
-                GroupId=sessionId,
+                CustomId = key,
+                SessionId = sessionId,
                 Expiration=sessionTimeout
 
             })// SessionCmd.Set, key, value, sessionTimeout, sessionId))
@@ -968,8 +969,8 @@ namespace Nistec.Caching.Remote
             }
             using (var message = new CacheMessage() {
                 Command = SessionCmd.Add,
-                Id = key,
-                GroupId = sessionId,
+                CustomId = key,
+                SessionId = sessionId,
                 Expiration = sessionTimeout
 
             })// SessionCmd.Add, key, value, sessionTimeout, sessionId))
@@ -999,8 +1000,8 @@ namespace Nistec.Caching.Remote
             using (var message = new CacheMessage()
             {
                 Command = SessionCmd.Exists,
-                GroupId = sessionId,
-                Id = key
+                SessionId = sessionId,
+                CustomId = key
             })
             {
                 return SendDuplexState(message)== CacheState.Ok;
@@ -1030,7 +1031,7 @@ namespace Nistec.Caching.Remote
             using (var message = new CacheMessage()
             {
                 Command = SessionCmd.ViewAllSessionsKeysByState,
-                Args = CacheMessage.CreateArgs("state", ((int)state).ToString())
+                Args = NameValueArgs.Create("state", ((int)state).ToString())
             })
             {
                 return SendDuplexStream<string[]>(message, OnFault);
@@ -1052,7 +1053,7 @@ namespace Nistec.Caching.Remote
             using (var message = new CacheMessage()
             {
                 Command = SessionCmd.ViewSessionKeys,
-                GroupId = sessionId,
+                SessionId = sessionId,
             })
             {
                 return SendDuplexStream<string[]>(message, OnFault);
@@ -1068,7 +1069,7 @@ namespace Nistec.Caching.Remote
             using (var message = new CacheMessage()
             {
                 Command = SessionCmd.ViewSessionStream,
-                GroupId = sessionId,
+                SessionId = sessionId,
             })
             {
                 return SendDuplexStream<SessionBagStream>(message, OnFault);
@@ -1088,7 +1089,7 @@ namespace Nistec.Caching.Remote
             using (var message = new CacheMessage()
             {
                 Command = SessionCmd.Reply,
-                Id = text,
+                CustomId = text,
             })
             {
                 return SendDuplexStream<string>(message, OnFault);

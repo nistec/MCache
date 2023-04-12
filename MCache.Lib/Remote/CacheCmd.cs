@@ -43,20 +43,21 @@ namespace Nistec.Caching.Remote
     /// <summary>
     /// Represent known args for api commands.
     /// </summary>
-    public class KnowsArgs
+    public class KnownArgs
     {
         //public const string SessionId = "SessionId";
         /// <summary>Source.</summary>
         public const string Source = "source";
         /// <summary>Destination.</summary>
         public const string Destination = "destination";
-
         /// <summary>ConnectionKey.</summary>
         public const string ConnectionKey = "connectionkey";
         /// <summary>TableName.</summary>
         public const string TableName = "tablename";
         /// <summary>MappingName.</summary>
         public const string MappingName = "mappingname";
+        /// <summary>DbName.</summary>
+        public const string DbName = "DbName";
         /// <summary>SourceName.</summary>
         public const string SourceName = "sourcename";
         /// <summary>SourceType.</summary>
@@ -85,7 +86,6 @@ namespace Nistec.Caching.Remote
         public const string StrArgs = "strArgs";
         /// <summary>ShouldSerialized.</summary>
         public const string ShouldSerialized = "shouldserialized";
-
         /// <summary>CloneType.</summary>
         public const string CloneType = "clonetype";
         /// <summary>SyncType.</summary>

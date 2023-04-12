@@ -413,7 +413,7 @@ namespace Nistec.Caching.Sync.Embed
         /// Refrech cache
         /// </summary>
         public void Refresh()
-        {
+              {
             foreach (string item in this.GetKeys())
             {
                 Refresh(item);

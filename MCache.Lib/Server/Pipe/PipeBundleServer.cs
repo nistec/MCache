@@ -38,7 +38,7 @@ namespace Nistec.Caching.Server.Pipe
     /// <summary>
     /// Represent a cache Pipe server listner.
     /// </summary>
-    public class PipeBundleServer : PipeServer<MessageStream>
+    public class PipeBundleServer : PipeServer<CacheMessage>
     {
         bool isCache=false;
         bool isDataCache=false;
@@ -140,7 +140,7 @@ namespace Nistec.Caching.Server.Pipe
         /// </summary>
         /// <param name="message"></param>
         /// <returns></returns>
-        protected override TransStream ExecRequset(MessageStream message)
+        protected override TransStream ExecRequset(CacheMessage message)
         {
             return AgentManager.ExecCommand(message);
         }
@@ -149,9 +149,9 @@ namespace Nistec.Caching.Server.Pipe
         /// </summary>
         /// <param name="pipeServer"></param>
         /// <returns></returns>
-        protected override MessageStream ReadRequest(NamedPipeServerStream pipeServer)
+        protected override CacheMessage ReadRequest(NamedPipeServerStream pipeServer)
         {
-            return MessageStream.ReadRequest(pipeServer, ReceiveBufferSize);
+            return new CacheMessage(pipeServer, null);// MessageStream.ReadRequest(pipeServer, ReceiveBufferSize);
         }
 
 

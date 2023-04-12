@@ -49,7 +49,8 @@ namespace Nistec.Caching.Sync.Embed
     [Serializable]
     public class SyncTable<T> : SyncTableBase<T>,ISyncTable, ISyncEx<T>, ISyncEx //where T: IEntityItem
     {
- 
+
+        internal Action<string,DataTable> OnSyncCompleted;
         #region ctor
 
         /// <summary>
@@ -423,9 +424,17 @@ namespace Nistec.Caching.Sync.Embed
             CacheLogger.Logger.LogAction(CacheAction.SyncTime, CacheActionState.Debug, "Refreshe Sync Item start : " + this.SyncSource.EntityName);
 
             ConcurrentDictionary<string, T> items = null;
+            DataTable dt;
             lock (taskLock)
             {
-                items = EntityExtension.CreateConcurrentEntityList<T>(_Context, Filter, OnError);
+
+                dt = EntityExtension.CreateEntityData<T>(_Context, Filter, OnError);
+                if (dt == null)
+                {
+                    CacheLogger.Logger.LogAction(CacheAction.SyncTime, CacheActionState.Failed, "Refreshe Sync Data Failed : " + this.SyncSource.EntityName);
+                    return;
+                }
+                items = EntityExtension.CreateConcurrentEntityList<T>(_Context, dt, OnError);
                 if (items == null)
                 {
                     CacheLogger.Logger.LogAction(CacheAction.SyncTime, CacheActionState.Failed, "Refreshe Sync Item Failed : " + this.SyncSource.EntityName);
@@ -448,6 +457,15 @@ namespace Nistec.Caching.Sync.Embed
             {
                 CacheLogger.Logger.LogAction(CacheAction.SyncTime, CacheActionState.Ok, "Refresh Sync Item completed : " + this.SyncSource.EntityName);
             }
+
+            //T item;
+            //if(_Items.TryGetValue(this.SyncSource.EntityName, out item))
+            //{
+
+            //}
+
+            if (OnSyncCompleted != null)
+                OnSyncCompleted(this.SyncSource.EntityName, dt.Copy());
         }
 
         public void LogActionSync(string text)

@@ -80,7 +80,7 @@ namespace Nistec.Caching.Remote
         }
 
         #region do custom
-        public object DoCustom(string command, string key, string groupId, string label = null, object value = null, int expiration = 0)
+        public object DoCustom(string command, string key, string sessionId, string label = null, object value = null, int expiration = 0)
         {
             switch ("cach_" + command)
             {
@@ -121,7 +121,7 @@ namespace Nistec.Caching.Remote
             }
         }
 
-        public string DoHttpJson(string command, string key, string groupId=null, string label=null, object value = null, int expiration = 0, bool pretty=false)
+        public string DoHttpJson(string command, string key, string sessionId=null, string label=null, object value = null, int expiration = 0, bool pretty=false)
         {
             string cmd = "cach_" + command.ToLower();
             switch (cmd)
@@ -133,7 +133,7 @@ namespace Nistec.Caching.Remote
                         {
                             throw new ArgumentNullException("key is required");
                         }
-                        var msg = new CacheMessage() { Command = cmd, Id = key, GroupId = groupId, Expiration = expiration };
+                        var msg = new CacheMessage() { Command = cmd, CustomId = key, SessionId = sessionId, Expiration = expiration };
                         msg.SetBody(value);
                         return SendHttpJsonDuplex(msg, pretty);
                     }
@@ -146,9 +146,9 @@ namespace Nistec.Caching.Remote
                         {
                             throw new ArgumentNullException("key is required");
                         }
-                        var msg = new CacheMessage() { Command = cmd, Id = key, GroupId= groupId, Expiration=expiration };
+                        var msg = new CacheMessage() { Command = cmd, CustomId = key, SessionId = sessionId, Expiration=expiration };
                         msg.SetBody(value);
-                        msg.Args = MessageStream.CreateArgs(KnowsArgs.Source, label, KnowsArgs.Destination, key);
+                        msg.Args = NameValueArgs.Create(KnownArgs.Source, label, KnownArgs.Destination, key);
                         return SendHttpJsonDuplex(msg, pretty);
                     }
                 case CacheCmd.Fetch:
@@ -164,7 +164,7 @@ namespace Nistec.Caching.Remote
                         {
                             throw new ArgumentNullException("key is required");
                         }
-                        return SendHttpJsonDuplex(new CacheMessage() {Command=cmd,Id=key }, pretty);
+                        return SendHttpJsonDuplex(new CacheMessage() {Command=cmd, CustomId = key }, pretty);
                     }
                 case CacheCmd.KeepAliveItem:
                 case CacheCmd.RemoveAsync:
@@ -173,7 +173,7 @@ namespace Nistec.Caching.Remote
                         {
                             throw new ArgumentNullException("key is required");
                         }
-                        SendHttpJsonOut(new CacheMessage() { Command = cmd, Id = key });
+                        SendHttpJsonOut(new CacheMessage() { Command = cmd, CustomId = key });
                         return CacheState.Ok.ToString();
                     }
 
@@ -223,7 +223,7 @@ namespace Nistec.Caching.Remote
             {
                 throw new ArgumentNullException("key is required");
             }
-            var message = new CacheMessage() { Command = CacheCmd.Get, Id = key };
+            var message = new CacheMessage() { Command = CacheCmd.Get, CustomId = key };
             return SendDuplexStream<T>(message, OnFault);
 
         }
@@ -241,7 +241,7 @@ namespace Nistec.Caching.Remote
             {
                 throw new ArgumentNullException("key is required");
             }
-            var message = new CacheMessage() { Command = CacheCmd.Get, Id = key};
+            var message = new CacheMessage() { Command = CacheCmd.Get, CustomId = key};
             var ts = SendDuplexStream(message);
             if (ts == null)
                 return defaultValue;
@@ -259,7 +259,7 @@ namespace Nistec.Caching.Remote
             {
                 throw new ArgumentNullException("key is required");
             }
-            var message = new CacheMessage() { Command = CacheCmd.Get, Id = key };
+            var message = new CacheMessage() { Command = CacheCmd.Get, CustomId = key };
             var ts = SendDuplexStream(message);
             if (ts == null)
             {
@@ -279,7 +279,7 @@ namespace Nistec.Caching.Remote
             {
                 throw new ArgumentNullException("key is required");
             }
-            var message = new CacheMessage() { Command = CacheCmd.GetRecord, Id = key };
+            var message = new CacheMessage() { Command = CacheCmd.GetRecord, CustomId = key };
             var ts = SendDuplexStream(message);
             if (ts == null)
             {
@@ -315,7 +315,7 @@ namespace Nistec.Caching.Remote
             {
                 throw new ArgumentNullException("text is required");
             }
-            var message = new CacheMessage() { Command = CacheCmd.Reply ,Id = text };
+            var message = new CacheMessage() { Command = CacheCmd.Reply , CustomId = text };
             return SendDuplexStream<string>(message,OnFault);
         }
         
@@ -341,7 +341,7 @@ namespace Nistec.Caching.Remote
             {
                 throw new ArgumentNullException("cacheKey is required");
             }
-            var message = new CacheMessage() { Command = CacheCmd.Remove, Id = cacheKey };
+            var message = new CacheMessage() { Command = CacheCmd.Remove, CustomId = cacheKey };
             var ts = SendDuplexStream(message);
             if(ts==null)
             {
@@ -360,7 +360,7 @@ namespace Nistec.Caching.Remote
             {
                 throw new ArgumentNullException("cacheKey is required");
             }
-            var message = new CacheMessage() { Command = CacheCmd.RemoveAsync, Id = cacheKey };
+            var message = new CacheMessage() { Command = CacheCmd.RemoveAsync, CustomId = cacheKey };
             SendOut(message);
         }
 
@@ -387,7 +387,7 @@ namespace Nistec.Caching.Remote
                 throw new ArgumentNullException("cacheKey is required");
             }
 
-            var message = new CacheMessage() { Command = CacheCmd.Get, Id = cacheKey };
+            var message = new CacheMessage() { Command = CacheCmd.Get, CustomId = cacheKey };
             var ts = SendDuplexStream(message);
             if (ts == null)
             {
@@ -420,7 +420,7 @@ namespace Nistec.Caching.Remote
                 throw new ArgumentNullException("cacheKey is required");
             }
 
-            var message = new CacheMessage() { Command = CacheCmd.Fetch, Id = cacheKey};
+            var message = new CacheMessage() { Command = CacheCmd.Fetch, CustomId = cacheKey};
             return SendDuplexStream<T>(message, OnFault);
         }
 
@@ -430,7 +430,7 @@ namespace Nistec.Caching.Remote
             {
                 throw new ArgumentNullException("cacheKey is required");
             }
-            var message = new CacheMessage() { Command = CacheCmd.Fetch, Id = cacheKey };
+            var message = new CacheMessage() { Command = CacheCmd.Fetch, CustomId = cacheKey };
             return SendDuplexStreamValue(message, OnFault);
         }
 
@@ -489,8 +489,8 @@ namespace Nistec.Caching.Remote
 
             using (var message = new CacheMessage() {
                 Command= CacheCmd.Set,
-                Id= cacheKey,
-                GroupId=sessionId,
+                CustomId = cacheKey,
+                SessionId=sessionId,
                 Expiration=expiration
 
             })
@@ -531,8 +531,8 @@ namespace Nistec.Caching.Remote
 
             using (var message = new CacheMessage() {
                     Command = CacheCmd.Set,
-                    Id = cacheKey,
-                    GroupId = sessionId,
+                CustomId = cacheKey,
+                SessionId = sessionId,
                     Expiration = expiration
 
             }) //CacheCmd.Add, cacheKey, value, expiration, sessionId))
@@ -554,7 +554,7 @@ namespace Nistec.Caching.Remote
                 throw new ArgumentNullException("cacheKey is required");
             }
 
-            using (var message = new CacheMessage() { Command = CacheCmd.GetEntry, Id = cacheKey })
+            using (var message = new CacheMessage() { Command = CacheCmd.GetEntry, CustomId = cacheKey })
             {
                 return SendDuplexStream<CacheEntry>(message, OnFault);
             }
@@ -572,7 +572,7 @@ namespace Nistec.Caching.Remote
                 throw new ArgumentNullException("cacheKey is required");
             }
 
-            using (var message = new CacheMessage() { Command = CacheCmd.ViewEntry, Id = cacheKey})
+            using (var message = new CacheMessage() { Command = CacheCmd.ViewEntry, CustomId = cacheKey})
             {
                 return SendDuplexStream<CacheEntry>(message,OnFault);
             }
@@ -605,10 +605,10 @@ namespace Nistec.Caching.Remote
             using (var message = new CacheMessage()
             {
                 Command = CacheCmd.CopyTo,
-                Args = MessageStream.CreateArgs(KnowsArgs.Source, source, KnowsArgs.Destination, dest),
+                Args = NameValueArgs.Create(KnownArgs.Source, source, KnownArgs.Destination, dest),
                 Expiration = expiration,
                 IsDuplex = false,
-                Id = dest
+                CustomId = dest
             })
             {
                 return SendDuplexState(message);
@@ -639,10 +639,10 @@ namespace Nistec.Caching.Remote
             using (var message = new CacheMessage()
             {
                 Command = CacheCmd.CutTo,
-                Args = MessageStream.CreateArgs(KnowsArgs.Source, source, KnowsArgs.Destination, dest),
+                Args = NameValueArgs.Create(KnownArgs.Source, source, KnownArgs.Destination, dest),
                 Expiration = expiration,
                 IsDuplex = false,
-                Id = dest
+                CustomId = dest
             })
             {
                 return SendDuplexState(message);
@@ -660,7 +660,7 @@ namespace Nistec.Caching.Remote
         {
             if (sessionId == null)
                 return CacheState.ArgumentsError;
-            using (var message = new CacheMessage() { Command = CacheCmd.RemoveItemsBySession, Label = sessionId })
+            using (var message = new CacheMessage() { Command = CacheCmd.RemoveItemsBySession, SessionId = sessionId })
             {
                 return SendDuplexState(message);
             }
@@ -674,7 +674,7 @@ namespace Nistec.Caching.Remote
         {
             if (cacheKey == null)
                 return;
-            using (var message = new CacheMessage() { Command = CacheCmd.KeepAliveItem, Id = cacheKey })
+            using (var message = new CacheMessage() { Command = CacheCmd.KeepAliveItem, CustomId = cacheKey })
             {
                 SendOut(message);
             }
