@@ -607,7 +607,8 @@ namespace Nistec.Caching.Remote
                 Command = CacheCmd.CopyTo,
                 Args = NameValueArgs.Create(KnownArgs.Source, source, KnownArgs.Destination, dest),
                 Expiration = expiration,
-                IsDuplex = false,
+                //IsDuplex = false,
+                DuplexType = DuplexTypes.None,
                 CustomId = dest
             })
             {
@@ -641,7 +642,8 @@ namespace Nistec.Caching.Remote
                 Command = CacheCmd.CutTo,
                 Args = NameValueArgs.Create(KnownArgs.Source, source, KnownArgs.Destination, dest),
                 Expiration = expiration,
-                IsDuplex = false,
+                //IsDuplex = false,
+                DuplexType = DuplexTypes.None,
                 CustomId = dest
             })
             {

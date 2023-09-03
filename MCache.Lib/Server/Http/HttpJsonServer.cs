@@ -40,7 +40,7 @@ namespace Nistec.Caching.Server.Http
     /// <summary>
     /// Represent a cache Http server listner.
     /// </summary>
-    public class HttpJsonBundleServer : HttpServer<StringMessage>
+    public class HttpJsonBundleServer : HttpServer<TransString>
     {
         bool isCache=false;
         bool isDataCache=false;
@@ -150,9 +150,9 @@ namespace Nistec.Caching.Server.Http
         /// </summary>
         /// <param name="message"></param>
         /// <returns></returns>
-        protected override TransStream ExecTransStream(StringMessage message)
+        protected override TransStream ExecTransStream(TransString message)
         {
-            var cm = JsonSerializer.Deserialize<CacheMessage>(message.Message);
+            var cm = JsonSerializer.Deserialize<CacheMessage>(message.Body);
             var ack = AgentManager.ExecCommand(cm);
             if (ack == null)
             {
@@ -165,7 +165,7 @@ namespace Nistec.Caching.Server.Http
 
             ////string json = ack.ToJson();
             //NetStream nstream = new NetStream();
-            //StringMessage.WriteString(json, nstream);
+            //TransString.WriteString(json, nstream);
             //return nstream;
         }
 
@@ -174,9 +174,9 @@ namespace Nistec.Caching.Server.Http
         /// </summary>
         /// <param name="message"></param>
         /// <returns></returns>
-        protected override string ExecString(StringMessage message)
+        protected override string ExecString(TransString message)
         {
-            var cm = JsonSerializer.Deserialize<CacheMessage>(message.Message);
+            var cm = JsonSerializer.Deserialize<CacheMessage>(message.Body);
             var ack = AgentManager.ExecCommand(cm);
             if(ack==null)
             {
@@ -192,9 +192,9 @@ namespace Nistec.Caching.Server.Http
         /// </summary>
         /// <param name="request"></param>
         /// <returns></returns>
-        protected override StringMessage ReadRequest(HttpRequestInfo request)
+        protected override TransString ReadRequest(HttpRequestInfo request)
         {
-            return new StringMessage(request);
+            return new TransString(request);
         }
 
         ///// <summary>

@@ -84,11 +84,11 @@ namespace Nistec.Caching.Data
             var message = new CacheMessage()
             {
                 Command = Remote.DataCacheCmd.QueryTable,
-                Expiration = expiration,
-                BodyStream=MessageStream.SerializeBody(arg),
-                TypeName=Types.GetTypeName(arg)
+                Expiration = expiration
+                //BodyStream=MessageStream.SerializeBody(arg),
+                //TypeName=Types.GetTypeName(arg)
             };
-
+            message.SetBody(arg);
             //var message = new Channels.GenericMessage(keyValueParameters)
             //{
             //    Command= Remote.DataCacheCmd.QueryTable,
@@ -117,11 +117,11 @@ namespace Nistec.Caching.Data
             {
                 Command = Remote.DataCacheCmd.QueryEntity,
                 Expiration = expiration,
-                CustomId = entityKey.GetPrimaryKey(),
-                BodyStream = MessageStream.SerializeBody(arg),
-                TypeName = Types.GetTypeName(arg)
+                CustomId = entityKey.GetPrimaryKey()
+                //BodyStream = MessageStream.SerializeBody(arg),
+                //TypeName = Types.GetTypeName(arg)
             };
-
+            message.SetBody(arg);
             //var message = new Channels.GenericMessage(keyValueParameters)
             //{
             //    Command = Remote.DataCacheCmd.QueryEntity,

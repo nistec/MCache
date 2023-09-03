@@ -4,7 +4,7 @@ using System.Collections;
 using System.Text;
 using System.Runtime.InteropServices;
 using Nistec.IO;
-using Nistec.Channels.RemoteCache;
+//using Nistec.Channels.RemoteCache;
 using Nistec.Generic;
 using Nistec.Serialization;
 using System.Diagnostics;

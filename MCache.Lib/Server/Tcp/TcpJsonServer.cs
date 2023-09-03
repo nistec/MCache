@@ -139,9 +139,9 @@ namespace Nistec.Caching.Server.Tcp
 
         #region abstract methods
 
-        protected override TransStream ExecRequset(StringMessage message)
+        protected override TransStream ExecRequset(TransString message)
         {
-            var cm = JsonSerializer.Deserialize<CacheMessage>(message.Message);
+            var cm = JsonSerializer.Deserialize<CacheMessage>(message.Body);
             var ack = AgentManager.ExecCommand(cm);
             if(ack==null)
             {

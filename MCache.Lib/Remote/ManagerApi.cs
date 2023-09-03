@@ -352,7 +352,8 @@ namespace Nistec.Caching.Remote
             {
                 Command = command,
                 CustomId = "*",
-                IsDuplex = true
+                DuplexType= DuplexTypes.Respond
+                //IsDuplex = true
             })
             {
                 return ManagerApi.SendDuplexStream<CacheItemReport>(message, OnFault);
@@ -514,15 +515,17 @@ namespace Nistec.Caching.Remote
             /// <param name="ts"></param>
             public static void AddTableWithSync(string db, DataTable dt, string tableName, string mappingName, string[] sourceName, SyncType syncType, TimeSpan ts)
             {
-                PipeClient.SendOut(new CacheMessage()//BinarySerializer.ConvertToStream(dt))//(MessageStream.GetTypeName(dt), BinarySerializer.ConvertToStream(dt))
+                var message=new CacheMessage()//BinarySerializer.ConvertToStream(dt))//(MessageStream.GetTypeName(dt), BinarySerializer.ConvertToStream(dt))
                 {
                     Command = DataCacheCmd.AddTableWithSync,
                     DbName = db,
-                    Label=tableName,
-                    BodyStream = MessageStream.SerializeBody(dt),
-                    TypeName = Types.GetTypeName(dt),
+                    Label = tableName,
+                    //BodyStream = MessageStream.SerializeBody(dt),
+                    //TypeName = Types.GetTypeName(dt),
                     Args = NameValueArgs.Create(KnownArgs.MappingName, mappingName, KnownArgs.SourceName, NameValueArgs.JoinArg(sourceName), KnownArgs.SyncType, ((int)syncType).ToString(), KnownArgs.SyncTime, ts.ToString())
-                }, CacheDefaults.DefaultBundleHostName, CacheApiSettings.EnableRemoteException);
+                };
+                message.SetBody(dt);
+                PipeClient.SendOut(message, CacheDefaults.DefaultBundleHostName, CacheApiSettings.EnableRemoteException);
             }
 
             /// <summary>
@@ -550,15 +553,17 @@ namespace Nistec.Caching.Remote
             /// </code></example>
             public static void AddTableWithSync(string db, DataTable dt, string tableName, string mappingName, Nistec.Caching.SyncType syncType, TimeSpan ts)
             {
-                PipeClient.SendOut(new CacheMessage()//BinarySerializer.ConvertToStream(dt))//(MessageStream.GetTypeName(dt), BinarySerializer.ConvertToStream(dt))
+                var message=new CacheMessage()//BinarySerializer.ConvertToStream(dt))//(MessageStream.GetTypeName(dt), BinarySerializer.ConvertToStream(dt))
                 {
                     Command = DataCacheCmd.AddTableWithSync,
                     DbName = db,
-                    Label=tableName,
-                    BodyStream = MessageStream.SerializeBody(dt),
-                    TypeName = Types.GetTypeName(dt),
+                    Label = tableName,
+                    //BodyStream = MessageStream.SerializeBody(dt),
+                    //TypeName = Types.GetTypeName(dt),
                     Args = NameValueArgs.Create(KnownArgs.MappingName, mappingName, KnownArgs.SourceName, mappingName, KnownArgs.SyncType, ((int)syncType).ToString(), KnownArgs.SyncTime, ts.ToString())
-                }, CacheDefaults.DefaultBundleHostName, CacheApiSettings.EnableRemoteException);
+                };
+                message.SetBody(dt);
+                PipeClient.SendOut(message, CacheDefaults.DefaultBundleHostName, CacheApiSettings.EnableRemoteException);
 
             }
             /// <summary>

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections;
 using System.Text;
@@ -24,6 +24,7 @@ namespace Nistec.Caching.Demo
 
             Console.WriteLine("Start test...");
 
+           
             RemoteCacheSyncTest.TestAll(NetProtocol.Tcp);
             Console.ReadLine();
 

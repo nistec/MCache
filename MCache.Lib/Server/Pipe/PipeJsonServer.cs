@@ -142,13 +142,13 @@ namespace Nistec.Caching.Server.Pipe
         /// </summary>
         /// <param name="message"></param>
         /// <returns></returns>
-        protected override TransStream ExecRequset(StringMessage message)
+        protected override TransStream ExecRequset(TransString message)
         {
-            var cm = JsonSerializer.Deserialize<CacheMessage>(message.Message);
+            var cm = JsonSerializer.Deserialize<CacheMessage>(message.Body);
             var ack= AgentManager.ExecCommand(cm);
             if (ack == null)
             {
-                return TransStream.WriteState(-1,"Invalid result for message: " + message.Message);//, TransType.Error);
+                return TransStream.WriteState(-1,"Invalid result for message: " + message.Body);//, TransType.Error);
             }
             //return ack.ToJsonStream();
             string json = TransStream.ReadJson(ack.GetStream());
@@ -158,7 +158,7 @@ namespace Nistec.Caching.Server.Pipe
 
             //string json = ack.ToJson();
             //NetStream nstream = new NetStream();
-            //StringMessage.WriteString(json, nstream);
+            //TransString.WriteString(json, nstream);
             //return nstream;
         }
 

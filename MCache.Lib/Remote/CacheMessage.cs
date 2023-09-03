@@ -352,7 +352,7 @@ namespace Nistec.Caching.Remote
 #endif
 
         #region extension
-
+        public byte[] Body { get => base._Body; set => base._Body = value; }
         [NoSerialize]
         public string CacheKey { get { return CustomId; } internal set { CustomId = value; } }
         [NoSerialize]

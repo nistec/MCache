@@ -262,8 +262,8 @@ namespace Nistec.Caching.Remote
             string response = null;
 
             message.TransformType = TransformType.Json;
-            message.IsDuplex = true;
-
+            //message.IsDuplex = true;
+            message.DuplexType = DuplexTypes.Respond;
             response = HttpClient.SendDuplexJson(message, RemoteHostName, false);
             //response = HttpClientCache.SendDuplexJson(message, RemoteHostName, false);
 
@@ -320,7 +320,7 @@ namespace Nistec.Caching.Remote
                 case NetProtocol.Tcp:
                     break;
             }
-            return TcpClient.SendDuplexStream(message, RemoteHostName, EnableRemoteException);
+            return TcpStreamClient.SendDuplexStream(message, RemoteHostName, EnableRemoteException);
         }
 
         public void SendOut(CacheMessage message)
@@ -335,7 +335,7 @@ namespace Nistec.Caching.Remote
                     break;
                 case NetProtocol.Tcp:
                 default:
-                    TcpClient.SendOut(message, RemoteHostName, EnableRemoteException);
+                    TcpStreamClient.SendOut(message, RemoteHostName, EnableRemoteException);
                     break;
             }
         }
@@ -470,7 +470,7 @@ namespace Nistec.Caching.Remote
                         break;
                     case NetProtocol.Tcp:
                     default:
-                        TcpClient.SendOut(message, RemoteHostName, EnableRemoteException);
+                        TcpStreamClient.SendOut(message, RemoteHostName, EnableRemoteException);
                         break;
                 }
             }
