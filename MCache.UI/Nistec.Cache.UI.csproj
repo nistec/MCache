@@ -90,23 +90,23 @@
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Nistec.Charts, Version=4.0.2.0, Culture=neutral, PublicKeyToken=734a739868a76423, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\References\_WinDll\Nistec.Charts.dll</HintPath>
+      <HintPath>..\..\Nistec.Win\References\Debug\Nistec.Charts.dll</HintPath>
     </Reference>
     <Reference Include="Nistec.GridView, Version=4.0.2.0, Culture=neutral, PublicKeyToken=734a739868a76423, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\References\_WinDll\Nistec.GridView.dll</HintPath>
+      <HintPath>..\..\Nistec.Win\References\Debug\Nistec.GridView.dll</HintPath>
     </Reference>
     <Reference Include="Nistec.Win, Version=4.0.2.0, Culture=neutral, PublicKeyToken=734a739868a76423, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\References\_WinDll\Nistec.Win.dll</HintPath>
+      <HintPath>..\..\Nistec.Win\References\Debug\Nistec.Win.dll</HintPath>
     </Reference>
     <Reference Include="Nistec.WinForms, Version=4.0.2.0, Culture=neutral, PublicKeyToken=734a739868a76423, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\References\_WinDll\Nistec.WinForms.dll</HintPath>
+      <HintPath>..\..\Nistec.Win\References\Debug\Nistec.WinForms.dll</HintPath>
     </Reference>
     <Reference Include="Nistec.Wizards, Version=4.0.2.0, Culture=neutral, PublicKeyToken=734a739868a76423, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\References\_WinDll\Nistec.Wizards.dll</HintPath>
+      <HintPath>..\..\Nistec.Win\References\Debug\Nistec.Wizards.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core">
@@ -271,15 +271,14 @@
       <Name>Nistec.Logger</Name>
     </ProjectReference>
     <ProjectReference Include="..\MCache.Agent\Nistec.Cache.Agent.csproj">
-      <Project>{68B39437-C795-4B1D-938C-CDA5AD79FF07}</Project>
+      <Project>{68b39437-c795-4b1d-938c-cda5ad79ff07}</Project>
       <Name>Nistec.Cache.Agent</Name>
     </ProjectReference>
     <ProjectReference Include="..\MCache.Lib\Nistec.Cache.csproj">
-      <Project>{EFA331B8-D990-4A1F-AB55-1934831F9D98}</Project>
+      <Project>{efa331b8-d990-4a1f-ab55-1934831f9d98}</Project>
       <Name>Nistec.Cache</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup />
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
