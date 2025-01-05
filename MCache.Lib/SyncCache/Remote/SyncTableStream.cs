@@ -41,7 +41,7 @@ using System.Threading.Tasks;
 using System.Threading;
 using Nistec.Channels;
 using Nistec.Caching.Config;
-
+#pragma warning disable 1591
 namespace Nistec.Caching.Sync.Remote
 {
 
@@ -432,6 +432,7 @@ namespace Nistec.Caching.Sync.Remote
         /// Try Get copy of an item as <see cref="NetStream"/>.
         /// </summary>
         /// <param name="key"></param>
+        /// <param name="item"></param>
         /// <returns></returns>
         public bool TryGetItemStream(string key, out NetStream item)
         {

@@ -32,7 +32,7 @@ using System.Collections;
 using Nistec.Data.Entities;
 using Nistec.IO;
 using Nistec.Caching.Config;
-
+#pragma warning disable 1591
 namespace Nistec.Caching.Session
 {
     /// <summary>
@@ -151,7 +151,7 @@ namespace Nistec.Caching.Session
 
         #endregion
 
-        public virtual SessionEntry Copy()
+        public new SessionEntry Copy()
         {
             return new SessionEntry()
             {

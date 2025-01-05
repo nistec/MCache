@@ -34,7 +34,7 @@ using Nistec.Channels.Http;
 using System.Net.Sockets;
 using Nistec.Serialization;
 using Nistec.Runtime;
-
+#pragma warning disable 1591
 namespace Nistec.Caching.Server.Http
 {
     /// <summary>

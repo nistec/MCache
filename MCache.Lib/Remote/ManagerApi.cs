@@ -35,7 +35,7 @@ using Nistec.Runtime;
 using Nistec.Generic;
 using Nistec.Serialization;
 using Nistec.IO;
-
+#pragma warning disable 1591
 namespace Nistec.Caching.Remote
 {
     /// <summary>

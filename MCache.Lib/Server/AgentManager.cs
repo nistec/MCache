@@ -115,6 +115,9 @@ namespace Nistec.Caching.Server
         #endregion
 
         static ConnectionSettings _Connections;
+        /// <summary>
+        /// Get Connections
+        /// </summary>
         public static ConnectionSettings Connections
         {
             get

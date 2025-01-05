@@ -40,7 +40,7 @@ using Nistec.Serialization;
 using System.IO;
 using System.Diagnostics;
 using Nistec.Data.Ado;
-
+#pragma warning disable 1591
 namespace Nistec.Caching.Data
 {
 
@@ -799,7 +799,7 @@ namespace Nistec.Caching.Data
         /// <summary>
         /// Add Value into local data table  
         /// </summary>
-        /// <param name="primaryKey"</param>
+        /// <param name="primaryKey"></param>
         /// <param name="field"></param>
         /// <param name="value">value to set</param>
         public bool Add(string primaryKey, string field, object value)
@@ -842,7 +842,7 @@ namespace Nistec.Caching.Data
         /// <summary>
         /// Set Value into local data table  
         /// </summary>
-        /// <param name="primaryKey"</param>
+        /// <param name="primaryKey"></param>
         /// <param name="field"></param>
         /// <param name="value">value to set</param>
         public bool Set(string primaryKey, string field, object value)

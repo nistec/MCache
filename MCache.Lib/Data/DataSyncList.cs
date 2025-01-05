@@ -36,6 +36,10 @@ namespace Nistec.Caching.Data
     {
         internal static readonly DataSyncList Global = new DataSyncList();
 
+        /// <summary>
+        /// Copy
+        /// </summary>
+        /// <returns></returns>
         public DataSyncList Copy()
         {
 
@@ -339,7 +343,11 @@ namespace Nistec.Caching.Data
             return 0;
 
         }
-
+        /// <summary>
+        /// IsEqual
+        /// </summary>
+        /// <param name="list"></param>
+        /// <returns></returns>
         public bool IsEqual(DataSyncList list)
         {
             foreach (var dc in list.GetItems())

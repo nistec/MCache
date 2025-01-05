@@ -31,7 +31,7 @@ using Nistec.Caching.Config;
 using Nistec.Generic;
 using System.Dynamic;
 using System.Threading.Tasks;
-
+#pragma warning disable 1591
 namespace Nistec.Caching.Session
 {
 

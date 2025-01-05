@@ -29,7 +29,7 @@ using System.IO;
 using Nistec.IO;
 using Nistec.Caching.Config;
 using Nistec.Generic;
-
+#pragma warning disable 1591
 namespace Nistec.Caching.Session
 {
 

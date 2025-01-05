@@ -32,7 +32,7 @@ using Nistec.Xml;
 using Nistec.Data.Advanced;
 using Nistec.Caching.Sync;
 using Nistec.Serialization;
-
+#pragma warning disable 1591
 namespace Nistec.Caching.Data
 {
 

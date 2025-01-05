@@ -38,7 +38,7 @@ using Nistec.IO;
 using Nistec.Channels;
 using Nistec.Runtime;
 using Nistec.Caching.Config;
-
+#pragma warning disable 1591
 namespace Nistec.Caching.Sync.Embed
 {
     /// <summary>

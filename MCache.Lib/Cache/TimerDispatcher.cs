@@ -29,7 +29,7 @@ using System.Collections.Concurrent;
 using System.Data;
 using Nistec.Caching.Session;
 using Nistec.Caching.Config;
-
+#pragma warning disable 1591
 namespace Nistec.Caching
 {
     public class TimerSource
@@ -45,7 +45,7 @@ namespace Nistec.Caching
         internal DateTime Ttl;
         internal int Increment;
         internal int State;//0=active, 1=idle, 2=timedout
-        internal bool EnableNotification;
+        internal bool EnableNotification { get; set; }
         internal int IdlIncrement=3;
         int StateTaken = 0;
         public int GetState()

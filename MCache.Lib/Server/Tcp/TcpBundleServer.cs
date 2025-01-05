@@ -92,7 +92,11 @@ namespace Nistec.Caching.Server.Tcp
             base.OnLoad();
             
         }
-
+        /// <summary>
+        /// OnFault
+        /// </summary>
+        /// <param name="message"></param>
+        /// <param name="ex"></param>
         protected override void OnFault(string message, Exception ex)
         {
             //base.OnFault(message, ex);

@@ -494,7 +494,7 @@ namespace Nistec.Caching
         /// Get item copy without value
         /// </summary>
         /// <returns></returns>
-        public CacheEntry Clone()
+        public new CacheEntry Clone()
         {
             return Copy(false);
         }
@@ -504,7 +504,7 @@ namespace Nistec.Caching
         /// </summary>
         /// <param name="valueAswell"></param>
         /// <returns></returns>
-        public new CacheEntry Copy(bool valueAswell)
+        public CacheEntry Copy(bool valueAswell)
         {
             CacheEntry item = new CacheEntry();
             item.SessionId = SessionId;

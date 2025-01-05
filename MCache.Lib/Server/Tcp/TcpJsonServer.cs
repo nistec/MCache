@@ -91,7 +91,11 @@ namespace Nistec.Caching.Server.Tcp
             base.OnLoad();
             
         }
-
+        /// <summary>
+        /// OnFault
+        /// </summary>
+        /// <param name="message"></param>
+        /// <param name="ex"></param>
         protected override void OnFault(string message, Exception ex)
         {
             //base.OnFault(message, ex);
@@ -138,7 +142,11 @@ namespace Nistec.Caching.Server.Tcp
         #endregion
 
         #region abstract methods
-
+        /// <summary>
+        /// ExecRequset
+        /// </summary>
+        /// <param name="message"></param>
+        /// <returns></returns>
         protected override TransStream ExecRequset(TransString message)
         {
             var cm = JsonSerializer.Deserialize<CacheMessage>(message.Body);

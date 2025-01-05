@@ -30,7 +30,7 @@ using Nistec.Serialization;
 using Nistec.Channels.Tcp;
 using Nistec.Channels.Http;
 using Nistec.Runtime;
-
+#pragma warning disable 1591
 namespace Nistec.Caching.Remote
 {
     public abstract class RemoteApi

@@ -40,7 +40,7 @@ using System.IO;
 using Nistec.Serialization;
 using Nistec.Caching.Remote;
 using Nistec.Channels;
-
+#pragma warning disable 1591
 namespace Nistec.Caching.Data
 {
 

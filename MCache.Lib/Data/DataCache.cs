@@ -35,7 +35,7 @@ using Nistec.Caching.Sync;
 using System.Threading.Tasks;
 using Nistec.Caching.Config;
 
-
+#pragma warning disable 1591
 namespace Nistec.Caching.Data
 {
 
@@ -365,7 +365,7 @@ namespace Nistec.Caching.Data
 
             //  <RemoteData>
             //  <Settings>
-            //    <ConnectionString value ="Data Source=MCONTROL; Initial Catalog=Northwind; uid=sa;password=tishma; Connection Timeout=30"/>
+            //    <ConnectionString value ="Data Source=MCONTROL; Initial Catalog=Northwind; uid=sa;password=???; Connection Timeout=30"/>
             //    <Provider value ="SqlServer"/>
             //    <DataCacheName value ="McRemoteData"/>
             //    <LoadRemoteSettings value ="true"/>

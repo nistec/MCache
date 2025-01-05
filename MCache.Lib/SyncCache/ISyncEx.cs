@@ -27,6 +27,9 @@ using Nistec.Caching.Data;
 
 namespace Nistec.Caching.Sync
 {
+    /// <summary>
+    /// ISyncBag
+    /// </summary>
     public interface ISyncBag
     {
 

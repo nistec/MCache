@@ -4,7 +4,7 @@ using System.Collections;
 using System.Text;
 using System.Data;
 using System.Linq;
-
+#pragma warning disable 1591
 namespace Nistec.Caching
 {
 
@@ -313,13 +313,13 @@ namespace Nistec.Caching
             {
                 InitCache();
             }
-            bool found = false;
+            //bool found = false;
             foreach(var item in this.Values)
             {
                 var prop = typeof(T).GetProperties().Where(p => p.Name == field && p.CanRead).FirstOrDefault();
                 if (prop != null && prop.GetValue(item, null) == value)
                 {
-                    found = true;
+                    //found = true;
                     return item;
                 }
 

@@ -34,6 +34,8 @@ using Nistec.Caching.Server;
 using Nistec.Runtime;
 using System.Diagnostics;
 
+#pragma warning disable 1591
+
 namespace Nistec.Caching
 {
         

@@ -35,7 +35,7 @@ using Nistec.Caching.Config;
 using Nistec.Channels;
 using System.Data;
 using System.Threading;
-
+#pragma warning disable 1591
 namespace Nistec.Caching.Session
 {
 
@@ -1100,7 +1100,6 @@ namespace Nistec.Caching.Session
         /// <summary>
         /// Get item value from session using session id and item key.
         /// </summary>
-        /// <typeparam name="T"></typeparam>
         /// <param name="sessionId"></param>
         /// <param name="key"></param>
         /// <returns></returns>

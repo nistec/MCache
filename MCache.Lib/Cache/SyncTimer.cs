@@ -177,7 +177,11 @@ namespace Nistec.Caching
         {
             return (obj.Interval == _timeSpan);
         }
-
+        /// <summary>
+        /// IsEquals
+        /// </summary>
+        /// <param name="st"></param>
+        /// <returns></returns>
         public bool IsEquals(SyncTimer st)
         {
             if (st == null)

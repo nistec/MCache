@@ -31,7 +31,7 @@ using Nistec.Data.Entities;
 using Nistec.Data.Factory;
 using System.Threading;
 using Nistec.Caching.Config;
-
+#pragma warning disable 1591
 namespace Nistec.Caching.Sync
 {
     ///// Represent a db cache that Hold a multiple <see cref="DataCache"/> items in memory.

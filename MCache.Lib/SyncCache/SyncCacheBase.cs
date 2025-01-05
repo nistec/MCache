@@ -39,7 +39,7 @@ using System.Threading.Tasks;
 using System.Threading;
 using Nistec.Caching.Config;
 using Nistec.Caching.Sync.Embed;
-
+#pragma warning disable 1591
 namespace Nistec.Caching.Sync
 {
     /// <summary>

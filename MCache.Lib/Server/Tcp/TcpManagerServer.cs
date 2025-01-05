@@ -32,6 +32,7 @@ using Nistec.IO;
 using Nistec.Channels.Tcp;
 using Nistec.Caching.Config;
 using System.Net.Sockets;
+using System.Threading.Tasks;
 
 namespace Nistec.Caching.Server.Tcp
 {

@@ -40,7 +40,7 @@ using System.Xml;
 using System.Linq;
 using Nistec.Serialization;
 using Nistec.Caching.Config;
-
+#pragma warning disable 1591
 namespace Nistec.Caching.Sync.Remote
 {
     /// <summary>

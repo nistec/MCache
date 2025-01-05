@@ -33,7 +33,7 @@ using Nistec.Generic;
 //using Nistec.Caching.Channels;
 using Nistec.Caching.Config;
 using Nistec.Serialization;
-
+#pragma warning disable 1591
 namespace Nistec.Caching.Remote
 {
 
@@ -537,6 +537,7 @@ namespace Nistec.Caching.Remote
         /// <param name="db">db name</param>
         /// <param name="tableName">table name</param>
         /// <param name="primaryKey">primary key</param>
+        /// <param name="format">primary key</param>
         /// <returns></returns>
         public string GetJson(string db, string tableName, string primaryKey, JsonFormat format)
         {

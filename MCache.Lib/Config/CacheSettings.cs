@@ -328,7 +328,7 @@ namespace Nistec.Caching.Config
 
 
             EnableSyncTypeEventTrigger = table.Get<bool>("EnableSyncTypeEventTrigger", true);
-            EnableConnectionProvider = table.Get<bool>("EnableConnectionProvider", true);
+            EnableConnectionProvider = table.Get<bool>("EnableConnectionProvider", false);
             //SyncEmbedEntityEventMode = table.Get("SyncEmbedEntityEventMode", "all");//all|list|table
                        
             //MaxTcpBundlePool = table.Get<int>("MaxTcpBundlePool", 0);

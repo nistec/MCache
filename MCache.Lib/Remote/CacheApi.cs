@@ -35,7 +35,7 @@ using Nistec.Caching.Config;
 using Nistec.Serialization;
 using Nistec.Data;
 using System.Data;
-
+#pragma warning disable 1591
 namespace Nistec.Caching.Remote
 {
     /// <summary>

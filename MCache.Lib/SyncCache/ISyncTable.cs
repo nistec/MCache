@@ -92,7 +92,11 @@ namespace Nistec.Caching.Sync
         /// <param name="info"></param>
         /// <returns></returns>
         bool Contains(ComplexKey info);
-
+        /// <summary>
+        /// GetPrimaryKey
+        /// </summary>
+        /// <param name="keyValueArgs"></param>
+        /// <returns></returns>
         string GetPrimaryKey(NameValueArgs keyValueArgs);
     }
 

@@ -33,7 +33,7 @@ using Nistec.Data.Factory;
 using Nistec.Caching.Sync.Embed;
 using Nistec.Serialization;
 using System.Collections;
-
+#pragma warning disable 1591
 namespace Nistec.Caching.Sync
 {
    
@@ -219,6 +219,7 @@ namespace Nistec.Caching.Sync
         /// <param name="interval"></param>
         /// <param name="enableNoLock"></param>
         /// <param name="commandTimeout"></param>
+        /// <param name="columns"></param>
         public SyncEntity(string entityName, string mappingName, string[] sourceName, SyncType syncType, TimeSpan interval, bool enableNoLock, int commandTimeout, string columns="*")
         {
             EntityName = entityName;
@@ -368,7 +369,7 @@ namespace Nistec.Caching.Sync
        
 
         /// <summary>
-        /// Create new instance of <see cref="ISyncItem"/>
+        /// Create new instance of ISyncItem
         /// </summary>
         /// <returns></returns>
         internal ISyncTable CreateInstance()//SyncCacheBase owner

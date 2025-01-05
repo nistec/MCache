@@ -14,7 +14,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
-
+#pragma warning disable 1591
 namespace Nistec.Caching.Sync
 {
     public class SyncConfig
@@ -83,6 +83,7 @@ namespace Nistec.Caching.Sync
             if (EnableSyncFileWatcher & _SyncFileWatcher !=null)
             {
                 _SyncFileWatcher.FileChanged -= new FileSystemEventHandler(_SyncFileWatcher_FileChanged);
+                _SyncFileWatcher = null;
             }
             CacheLogger.Logger.LogAction(CacheAction.General, CacheActionState.Debug, "SyncConfig Stoped!");
         }

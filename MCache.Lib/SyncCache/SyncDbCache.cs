@@ -463,6 +463,7 @@ namespace Nistec.Caching.Sync
         /// Add Db To Sync Cache
         /// </summary>
         /// <param name="connectionKey"></param>
+        /// <param name="owner"></param>
         /// <param name="intervalSeconds"></param>
         public void AddDb(string connectionKey, ISyncronizer owner, int intervalSeconds)
         {

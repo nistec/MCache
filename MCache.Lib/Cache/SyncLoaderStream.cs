@@ -42,7 +42,7 @@ using System.Threading;
 using Nistec.Channels;
 using Nistec.Caching.Sync;
 using Nistec.Caching.Config;
-
+#pragma warning disable 1591
 namespace Nistec.Caching
 {
     /// <summary>

@@ -31,7 +31,7 @@ using Nistec.Channels;
 using Nistec.Channels.Tcp;
 using System.IO.Pipes;
 using Nistec.Channels.Http;
-
+#pragma warning disable 1591
 namespace Nistec.Caching.Config
 {
     /// <summary>

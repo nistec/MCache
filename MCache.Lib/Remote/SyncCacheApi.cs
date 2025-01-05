@@ -35,7 +35,7 @@ using Nistec.Caching.Config;
 using Nistec.Caching.Data;
 using Nistec.IO;
 using Nistec.Serialization;
-
+#pragma warning disable 1591
 namespace Nistec.Caching.Remote
 {
     /// <summary>
@@ -330,6 +330,7 @@ namespace Nistec.Caching.Remote
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="info"></param>
+        /// <param name="field"></param>
         /// <returns></returns>
         public T Get<T>(ComplexKey info, string field)
         {
@@ -354,6 +355,7 @@ namespace Nistec.Caching.Remote
         /// <typeparam name="T"></typeparam>
         /// <param name="entityName"></param>
         /// <param name="keys"></param>
+        /// <param name="field"></param>
         /// <returns></returns>
         public T Get<T>(string entityName, string[] keys, string field)
         {
@@ -911,7 +913,6 @@ namespace Nistec.Caching.Remote
         /// <summary>
         /// Get if sync cache contains item using arguments.
         /// </summary>
-        /// <typeparam name="T"></typeparam>
         /// <param name="entityName"></param>
         /// <param name="keys"></param>
         /// <returns></returns>

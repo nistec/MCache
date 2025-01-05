@@ -44,7 +44,7 @@ using Nistec.IO;
 using Nistec.Data;
 using Nistec.Data.Factory;
 using Nistec.Channels;
-
+#pragma warning disable 1591
 namespace Nistec.Caching
 {
     /// <summary>

@@ -37,7 +37,7 @@ using System.Threading.Tasks;
 using System.Threading;
 using Nistec.Caching.Config;
 using Nistec.Channels;
-
+#pragma warning disable 1591
 namespace Nistec.Caching.Sync
 {
    
@@ -60,14 +60,21 @@ namespace Nistec.Caching.Sync
         internal bool IsTimeout { get; set; }
 
         internal ISyncBag Owner;
-
+        /// <summary>
+        /// GetCleanKeys
+        /// </summary>
+        /// <returns></returns>
         public string[] GetCleanKeys()
         {
             if (FieldsKey == null)
                 return null;
             return KeySet.CleanKeys(FieldsKey);
         }
-
+        /// <summary>
+        /// GetPrimaryKey
+        /// </summary>
+        /// <param name="keyValueArgs"></param>
+        /// <returns></returns>
         public string GetPrimaryKey(string[] keyValueArgs)
         {
 
@@ -219,6 +226,7 @@ namespace Nistec.Caching.Sync
         /// <param name="entityName"></param>
         /// <param name="mappingName"></param>
         /// <param name="keys"></param>
+        /// <param name="columns"></param>
         /// <param name="timer"></param>
         /// <param name="enableNoLock"></param>
         /// <param name="commandTimeout"></param>
@@ -291,6 +299,7 @@ namespace Nistec.Caching.Sync
         /// <param name="entityName"></param>
         /// <param name="mappingName"></param>
         /// <param name="keys"></param>
+        /// <param name="columns"></param>
         /// <param name="timer"></param>
         /// <param name="enableNoLock"></param>
         /// <param name="commandTimeout"></param>
@@ -307,6 +316,7 @@ namespace Nistec.Caching.Sync
         /// <param name="sourceName"></param>
         /// <param name="sourceType"></param>
         /// <param name="keys"></param>
+        /// <param name="columns"></param>
         /// <param name="timer"></param>
         /// <param name="enableNoLock"></param>
         /// <param name="commandTimeout"></param>
@@ -473,6 +483,7 @@ namespace Nistec.Caching.Sync
         /// <param name="entityName"></param>
         /// <param name="mappingName"></param>
         /// <param name="sourceName"></param>
+        /// <param name="columns"></param>
         /// <param name="syncType"></param>
         /// <param name="ts"></param>
         /// <param name="enableNoLock"></param>
@@ -506,6 +517,7 @@ namespace Nistec.Caching.Sync
         /// <param name="db"></param>
         public virtual void SetContextAndLoadEntity(EntityDbContext db)
         {
+           
             if (CacheSettings.EnableConnectionProvider)
                 db.EnableConnectionProvider = true;
 

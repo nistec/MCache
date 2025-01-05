@@ -38,7 +38,7 @@ using Nistec.Caching.Config;
 using System.Collections.Concurrent;
 using System.IO;
 using Nistec.Serialization;
-
+#pragma warning disable 1591
 namespace Nistec.Caching.Data
 {
 
@@ -1375,6 +1375,7 @@ namespace Nistec.Caching.Data
         /// <param name="dt">data table to add into the storage</param>
         /// <param name="tableName">table name</param>
         /// <param name="mappingName">maooing name in database</param>
+        /// <param name="sourceType">EntitySourceType</param>
         /// <param name="timeout">table name</param>
         public bool AddWithKey(DataTable dt,  string tableName, string mappingName, EntitySourceType sourceType, int timeout = 60000)
         {

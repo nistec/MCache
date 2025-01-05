@@ -30,7 +30,7 @@ using Nistec.Caching.Config;
 using Nistec.Serialization;
 using Nistec.IO;
 using Nistec.Generic;
-
+#pragma warning disable 1591
 namespace Nistec.Caching.Remote
 {
     /// <summary>
@@ -358,7 +358,6 @@ namespace Nistec.Caching.Remote
         /// <summary>
         ///  Fetch item from specified session cache using session id and item key.
         /// </summary>
-        /// <typeparam name="T"></typeparam>
         /// <param name="sessionId"></param>
         /// <param name="key"></param>
         /// <returns></returns>
@@ -384,7 +383,6 @@ namespace Nistec.Caching.Remote
         /// <summary>
         ///  Fetch item from specified session cache using session id and item key.
         /// </summary>
-        /// <typeparam name="T"></typeparam>
         /// <param name="sessionId"></param>
         /// <param name="key"></param>
         /// <returns></returns>
@@ -411,7 +409,6 @@ namespace Nistec.Caching.Remote
         /// <summary>
         ///  Fetch item from specified session cache using session id and item key.
         /// </summary>
-        /// <typeparam name="T"></typeparam>
         /// <param name="sessionId"></param>
         /// <param name="key"></param>
         /// <returns></returns>

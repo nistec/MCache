@@ -25,13 +25,12 @@ using System.Text;
 namespace Nistec.Caching
 {
 
-   
-
     /// <summary>CacheState.</summary>
     [Serializable]
     public enum CacheState
     {
-        UnKnown=-1,
+        /// <summary>UnKnown.</summary>
+        UnKnown = -1,
         /// <summary>Ok.</summary>
         Ok = 0,
         /// <summary>ItemAdded.</summary>

@@ -38,7 +38,7 @@ using Nistec.Caching.Server;
 using System.Collections.Concurrent;
 using Nistec.Channels;
 using Nistec.Caching.Remote;
-
+#pragma warning disable 1591
 namespace Nistec.Caching.Sync.Embed
 {
    

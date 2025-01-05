@@ -35,7 +35,7 @@ using Nistec.Caching.Server;
 using Nistec.Data.Entities;
 using System.Threading.Tasks;
 using Nistec.Caching.Config;
-
+#pragma warning disable 1591
 namespace Nistec.Caching.Data
 {
 

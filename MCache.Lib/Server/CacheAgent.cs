@@ -32,7 +32,7 @@ using System.Threading.Tasks;
 using System.Threading;
 using Nistec.Caching.Config;
 
-
+#pragma warning disable 1591
 namespace Nistec.Caching.Server
 {
     /// <summary>

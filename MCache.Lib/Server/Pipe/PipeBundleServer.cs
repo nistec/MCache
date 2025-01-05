@@ -32,7 +32,7 @@ using System.Threading.Tasks;
 using Nistec.Caching.Config;
 using System.Net.Sockets;
 
-
+#pragma warning disable 1591
 namespace Nistec.Caching.Server.Pipe
 {
     /// <summary>

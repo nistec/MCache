@@ -33,7 +33,7 @@ using Nistec.IO;
 using Nistec.Caching.Session;
 using Nistec.Caching.Config;
 using Nistec.Channels;
-
+#pragma warning disable 1591
 namespace Nistec.Caching.Server
 {
 

@@ -43,7 +43,7 @@ using Nistec.Caching.Config;
 using Nistec.Caching.Sync.Remote;
 using Nistec.Channels;
 using Nistec.Runtime;
-
+#pragma warning disable 1591
 namespace Nistec.Caching.Server
 {
     /// <summary>
