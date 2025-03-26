@@ -92,10 +92,10 @@ namespace Nistec.Caching.Data
         ConcurrentDictionary<string, DataSyncEntity> m_data;
 
         IDataCache Owner;
-        bool IsGlobal;
+        //bool IsGlobal;
         internal DataSyncList()
         {
-            IsGlobal = true;
+            //IsGlobal = true;
             m_data = new ConcurrentDictionary<string, DataSyncEntity>();
 
         }
@@ -105,7 +105,7 @@ namespace Nistec.Caching.Data
         /// <param name="owner"></param>
         public DataSyncList(IDataCache owner)
         {
-            IsGlobal = false;
+            //IsGlobal = false;
             m_data = new ConcurrentDictionary<string, DataSyncEntity>();
             Owner = owner;
         }

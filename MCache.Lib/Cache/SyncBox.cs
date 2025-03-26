@@ -95,7 +95,7 @@ namespace Nistec.Caching
             IsRemote = isRemote;
             //this.IntervalSeconds = CacheSettings.SyncBoxInterval;
             //this.Initialized = true;
-            this.LogAction(CacheAction.General, CacheActionState.None, "Initialized SynBox");
+            this.LogAction(CacheAction.General, CacheActionState.None, "Initialized SyncBox");
 
             if (autoStart)
             {
@@ -411,7 +411,6 @@ namespace Nistec.Caching
          */
 
         #endregion
-
 
         #region events
         /*

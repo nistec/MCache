@@ -367,14 +367,14 @@ namespace Nistec.Caching.Data
         /// CacheStateChanged
         /// </summary>
         public event EventHandler CacheStateChanged;
-        /// <summary>
-        /// DataCacheChanging 
-        /// </summary>
-        public event EventHandler DataCacheChanging;
-        /// <summary>
-        /// DataCacheChanged
-        /// </summary>
-        public event EventHandler DataCacheChanged;
+        ///// <summary>
+        ///// DataCacheChanging 
+        ///// </summary>
+        //public event EventHandler DataCacheChanging;
+        ///// <summary>
+        ///// DataCacheChanged
+        ///// </summary>
+        //public event EventHandler DataCacheChanged;
         /// <summary>
         /// DataValueChanged
         /// </summary>

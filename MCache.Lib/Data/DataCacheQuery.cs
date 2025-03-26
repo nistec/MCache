@@ -421,10 +421,10 @@ namespace Nistec.Caching.Data
         /// Synchronize Start Event Handler.
         /// </summary>
         public event EventHandler SynchronizeStart;
-        /// <summary>
-        /// Session Removed Event Handler.
-        /// </summary>
-        public event EventHandler<GenericEventArgs<string>> TableRemoved;
+        ///// <summary>
+        ///// Session Removed Event Handler.
+        ///// </summary>
+        //public event EventHandler<GenericEventArgs<string>> TableRemoved;
         /// <summary>
         /// Start Session cache.
         /// </summary>
