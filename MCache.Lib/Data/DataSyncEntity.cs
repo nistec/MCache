@@ -196,9 +196,9 @@ namespace Nistec.Caching.Data
                 return false;
 
             if (!(this.ClientId == dse.ClientId &&
-                this.ConnectionKey == dse.ClientId &&
+                this.ConnectionKey == dse.ConnectionKey &&
                 this.EnableNoLock == dse.EnableNoLock &&
-                this.EntityName == dse.ClientId &&
+                this.EntityName == dse.EntityName &&
                 this.Interval == dse.Interval &&
                 this.SourceType == dse.SourceType &&
                 this.SourceName == dse.SourceName &&
@@ -353,11 +353,12 @@ DROP TRIGGER trgw_{1}
         /// <param name="sourceName"></param>
         /// <param name="syncType"></param>
         /// <param name="interval"></param>
+        /// <param name="storageName"></param>
         /// <param name="enableNoLock"></param>
         /// <param name="commandTimeout"></param>
-        public DataSyncEntity(string connectionKey, string entityName, string mappingName, string[] sourceName, SyncType syncType, TimeSpan interval, bool enableNoLock, int commandTimeout)
+        public DataSyncEntity(string connectionKey, string entityName, string mappingName, string[] sourceName, SyncType syncType, TimeSpan interval, string storageName, bool enableNoLock, int commandTimeout)
         {
-            SyncEntity = new SyncEntity(entityName, mappingName, sourceName, syncType, interval, enableNoLock, commandTimeout);
+            SyncEntity = new SyncEntity(entityName, mappingName, sourceName, syncType, interval,storageName, enableNoLock, commandTimeout);
             if (syncType == SyncType.Event && interval == TimeSpan.Zero)
                 interval = TimeSpan.FromSeconds(60);
             SyncTime = new SyncTimer(interval, syncType);
@@ -372,11 +373,12 @@ DROP TRIGGER trgw_{1}
         /// <param name="mappingName"></param>
         /// <param name="syncType"></param>
         /// <param name="interval"></param>
+        /// <param name="storageName"></param>
         /// <param name="enableNoLock"></param>
         /// <param name="commandTimeout"></param>
-        public DataSyncEntity(string connectionKey, string entityName, string mappingName, SyncType syncType, TimeSpan interval, bool enableNoLock=false, int commandTimeout=0)
+        public DataSyncEntity(string connectionKey, string entityName, string mappingName, SyncType syncType, TimeSpan interval, string storageName, bool enableNoLock=false, int commandTimeout=0)
         {
-            SyncEntity = new SyncEntity(entityName, mappingName, new string[] { mappingName }, syncType, interval, enableNoLock, commandTimeout);
+            SyncEntity = new SyncEntity(entityName, mappingName, new string[] { mappingName }, syncType, interval,storageName, enableNoLock, commandTimeout);
             if (syncType == SyncType.Event && interval == TimeSpan.Zero)
                 interval = TimeSpan.FromSeconds(60);
             SyncTime = new SyncTimer(interval, syncType);
@@ -453,7 +455,7 @@ DROP TRIGGER trgw_{1}
         /// <returns></returns>
         public int RegisterAsync(IDataCache Owner)
         {
-            return Task.Factory.StartNew<int>(() => Register(Owner, true)).Result;
+            return Task.Factory.StartNew<int>(() => Register(Owner, true)).GetAwaiter().GetResult();
         }
 
         /// <summary>
@@ -602,7 +604,7 @@ DROP TRIGGER trgw_{1}
         /// <returns></returns>
         public int CreateTableTriggerAsync(IDataCache Owner)
         {
-            return Task.Factory.StartNew<int>(() => CreateTableTrigger(Owner)).Result;
+            return Task.Factory.StartNew<int>(() => CreateTableTrigger(Owner)).GetAwaiter().GetResult();
         }
 
         /// <summary>

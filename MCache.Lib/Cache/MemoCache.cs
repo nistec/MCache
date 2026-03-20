@@ -1801,7 +1801,7 @@ namespace Nistec.Caching
         #region Find items
         public IList<CacheEntry> FindItemsByArgsAsync(params string[] keyValuesArgs)
         {
-            return Task.Factory.StartNew<IList<CacheEntry>>(() => FindItemsByArgs(keyValuesArgs)).Result;
+            return Task.Factory.StartNew<IList<CacheEntry>>(() => FindItemsByArgs(keyValuesArgs)).GetAwaiter().GetResult();
         }
         public IList<CacheEntry> FindItemsByArgs(params string[] keyValuesArgs)
         {
@@ -1818,7 +1818,7 @@ namespace Nistec.Caching
 
         public IEnumerable<KeyValuePair<string, CacheEntry>> FindItemsAsync(string regexPattern)
         {
-            return Task.Factory.StartNew<IEnumerable<KeyValuePair<string, CacheEntry>>>(() => FindItems(regexPattern)).Result;
+            return Task.Factory.StartNew<IEnumerable<KeyValuePair<string, CacheEntry>>>(() => FindItems(regexPattern)).GetAwaiter().GetResult();
         }
         public IEnumerable<KeyValuePair<string, CacheEntry>> FindItems(string regexPattern)
         {
@@ -1827,7 +1827,7 @@ namespace Nistec.Caching
         }
         public T FindFirstItemAsync<T>(string regexPattern)
         {
-            return Task.Factory.StartNew<T>(() => FindFirstItem<T>(regexPattern)).Result;
+            return Task.Factory.StartNew<T>(() => FindFirstItem<T>(regexPattern)).GetAwaiter().GetResult();
         }
         public T FindFirstItem<T>(string regexPattern)
         {
@@ -1853,7 +1853,7 @@ namespace Nistec.Caching
         }
         public IList<CacheEntry> FindItemsAsync(string searchValue, bool searchStartsWith)
         {
-            return Task.Factory.StartNew<IList<CacheEntry>>(() => FindItems(searchValue, searchStartsWith)).Result;
+            return Task.Factory.StartNew<IList<CacheEntry>>(() => FindItems(searchValue, searchStartsWith)).GetAwaiter().GetResult();
         }
         public IList<CacheEntry> FindItems(string searchValue, bool searchStartsWith)
         {
@@ -1867,7 +1867,7 @@ namespace Nistec.Caching
         }
         public IList<string> FindKeysAsync(string searchValue, bool searchStartsWith)
         {
-            return Task.Factory.StartNew<IList<string>>(() => FindKeys(searchValue, searchStartsWith)).Result;
+            return Task.Factory.StartNew<IList<string>>(() => FindKeys(searchValue, searchStartsWith)).GetAwaiter().GetResult();
         }
         public IList<string> FindKeys(string searchValue, bool searchStartsWith)
         {

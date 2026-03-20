@@ -229,12 +229,13 @@ namespace Nistec.Caching.Sync
         /// <param name="columns"></param>
         /// <param name="timer"></param>
         /// <param name="enableNoLock"></param>
+        /// <param name="storageName"></param>
         /// <param name="commandTimeout"></param>
         /// <param name="isAsync"></param>
-        public SyncTableBase(string connectionKey, string entityName, string mappingName, string[] keys, string columns, SyncTimer timer, bool enableNoLock, int commandTimeout, bool isAsync)
+        public SyncTableBase(string connectionKey, string entityName, string mappingName, string[] keys, string columns, SyncTimer timer, bool enableNoLock, string storageName, int commandTimeout, bool isAsync)
             : this(isAsync)
         {
-            Set(connectionKey, entityName, mappingName, new string[] { mappingName }, EntitySourceType.Table, keys,columns, timer, enableNoLock, commandTimeout);
+            Set(connectionKey, entityName, mappingName, new string[] { mappingName }, EntitySourceType.Table, keys,columns, timer, storageName,enableNoLock, commandTimeout);
         }
 
         /// <summary>
@@ -248,13 +249,14 @@ namespace Nistec.Caching.Sync
         /// <param name="keys"></param>
         /// <param name="columns"></param>
         /// <param name="timer"></param>
+        /// <param name="storageName"></param>
         /// <param name="enableNoLock"></param>
         /// <param name="commandTimeout"></param>
         /// <param name="isAsync"></param>
-        public SyncTableBase(string connectionKey, string entityName, string mappingName, string[] sourceName, EntitySourceType sourceType, string[] keys, string columns, SyncTimer timer, bool enableNoLock, int commandTimeout, bool isAsync)
+        public SyncTableBase(string connectionKey, string entityName, string mappingName, string[] sourceName, EntitySourceType sourceType, string[] keys, string columns, SyncTimer timer, string storageName, bool enableNoLock, int commandTimeout, bool isAsync)
             : this(isAsync)
         {
-            Set(connectionKey, entityName, mappingName, sourceName, sourceType, keys,columns, timer,enableNoLock, commandTimeout);
+            Set(connectionKey, entityName, mappingName, sourceName, sourceType, keys,columns, timer, storageName,enableNoLock, commandTimeout);
         }
         /// <summary>
         /// Set current item.
@@ -265,9 +267,10 @@ namespace Nistec.Caching.Sync
         /// <param name="keys"></param>
         /// <param name="columns"></param>
         /// <param name="timer"></param>
+        /// <param name="storageName"></param>
         /// <param name="enableNoLock"></param>
         /// <param name="commandTimeout"></param>
-        public void Set<Dbc>(string entityName, string mappingName, string[] keys, string columns, SyncTimer timer, bool enableNoLock, int commandTimeout) where Dbc : IDbContext
+        public void Set<Dbc>(string entityName, string mappingName, string[] keys, string columns, SyncTimer timer, string storageName, bool enableNoLock, int commandTimeout) where Dbc : IDbContext
         {
             //Info = new ComplexKey() { ItemKeys = keys, ItemName = entityName };//mappingName
             //Info = ComplexArgs.Get(entityName, keys);
@@ -286,7 +289,8 @@ namespace Nistec.Caching.Sync
                     Interval = timer.Interval,
                     EnableNoLock = enableNoLock,
                     CommandTimeout=commandTimeout,
-                    Columns=columns
+                    Columns=columns,
+                    StorageName= storageName
                 }, timer);
 
             SetContext<Dbc>(mappingName, EntityKeys.Get(keys));
@@ -301,11 +305,12 @@ namespace Nistec.Caching.Sync
         /// <param name="keys"></param>
         /// <param name="columns"></param>
         /// <param name="timer"></param>
+        /// <param name="storageName"></param>
         /// <param name="enableNoLock"></param>
         /// <param name="commandTimeout"></param>
-        public void Set(string connectionKey, string entityName, string mappingName, string[] keys, string columns, SyncTimer timer, bool enableNoLock,int commandTimeout)
+        public void Set(string connectionKey, string entityName, string mappingName, string[] keys, string columns, SyncTimer timer, string storageName, bool enableNoLock,int commandTimeout)
         {
-            Set(connectionKey, entityName, mappingName, new string[] { mappingName }, EntitySourceType.Table, keys, columns, timer, enableNoLock, commandTimeout);
+            Set(connectionKey, entityName, mappingName, new string[] { mappingName }, EntitySourceType.Table, keys, columns, timer, storageName,enableNoLock, commandTimeout);
         }
         /// <summary>
         /// Set current item.
@@ -318,9 +323,10 @@ namespace Nistec.Caching.Sync
         /// <param name="keys"></param>
         /// <param name="columns"></param>
         /// <param name="timer"></param>
+        /// <param name="storageName"></param>
         /// <param name="enableNoLock"></param>
         /// <param name="commandTimeout"></param>
-        public void Set(string connectionKey, string entityName, string mappingName, string[] sourceName, EntitySourceType sourceType, string[] keys, string columns, SyncTimer timer, bool enableNoLock, int commandTimeout)
+        public void Set(string connectionKey, string entityName, string mappingName, string[] sourceName, EntitySourceType sourceType, string[] keys, string columns, SyncTimer timer, string storageName, bool enableNoLock, int commandTimeout)
         {
             //Info = new ComplexKey() { ItemKeys = keys, ItemName = entityName };//mappingName
             //Info = ComplexArgs.Get(entityName, keys);
@@ -340,7 +346,8 @@ namespace Nistec.Caching.Sync
                     Interval = timer.Interval,
                     EnableNoLock = enableNoLock,
                     CommandTimeout = commandTimeout,
-                    Columns=columns
+                    Columns=columns,
+                    StorageName=storageName
                 }, timer);
 
             SetContext(connectionKey, entityName, mappingName, sourceType, EntityKeys.Get(keys));

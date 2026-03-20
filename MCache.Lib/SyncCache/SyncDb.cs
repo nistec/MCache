@@ -78,6 +78,7 @@ namespace Nistec.Caching.Sync
         public const string DefaultCachename = "SyncDbCache";
 
         private string _storageName;
+        string _connectionKey;
         private DataCacheState _state;
         private bool initilized;
         private DataSyncList _SyncTables;
@@ -186,13 +187,16 @@ namespace Nistec.Caching.Sync
         /// SyncDb Ctor 
         /// </summary>
         /// <param name="connectionKey"></param>
-        public SyncDb(string connectionKey)
+        /// <param name="storageName"></param>
+        public SyncDb(string connectionKey, string storageName)
         {
             //Owner = owner;SyncCacheBase owner,
             SyncState = CacheSyncState.Idle;
             _EnableTrigger = CacheSettings.EnableSyncTypeEventTrigger;
             _EnableSyncEvent = CacheSettings.EnableSyncTypeEvent;
-            _storageName = connectionKey;
+            //_storageName = connectionKey;//$NIS
+            _connectionKey = connectionKey;
+            _storageName = storageName;
             _ClientId = Environment.MachineName + "$" + _storageName;
             _TableWatcherName = DbWatcher.DefaultWatcherName;
             initilized = false;
@@ -207,16 +211,19 @@ namespace Nistec.Caching.Sync
         /// SyncDb Ctor 
         /// </summary>
         /// <param name="connectionKey"></param>
+        /// <param name="storageName"></param>
         /// <param name="syncOption"></param>
         /// <param name="enableTrigger"></param>
         /// <param name="enableSyncEvent"></param>
-        public SyncDb( string connectionKey, SyncOption syncOption,bool enableTrigger, bool enableSyncEvent)
+        public SyncDb( string connectionKey, string storageName, SyncOption syncOption,bool enableTrigger, bool enableSyncEvent)
         {
             //Owner = owner;SyncCacheBase owner,
             SyncState = CacheSyncState.Idle;
             _EnableTrigger = enableTrigger;
             _EnableSyncEvent = enableSyncEvent;
-            _storageName = connectionKey;
+            //_storageName = connectionKey;//$NIS
+            _connectionKey = connectionKey;
+            _storageName = storageName;
             _ClientId = Environment.MachineName + "$" + _storageName;
             _TableWatcherName = DbWatcher.DefaultWatcherName;
             initilized = false;
@@ -467,7 +474,7 @@ namespace Nistec.Caching.Sync
         /// </summary>
         public string ConnectionKey
         {
-            get { return _storageName; }
+            get { return _connectionKey; }// _storageName; }//$NIS
             //private set;
         }
 

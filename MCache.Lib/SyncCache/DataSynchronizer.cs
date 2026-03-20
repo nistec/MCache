@@ -298,6 +298,7 @@ namespace Nistec.Caching.Sync
                         {
                             using (TransactionScope trans = new TransactionScope())
                             {
+                                /*
                                 IDataCache dc;
                                 bool isEqual = false;
                                 if (DataEventsOwners.TryGetValue(owner.ConnectionKey, out dc))
@@ -312,6 +313,12 @@ namespace Nistec.Caching.Sync
                                         entity.CreateTableTrigger(owner);
                                     DataEventsOwners[owner.ConnectionKey] = owner;
                                 }
+                                */
+                                entity.Register(owner, ensureEventTableWatcher);
+                                if (enableTrigger)
+                                    entity.CreateTableTrigger(owner);
+                                DataEventsOwners[owner.ConnectionKey] = owner;
+                                //==========================================
                                 DataSyncItems.Set(entity);
                                 trans.Complete();
                                 CacheLogger.DebugFormat("RegisterSyncTable Added SyncType.Event to SyncBox: {0} ", entity.EntityName);

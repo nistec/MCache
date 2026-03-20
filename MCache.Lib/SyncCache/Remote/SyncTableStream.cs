@@ -74,13 +74,14 @@ namespace Nistec.Caching.Sync.Remote
         /// <param name="keys"></param>
         /// <param name="columns"></param>
         /// <param name="timer"></param>
+        /// <param name="storageName"></param>
         /// <param name="enableNoLock"></param>
         /// <param name="commandTimeout"></param>
         /// <param name="isAsync"></param>
-        public SyncTableStream(string connectionKey, string entityName, string mappingName, string[] keys, string columns, SyncTimer timer, bool enableNoLock, int commandTimeout, bool isAsync)
+        public SyncTableStream(string connectionKey, string entityName, string mappingName, string[] keys, string columns, SyncTimer timer, string storageName, bool enableNoLock, int commandTimeout, bool isAsync)
             : base(isAsync)
         {
-            Set(connectionKey, entityName, mappingName, new string[] { mappingName }, EntitySourceType.Table, keys, columns, timer, enableNoLock, commandTimeout);
+            Set(connectionKey, entityName, mappingName, new string[] { mappingName }, EntitySourceType.Table, keys, columns, timer,storageName, enableNoLock, commandTimeout);
         }
 
         /// <summary>
@@ -94,13 +95,14 @@ namespace Nistec.Caching.Sync.Remote
         /// <param name="keys"></param>
         /// <param name="columns"></param>
         /// <param name="timer"></param>
+        /// <param name="storageName"></param>
         /// <param name="enableNoLock"></param>
         /// <param name="commandTimeout"></param>
         /// <param name="isAsync"></param>
-        public SyncTableStream(string connectionKey, string entityName, string mappingName, string[] sourceName, EntitySourceType sourceType, string[] keys, string columns, SyncTimer timer, bool enableNoLock, int commandTimeout, bool isAsync)
+        public SyncTableStream(string connectionKey, string entityName, string mappingName, string[] sourceName, EntitySourceType sourceType, string[] keys, string columns, SyncTimer timer, string storageName, bool enableNoLock, int commandTimeout, bool isAsync)
             : base(isAsync)
         {
-            Set(connectionKey, entityName, mappingName, sourceName, sourceType, keys, columns, timer, enableNoLock, commandTimeout);
+            Set(connectionKey, entityName, mappingName, sourceName, sourceType, keys, columns, timer,storageName, enableNoLock, commandTimeout);
         }
 
         internal SyncTableStream(NameValueArgs dic, bool isAsync)
@@ -113,7 +115,7 @@ namespace Nistec.Caching.Sync.Remote
                 (EntitySourceType)dic.Get<int>(KnownArgs.SourceType),
                 dic.SplitArg(KnownArgs.EntityKeys, null), "*",
 
-                new SyncTimer(dic.TimeArg(KnownArgs.SyncTime, null), (SyncType)dic.Get<int>(KnownArgs.SyncType)),
+                new SyncTimer(dic.TimeArg(KnownArgs.SyncTime, null), (SyncType)dic.Get<int>(KnownArgs.SyncType)), dic.Get(KnownArgs.StorageName),
                 false, 0);
         }
 

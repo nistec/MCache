@@ -92,6 +92,10 @@ namespace Nistec.Caching.Remote
         public const string SyncType = "synctype";
         /// <summary>SyncTime.</summary>
         public const string SyncTime = "synctime";
+        /// <summary>StorageName.</summary>
+        public const string StorageName = "StorageName";
+
+         
         //public const string Timeout = "Timeout";
 
     }

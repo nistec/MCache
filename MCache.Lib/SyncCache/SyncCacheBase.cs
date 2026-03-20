@@ -296,9 +296,10 @@ namespace Nistec.Caching.Sync
         /// <param name="columns"></param>
         /// <param name="interval"></param>
         /// <param name="syncType"></param>
+        /// <param name="storageName"></param>
         /// <param name="enableNoLock"></param>
         /// <param name="commandTimeout"></param>
-        public abstract CacheState AddItem<T>(string connectionKey, string entityName, string mappingName, string[] sourceName, EntitySourceType sourceType, string[] entityKeys, string columns, TimeSpan interval, SyncType syncType, bool enableNoLock, int commandTimeout);
+        public abstract CacheState AddItem<T>(string connectionKey, string entityName, string mappingName, string[] sourceName, EntitySourceType sourceType, string[] entityKeys, string columns, TimeSpan interval, SyncType syncType, string storageName, bool enableNoLock, int commandTimeout);
 
         internal abstract CacheState AddItem(SyncEntity entity);
         /// <summary>
@@ -589,20 +590,20 @@ namespace Nistec.Caching.Sync
             }
         }
 
-        internal CacheState AddItem(string entityType, string connectionKey, string entityName, string mappingName, string strSourceName, int iSourceType, string strEntityKeys, string columns, int intervalMinute, int iSyncType, bool enableNoLock, int commandTimeout)
+        internal CacheState AddItem(string entityType, string connectionKey, string entityName, string mappingName, string strSourceName, int iSourceType, string strEntityKeys, string columns, int intervalMinute, int iSyncType, string storageName, bool enableNoLock, int commandTimeout)
         {
             EntitySourceType sourceType = (EntitySourceType)iSourceType;
             TimeSpan interval = TimeSpan.FromMinutes(intervalMinute);
             SyncType syncType = (SyncType)iSyncType;
             if (syncType != SyncType.Remove)
             {
-                return AddItem(entityType, connectionKey, entityName, mappingName, strSourceName, sourceType, strEntityKeys, columns, interval, syncType, enableNoLock, commandTimeout);
+                return AddItem(entityType, connectionKey, entityName, mappingName, strSourceName, sourceType, strEntityKeys, columns, interval, syncType,storageName, enableNoLock, commandTimeout);
             }
             return CacheState.AddItemFailed;
         }
 
 
-        CacheState AddItem(string entityType, string connectionKey, string entityName, string mappingName, string strSourceName, EntitySourceType sourceType, string strEntityKeys, string columns, TimeSpan syncTime, SyncType syncType, bool enableNoLock, int commandTimeout)
+        CacheState AddItem(string entityType, string connectionKey, string entityName, string mappingName, string strSourceName, EntitySourceType sourceType, string strEntityKeys, string columns, TimeSpan syncTime, SyncType syncType, string storageName, bool enableNoLock, int commandTimeout)
         {
 
             if (strSourceName == null)
@@ -616,14 +617,14 @@ namespace Nistec.Caching.Sync
             switch (entityType)
             {
                 case "GenericRecord":
-                    return AddItem<GenericRecord>(connectionKey, entityName, mappingName, sourceName, sourceType, entityKeys, columns, syncTime, syncType, enableNoLock, commandTimeout);
+                    return AddItem<GenericRecord>(connectionKey, entityName, mappingName, sourceName, sourceType, entityKeys, columns, syncTime, syncType, storageName, enableNoLock, commandTimeout);
                 case "GenericData":
-                    return AddItem<GenericData>(connectionKey, entityName, mappingName, sourceName, sourceType, entityKeys, columns, syncTime, syncType, enableNoLock, commandTimeout);
+                    return AddItem<GenericData>(connectionKey, entityName, mappingName, sourceName, sourceType, entityKeys, columns, syncTime, syncType, storageName, enableNoLock, commandTimeout);
                 case "EntityStream":
-                    return AddItem<EntityStream>(connectionKey, entityName, mappingName, sourceName, sourceType, entityKeys, columns, syncTime, syncType, enableNoLock, commandTimeout);
+                    return AddItem<EntityStream>(connectionKey, entityName, mappingName, sourceName, sourceType, entityKeys, columns, syncTime, syncType, storageName, enableNoLock, commandTimeout);
                 case "GenericEntity":
                 default:
-                    return AddItem<GenericEntity>(connectionKey, entityName, mappingName, sourceName, sourceType, entityKeys, columns, syncTime, syncType, enableNoLock, commandTimeout);
+                    return AddItem<GenericEntity>(connectionKey, entityName, mappingName, sourceName, sourceType, entityKeys, columns, syncTime, syncType, storageName, enableNoLock, commandTimeout);
             }
         }
 

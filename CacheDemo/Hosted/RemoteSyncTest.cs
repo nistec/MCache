@@ -43,10 +43,10 @@ namespace Nistec.Caching.Demo.Hosted
         //Add items to remote cache.
         public void AddItems()
         {
+            string storageName = "";
+            SyncCache.AddItem<AccountEntity>("Netcell_Docs", "accountGeneric", "Person.Contact", new string[] { "Person.Contact" }, EntitySourceType.Table, new string[] { "AccountId" }, "*", TimeSpan.FromMinutes(10), SyncType.Interval, storageName);
 
-            SyncCache.AddItem<AccountEntity>("Netcell_Docs", "accountGeneric", "Person.Contact", new string[] { "Person.Contact" }, EntitySourceType.Table, new string[] { "AccountId" }, "*", TimeSpan.FromMinutes(10), SyncType.Interval);
-
-            SyncCache.AddItem<GenericRecord>("Netcell_Docs", "accountEntity", "Person.Contact", new string[] { "Person.Contact" }, EntitySourceType.Table, new string[] { "AccountId" }, "*", TimeSpan.FromMinutes(10), SyncType.Interval);
+            SyncCache.AddItem<GenericRecord>("Netcell_Docs", "accountEntity", "Person.Contact", new string[] { "Person.Contact" }, EntitySourceType.Table, new string[] { "AccountId" }, "*", TimeSpan.FromMinutes(10), SyncType.Interval, storageName);
 
             //SyncCache.Refresh("accountGeneric");
             //SyncCache.Refresh("accountEntity");

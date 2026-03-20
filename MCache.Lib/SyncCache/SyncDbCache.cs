@@ -360,7 +360,7 @@ namespace Nistec.Caching.Sync
             {
                 //ConnectionStringSettings cn = NetConfig.ConnectionSettings(connectionKey);
                 //rdc = new SyncDb(connectionKey, cn.ConnectionString, DBProvider.SqlServer);
-                rdc = new SyncDb(connectionKey);
+                rdc = new SyncDb(connectionKey, dse.SyncEntity.StorageName);
                 rdc.SyncOption = SyncOption.Auto;
                 rdc.Parent = owner;
                 //evt-
@@ -463,9 +463,10 @@ namespace Nistec.Caching.Sync
         /// Add Db To Sync Cache
         /// </summary>
         /// <param name="connectionKey"></param>
+        /// <param name="storageName"></param>
         /// <param name="owner"></param>
         /// <param name="intervalSeconds"></param>
-        public void AddDb(string connectionKey, ISyncronizer owner, int intervalSeconds)
+        public void AddDb(string connectionKey, string storageName, ISyncronizer owner, int intervalSeconds)
         {
             if (string.IsNullOrEmpty(connectionKey))
             {
@@ -476,7 +477,7 @@ namespace Nistec.Caching.Sync
 
             //ConnectionStringSettings cn = NetConfig.ConnectionSettings(connectionKey);
             //SyncDb rdc = new SyncDb(connectionKey, cn.ConnectionString, DBProvider.SqlServer);
-            SyncDb rdc = new SyncDb(connectionKey);
+            SyncDb rdc = new SyncDb(connectionKey, storageName);
             rdc.Parent = owner;
             //evt-
             rdc.SyncDataSourceChanged += new SyncDataSourceChangedEventHandler(_SyncData_SyncDataSourceChanged);

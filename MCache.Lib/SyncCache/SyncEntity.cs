@@ -112,6 +112,8 @@ namespace Nistec.Caching.Sync
         /// </summary>
         public int CommandTimeout { get; internal set; }
 
+        public string StorageName { get; internal set; }
+
         #endregion
 
         #region ctor
@@ -217,10 +219,11 @@ namespace Nistec.Caching.Sync
         /// <param name="sourceName"></param>
         /// <param name="syncType"></param>
         /// <param name="interval"></param>
+        /// <param name="storageName"></param>
         /// <param name="enableNoLock"></param>
         /// <param name="commandTimeout"></param>
         /// <param name="columns"></param>
-        public SyncEntity(string entityName, string mappingName, string[] sourceName, SyncType syncType, TimeSpan interval, bool enableNoLock, int commandTimeout, string columns="*")
+        public SyncEntity(string entityName, string mappingName, string[] sourceName, SyncType syncType, TimeSpan interval, string storageName, bool enableNoLock, int commandTimeout, string columns="*")
         {
             EntityName = entityName;
             ViewName = mappingName;
@@ -232,6 +235,7 @@ namespace Nistec.Caching.Sync
             EnableNoLock = enableNoLock;
             CommandTimeout = commandTimeout;
             Columns = columns;
+            StorageName = storageName;
         }
         #endregion
 

@@ -1003,9 +1003,10 @@ namespace Nistec.Caching.Sync.Remote
         /// <param name="columns"></param>
         /// <param name="interval"></param>
         /// <param name="syncType"></param>
+        /// <param name="storageName"></param>
         /// <param name="enableNoLock"></param>
         /// <param name="commandTimeout"></param>
-        public override CacheState AddItem<T>(string connectionKey, string entityName, string mappingName, string[] sourceName, EntitySourceType sourceType, string[] entityKeys, string columns, TimeSpan interval, SyncType syncType, bool enableNoLock=false, int commandTimeout=0)
+        public override CacheState AddItem<T>(string connectionKey, string entityName, string mappingName, string[] sourceName, EntitySourceType sourceType, string[] entityKeys, string columns, TimeSpan interval, SyncType syncType, string storageName, bool enableNoLock=false, int commandTimeout=0)
         {
             if (connectionKey == null)
                 throw new ArgumentNullException("AddItem.connectionKey");
@@ -1023,7 +1024,7 @@ namespace Nistec.Caching.Sync.Remote
                 SyncTimer timer = new SyncTimer(interval, syncType);
 
 
-                SyncTableStream<T> item = new SyncTableStream<T>(connectionKey, entityName, mappingName, sourceName, sourceType, entityKeys, columns, timer,enableNoLock, commandTimeout,true);
+                SyncTableStream<T> item = new SyncTableStream<T>(connectionKey, entityName, mappingName, sourceName, sourceType, entityKeys, columns, timer,storageName,enableNoLock, commandTimeout,true);
 
                 while (!item.IsReady)
                 {

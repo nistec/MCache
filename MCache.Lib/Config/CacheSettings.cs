@@ -90,7 +90,7 @@ namespace Nistec.Caching.Config
         /// <summary>EnableAsyncLoader.</summary>
         public static bool EnableAsyncLoader { get; private set; } = true;
         /// <summary>EnableSyncTypeEvent.</summary>
-        public static bool EnableSyncTypeEvent { get; private set; } = false;
+        public static bool EnableSyncTypeEvent { get; private set; } = true;//false
 
         /// <summary>Get the interval in hours for auto reset performance counter.</summary>
         public static int AutoResetIntervalHours { get; private set; } = CacheDefaults.DefaultAutoResetIntervalHours;
@@ -311,7 +311,7 @@ namespace Nistec.Caching.Config
             SyncTaskerTimeout = table.Get<int>("SyncTaskerTimeout", 60);
             EnableAsyncTask = table.Get<bool>("EnableAsyncTask", true);
             EnableAsyncLoader = table.Get<bool>("EnableAsyncLoader", true);
-            EnableSyncTypeEvent = table.Get<bool>("EnableSyncTypeEvent", false);
+            EnableSyncTypeEvent = table.Get<bool>("EnableSyncTypeEvent", true);//false
 
             AutoResetIntervalHours = table.Get<int>("AutoResetIntervalHours", CacheDefaults.DefaultAutoResetIntervalHours);
 

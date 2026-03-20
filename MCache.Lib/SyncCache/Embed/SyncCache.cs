@@ -630,9 +630,10 @@ namespace Nistec.Caching.Sync.Embed
         /// <param name="columns"></param>
         /// <param name="interval"></param>
         /// <param name="syncType"></param>
+        /// <param name="storageName"></param>
         /// <param name="enableNoLock"></param>
         /// <param name="commandTimeout"></param>
-        public override CacheState AddItem<T>(string connectionKey, string entityName, string mappingName, string[] sourceName, EntitySourceType sourceType, string[] entityKeys, string columns, TimeSpan interval, SyncType syncType, bool enableNoLock=false, int commandTimeout=0)
+        public override CacheState AddItem<T>(string connectionKey, string entityName, string mappingName, string[] sourceName, EntitySourceType sourceType, string[] entityKeys, string columns, TimeSpan interval, SyncType syncType, string storageName, bool enableNoLock=false, int commandTimeout=0)
         {
             if (connectionKey == null)
                 throw new ArgumentNullException("AddItem.connectionKey");
@@ -649,7 +650,7 @@ namespace Nistec.Caching.Sync.Embed
             {
                 SyncTimer timer = new SyncTimer(interval, syncType);
         
-                SyncTable<T> item = new SyncTable<T>(connectionKey, entityName, mappingName, sourceName,sourceType,entityKeys,columns, timer,enableNoLock, commandTimeout,false);
+                SyncTable<T> item = new SyncTable<T>(connectionKey, entityName, mappingName, sourceName,sourceType,entityKeys,columns, timer, storageName,enableNoLock, commandTimeout,false);
 
                 item.Validate();
 
@@ -680,9 +681,10 @@ namespace Nistec.Caching.Sync.Embed
         /// <param name="columns"></param>
         /// <param name="interval"></param>
         /// <param name="syncType"></param>
+        /// <param name="storageName"></param>
         /// <param name="enableNoLock"></param>
         /// <param name="commandTimeout"></param>
-        public void AddItem<T>(string connectionKey, string entityName, string mappingName, string[] entityKeys,string columns, TimeSpan interval, SyncType syncType, bool enableNoLock = false, int commandTimeout = 0)
+        public void AddItem<T>(string connectionKey, string entityName, string mappingName, string[] entityKeys,string columns, TimeSpan interval, SyncType syncType,string storageName, bool enableNoLock = false, int commandTimeout = 0)
         {
             if (connectionKey == null)
                 throw new ArgumentNullException("AddItem.connectionKey");
@@ -700,12 +702,12 @@ namespace Nistec.Caching.Sync.Embed
 
                 SyncTimer timer = new SyncTimer(interval, syncType);
 
-                SyncTable<T> item = new SyncTable<T>(connectionKey, entityName, mappingName, sourceName, sourceType, entityKeys, columns, timer, enableNoLock, commandTimeout, false);
+                SyncTable<T> item = new SyncTable<T>(connectionKey, entityName, mappingName, sourceName, sourceType, entityKeys, columns, timer, storageName,enableNoLock, commandTimeout, false);
                 
                 item.Validate();
 
                 item.OnSyncCompleted = OnSyncCompleted;
-
+                
                 _DataCache.AddSyncSource(item.ConnectionKey, item.SyncSource, this, IntervalSeconds, true);
 
                 _SyncBag.Set(entityName, item as ISyncTable);

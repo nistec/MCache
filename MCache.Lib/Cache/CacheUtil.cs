@@ -82,7 +82,7 @@ namespace Nistec.Caching
                 case CacheState.InvalidItem:
                 case CacheState.InvalidSession:
                 case CacheState.ArgumentsError:
-                    return ChannelState.ArgumentsError;
+                    return ChannelState.ArgumentError;
 
                 case CacheState.CacheNotReady:
                 case CacheState.CacheIsFull:
